@@ -205,6 +205,107 @@ cd demo && npx serve .
 
 ---
 
+### Using tmux for Development (Recommended)
+
+**tmux** (terminal multiplexer) lets you manage multiple terminals in one window. Perfect for running local network, facilitator, and tests simultaneously.
+
+#### Quick Start with tmux
+
+```bash
+# Create new session for Pay402 development
+tmux new -s pay402
+
+# Split into panes
+Ctrl+b "    # Split horizontally (top/bottom)
+Ctrl+b %    # Split vertically (left/right)
+
+# Navigate between panes
+Ctrl+b ↑    # Move to pane above
+Ctrl+b ↓    # Move to pane below
+Ctrl+b ←    # Move to pane left
+Ctrl+b →    # Move to pane right
+
+# Detach from session (keeps running)
+Ctrl+b d
+
+# Reattach to session
+tmux attach -t pay402
+
+# List sessions
+tmux ls
+```
+
+#### Essential tmux Commands
+
+| Command | Action |
+|---------|--------|
+| `tmux new -s NAME` | Create new session |
+| `tmux attach -t NAME` | Attach to session |
+| `tmux ls` | List sessions |
+| `Ctrl+b "` | Split horizontally |
+| `Ctrl+b %` | Split vertically |
+| `Ctrl+b ↑↓←→` | Navigate panes |
+| `Ctrl+b x` | Kill current pane |
+| `Ctrl+b &` | Kill current window |
+| `Ctrl+b d` | Detach (keeps running) |
+| `Ctrl+b [` | Scroll mode (q to exit) |
+| `Ctrl+b z` | Zoom pane (toggle) |
+| `Ctrl+b c` | Create new window |
+| `Ctrl+b n/p` | Next/previous window |
+| `Ctrl+b ,` | Rename window |
+
+#### Recommended Layout for Pay402
+
+```bash
+# Start tmux
+tmux new -s pay402
+
+# Top pane: Local SUI network
+sui start --with-faucet --force-regenesis
+
+# Split horizontally
+Ctrl+b "
+
+# Bottom pane: Facilitator
+cd facilitator && npm run dev
+
+# Split bottom pane vertically
+Ctrl+b %
+
+# Right pane: Tests/commands
+npm test
+```
+
+**Visual layout:**
+```
+┌─────────────────────────────────┐
+│ Pane 1: SUI Network             │
+│ sui start --with-faucet         │
+├─────────────────┬───────────────┤
+│ Pane 2:         │ Pane 3:       │
+│ Facilitator API │ Tests/Shell   │
+│ npm run dev     │ npm test      │
+└─────────────────┴───────────────┘
+```
+
+#### tmux Tips
+
+**Persist sessions:** tmux sessions survive disconnections - perfect for WSL2 where terminals might close.
+
+**Copy mode:** Use `Ctrl+b [` to scroll and copy text. Navigate with arrow keys, press `Space` to start selection, `Enter` to copy.
+
+**Resize panes:**
+```bash
+Ctrl+b :resize-pane -U 5    # Up 5 lines
+Ctrl+b :resize-pane -D 5    # Down 5 lines
+Ctrl+b :resize-pane -L 10   # Left 10 characters
+Ctrl+b :resize-pane -R 10   # Right 10 characters
+```
+
+**Kill stuck processes:** If a pane has a hung process, use `Ctrl+b x` then confirm with `y`.
+
+---
+
 ### Production Build
 
 ```bash

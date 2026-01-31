@@ -1,5 +1,16 @@
 # Pay402 - Cursor AI Rules
 
+## 🗂️ Source of Truth Hierarchy
+
+**When in doubt, trust this order:**
+1. **Code in `Pay402/`** - What actually works (ultimate truth)
+2. **Docs in `Pay402/docs/`** - Architecture, dev guide (authoritative)
+3. **`HackMoney_Research/`** - Exploration notes (STALE after Jan 31)
+
+**Rule:** If research docs conflict with Pay402 code/docs, Pay402 wins.
+
+---
+
 ## 🚨 Rule #0: FIGHT BLOAT
 
 ### Documentation
@@ -61,6 +72,7 @@ Examples:
 - Use `&mut` for coins (prevent front-running)
 - Emit events for state changes
 - Ephemeral receipts (zero storage)
+- **Testing:** Use `expected_failure(abort_code=X, location=module)` for framework errors
 
 ### Security
 - Never log private keys

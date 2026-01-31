@@ -1093,6 +1093,440 @@ Pay402.init({
 
 ---
 
+### 4. Widget Deployment Model
+
+**Deployment Strategy:** CDN-Hosted Embedded Widget (Stripe/PayPal Model)  
+**Complexity:** ★★☆☆☆ (Medium)  
+**Distribution:** Zero User Installation  
+
+#### Physical Architecture
+
+```
+┌────────────────────────────────────────────────────────────────┐
+│  Production Deployment                                         │
+├────────────────────────────────────────────────────────────────┤
+│                                                                │
+│  1. Build & Upload                                             │
+│     ┌──────────────────┐                                      │
+│     │ widget/          │  npm run build                       │
+│     │   src/           ├────────────────────┐                 │
+│     │   *.tsx          │                    │                 │
+│     └──────────────────┘                    ▼                 │
+│                                    ┌─────────────────┐         │
+│                                    │ webpack         │         │
+│                                    │ - TypeScript    │         │
+│                                    │ - React JSX     │         │
+│                                    │ - Tree shaking  │         │
+│                                    │ - Minification  │         │
+│                                    └────────┬────────┘         │
+│                                             │                  │
+│                                             ▼                  │
+│                                    ┌─────────────────┐         │
+│                                    │ widget.js       │         │
+│                                    │ (~150 KB gzip)  │         │
+│                                    └────────┬────────┘         │
+│                                             │                  │
+│                                   Upload to CDN                │
+│                                             │                  │
+│  2. CDN Distribution                        ▼                  │
+│     ┌─────────────────────────────────────────────┐           │
+│     │ Cloudflare CDN / AWS CloudFront             │           │
+│     │ https://cdn.pay402.com/                     │           │
+│     │                                             │           │
+│     │ ├── widget.js          (main bundle)       │           │
+│     │ ├── widget.js.map      (source maps)       │           │
+│     │ └── widget.css         (optional styles)   │           │
+│     └─────────────────────────────────────────────┘           │
+│                              │                                │
+│                              │ Global edge caching            │
+│                              │                                │
+└──────────────────────────────┼────────────────────────────────┘
+                               │
+                               │ HTTP GET
+                               │
+┌──────────────────────────────┼────────────────────────────────┐
+│  Merchant's Website          ▼                                │
+├────────────────────────────────────────────────────────────────┤
+│                                                                │
+│  <!-- merchant.com/index.html -->                             │
+│  <html>                                                        │
+│    <head>                                                      │
+│      <!-- ONE-TIME SETUP: Add script tag -->                  │
+│      <script src="https://cdn.pay402.com/widget.js"></script> │
+│      <script>                                                  │
+│        Pay402.init({                                           │
+│          facilitatorUrl: 'https://facilitator.pay402.com',    │
+│          googleClientId: 'MERCHANT_GOOGLE_ID'                 │
+│        });                                                     │
+│      </script>                                                 │
+│    </head>                                                     │
+│    <body>                                                      │
+│      <button onclick="fetchData()">Get Premium Data</button>  │
+│      <script>                                                  │
+│        async function fetchData() {                            │
+│          // Normal fetch - widget intercepts 402!             │
+│          const res = await fetch('/api/premium');             │
+│          // Widget handles payment automatically              │
+│        }                                                       │
+│      </script>                                                 │
+│    </body>                                                     │
+│  </html>                                                       │
+│                                                                │
+└────────────────────────────────────────────────────────────────┘
+```
+
+#### Runtime Behavior
+
+**Widget Lifecycle:**
+
+```typescript
+// 1. PAGE LOAD
+// - Merchant's page loads
+// - <script src="cdn.pay402.com/widget.js"> downloads
+// - Widget initializes in background (invisible)
+
+┌─────────────────────────────────────────────┐
+│ User's Browser (merchant.com)               │
+│                                             │
+│ [Page Content]                              │
+│                                             │
+│ (Widget running silently in background)     │
+│  ✓ Listening for fetch() calls              │
+│  ✓ zkLogin session check (localStorage)    │
+│  ✓ Modal container created (display:none)  │
+└─────────────────────────────────────────────┘
+
+// 2. USER CLICKS BUTTON
+// - JavaScript calls fetch('/api/premium')
+// - Widget intercepts via monkey-patched window.fetch
+
+┌─────────────────────────────────────────────┐
+│ Widget: Intercepting fetch()                │
+│                                             │
+│ const originalFetch = window.fetch;         │
+│ window.fetch = async (...args) => {         │
+│   const res = await originalFetch(...args); │
+│   if (res.status === 402) {                 │
+│     await widget.handlePayment(res);        │
+│   }                                         │
+│   return res;                               │
+│ };                                          │
+└─────────────────────────────────────────────┘
+
+// 3. SERVER RETURNS 402
+// - Merchant API returns 402 Payment Required
+// - Widget detects, parses WWW-Authenticate header
+
+┌─────────────────────────────────────────────┐
+│ HTTP/1.1 402 Payment Required               │
+│ WWW-Authenticate: x402                      │
+│   amount=100000                             │
+│   currency=USDC                             │
+│   merchant=0xMERCHANT                       │
+│   facilitator=https://facilitator.pay402... │
+└─────────────────────────────────────────────┘
+
+// 4. WIDGET SHOWS MODAL
+// - Modal container visibility: block
+// - React portal renders payment UI
+
+┌─────────────────────────────────────────────┐
+│ User's Browser (merchant.com)               │
+│                                             │
+│ [Dimmed Page Content]                       │
+│                                             │
+│  ┌────────────────────────────────────┐    │
+│  │ ⚡ Payment Required                │    │
+│  │                                    │    │
+│  │ Amount: 0.1 USDC                   │    │
+│  │ Merchant: api.merchant.com         │    │
+│  │                                    │    │
+│  │ [Login with Google] ← Button       │    │
+│  └────────────────────────────────────┘    │
+│                                             │
+└─────────────────────────────────────────────┘
+
+// 5. PAYMENT FLOW
+// (zkLogin → balance check → confirm → settle)
+
+// 6. WIDGET RETRIES FETCH
+// - Adds X-Payment header
+// - Returns content to merchant's JavaScript
+
+┌─────────────────────────────────────────────┐
+│ GET /api/premium                            │
+│ X-Payment: eyJhbGc...                       │
+│                                             │
+│ → 200 OK                                    │
+│   {"data": "premium content"}               │
+└─────────────────────────────────────────────┘
+
+// 7. MODAL CLOSES
+// - Widget hides modal (display:none)
+// - Content delivered to merchant's callback
+```
+
+#### Comparison: Distribution Models
+
+| Model | User Experience | Merchant Integration | Security | Our Choice |
+|-------|----------------|---------------------|----------|-----------|
+| **Browser Extension** (MetaMask) | ❌ Must install extension<br>❌ 5+ clicks<br>❌ Chrome Web Store approval | ✅ Just add code | ✅ Isolated context | ❌ Too much friction |
+| **Embedded Widget** (Stripe) | ✅ Zero installation<br>✅ 3 clicks<br>✅ Works everywhere | ✅ One `<script>` tag | ⚠️ Runs in page context | ✅ **CHOSEN** |
+| **Native Protocol** (Web Payments) | ✅ Browser-native UI<br>✅ 2 clicks | ⚠️ Requires browser support | ✅ Browser-level | ❌ Not available yet |
+| **Separate App** (Venmo) | ❌ Must install app<br>❌ Context switch<br>❌ Mobile-only | ❌ Deep linking complex | ✅ Sandboxed | ❌ Poor UX |
+
+**Winner: Embedded Widget** ✅
+
+#### Build & Deployment Process
+
+**Development:**
+```bash
+cd widget
+npm run dev  # Webpack dev server on localhost:3000
+```
+
+**Production Build:**
+```bash
+cd widget
+npm run build
+
+# Output: widget/dist/
+├── widget.js         # 150 KB (minified + gzipped)
+├── widget.js.map     # Source maps (debugging)
+└── widget.css        # Styles (optional, can be inlined)
+
+# Build includes:
+# - TypeScript → JavaScript
+# - React JSX → vanilla JS
+# - Tree shaking (remove unused code)
+# - Minification (uglify)
+# - Code splitting (lazy load modal components)
+```
+
+**Upload to CDN:**
+```bash
+# AWS CloudFront
+aws s3 cp dist/widget.js s3://pay402-cdn/widget.js \
+  --cache-control "public, max-age=31536000, immutable"
+aws cloudfront create-invalidation \
+  --distribution-id E12345EXAMPLE \
+  --paths "/widget.js"
+
+# Cloudflare (recommended)
+wrangler publish widget.js
+# Or via dashboard: Upload to R2 + enable CDN
+
+# Vercel Edge
+vercel deploy --prod
+```
+
+**Versioning:**
+```bash
+# Production (stable)
+https://cdn.pay402.com/widget.js           # Latest stable
+
+# Versioned (for backward compatibility)
+https://cdn.pay402.com/v1/widget.js        # Major version 1
+https://cdn.pay402.com/v1.2/widget.js      # Minor version 1.2
+https://cdn.pay402.com/v1.2.3/widget.js    # Exact version 1.2.3
+
+# Merchants choose:
+<script src="https://cdn.pay402.com/widget.js"></script>        # Auto-update
+<script src="https://cdn.pay402.com/v1/widget.js"></script>     # Stable v1.x
+<script src="https://cdn.pay402.com/v1.2.3/widget.js"></script> # Pin exact version
+```
+
+**Subresource Integrity (SRI):**
+```bash
+# Generate hash during build
+openssl dgst -sha384 -binary dist/widget.js | openssl base64 -A
+# Output: oqVuAfXRKap7fdgcCY5uykM6+R9GqQ8K/uxy9rx7HNQlGYl1kPzQho1wx4JwY8wC
+
+# Merchants can verify integrity
+<script 
+  src="https://cdn.pay402.com/v1.2.3/widget.js"
+  integrity="sha384-oqVuAfXRKap7fdgcCY5uykM6+R9GqQ8K/uxy9rx7HNQlGYl1kPzQho1wx4JwY8wC"
+  crossorigin="anonymous">
+</script>
+# Browser verifies hash before executing!
+```
+
+#### Security Considerations
+
+**Threat: CDN Compromise**
+- **Risk:** Attacker modifies widget.js on CDN
+- **Mitigation:** 
+  - Subresource Integrity (SRI) validation
+  - Immutable URLs with version hashing
+  - CSP (Content Security Policy) headers
+
+**Threat: Merchant XSS**
+- **Risk:** Merchant's page has XSS, attacker steals zkLogin keys
+- **Mitigation:**
+  - Store ephemeral keys in sessionStorage (not localStorage)
+  - Short max_epoch (~10 epochs = 10 days)
+  - Clear keys on window close
+
+**Threat: Malicious Merchant**
+- **Risk:** Fake merchant impersonates real merchant
+- **Mitigation:**
+  - Widget shows merchant address (not domain)
+  - User confirms recipient in modal
+  - Event logs on-chain (audit trail)
+
+**Threat: Supply Chain Attack**
+- **Risk:** Compromised npm package in build process
+- **Mitigation:**
+  - Lock file (package-lock.json)
+  - Audit dependencies (npm audit)
+  - Minimal dependencies (React + SUI SDK only)
+
+#### Demo Setup: Widget in Action
+
+**For Hackathon Demo:**
+
+```html
+<!-- demo/index.html -->
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Pay402 Demo - Premium Weather API</title>
+  
+  <!-- Load widget from CDN (or localhost during dev) -->
+  <script src="http://localhost:3000/widget.js"></script>
+  
+  <script>
+    // Initialize widget
+    Pay402.init({
+      facilitatorUrl: 'http://localhost:3001',  // Local facilitator
+      googleClientId: 'YOUR_GOOGLE_CLIENT_ID'
+    });
+  </script>
+  
+  <style>
+    body { font-family: sans-serif; max-width: 600px; margin: 50px auto; }
+    button { padding: 12px 24px; font-size: 16px; cursor: pointer; }
+    #result { margin-top: 20px; padding: 20px; background: #f0f0f0; }
+  </style>
+</head>
+<body>
+  <h1>🌤️ Premium Weather API Demo</h1>
+  <p>Click below to fetch premium weather data (costs $0.01 in USDC)</p>
+  
+  <button onclick="fetchWeatherData()">
+    Get Weather Data ($0.01)
+  </button>
+  
+  <div id="result" style="display:none;"></div>
+  
+  <script>
+    async function fetchWeatherData() {
+      try {
+        // Normal fetch - widget automatically intercepts 402!
+        const response = await fetch('https://x402.payai.network/echo?message=weather_data');
+        
+        // Widget handles payment flow if 402
+        // On success, response is automatically retried with payment token
+        
+        if (response.ok) {
+          const data = await response.text();
+          document.getElementById('result').innerHTML = `
+            <h3>✅ Success!</h3>
+            <pre>${data}</pre>
+          `;
+          document.getElementById('result').style.display = 'block';
+        }
+      } catch (error) {
+        console.error('Error:', error);
+        alert('Payment failed: ' + error.message);
+      }
+    }
+  </script>
+</body>
+</html>
+```
+
+**What Merchant Sees:**
+```
+Demo Page:
+┌────────────────────────────────┐
+│ 🌤️ Premium Weather API Demo    │
+│                                │
+│ Click below to fetch premium   │
+│ weather data (costs $0.01)     │
+│                                │
+│ [Get Weather Data ($0.01)]     │
+└────────────────────────────────┘
+
+(After click, widget modal appears automatically)
+```
+
+**Merchant Code Changes:**
+- **Before Pay402:** Merchant handles 402 manually (complex!)
+- **After Pay402:** Just add `<script>` tag (automatic!)
+
+#### Real-World Examples (Similar Distribution)
+
+**Stripe Checkout:**
+```html
+<script src="https://js.stripe.com/v3/"></script>
+<script>
+  const stripe = Stripe('pk_test_XXX');
+  stripe.redirectToCheckout({ ... });
+</script>
+```
+
+**PayPal Buttons:**
+```html
+<script src="https://www.paypal.com/sdk/js?client-id=XXX"></script>
+<script>
+  paypal.Buttons({ ... }).render('#paypal-button');
+</script>
+```
+
+**Google Analytics:**
+```html
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-XXX"></script>
+<script>
+  gtag('config', 'G-XXX');
+</script>
+```
+
+**Pay402 uses the EXACT SAME pattern!** ✅
+
+#### Summary: Widget Deployment Mental Model
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                     Widget Deployment                       │
+├─────────────────────────────────────────────────────────────┤
+│                                                             │
+│  WHERE:  CDN (Cloudflare/AWS)                               │
+│  WHAT:   Compiled JavaScript bundle (~150 KB)              │
+│  HOW:    Merchant adds <script> tag (one-time)             │
+│  WHEN:   Loaded on page load (before 402)                  │
+│  WHO:    Runs in buyer's browser (on merchant's page)      │
+│  WHY:    Zero installation for users!                      │
+│                                                             │
+│  ┌───────────────────────────────────────────────────┐     │
+│  │ NOT in 402 response!                              │     │
+│  │ NOT a browser extension!                          │     │
+│  │ NOT a separate app!                               │     │
+│  │                                                   │     │
+│  │ Pre-loaded via <script> tag                       │     │
+│  │ Listening for 402 responses                       │     │
+│  │ Ready to show modal when needed                   │     │
+│  └───────────────────────────────────────────────────┘     │
+│                                                             │
+│  Model: Stripe Checkout / PayPal Buttons                   │
+│                                                             │
+└─────────────────────────────────────────────────────────────┘
+```
+
+**Confidence: 100%** - This is the standard embedded payment widget model.
+
+---
+
 ## Demo Setup
 
 ### For Hackathon Demo
@@ -1125,52 +1559,132 @@ WWW-Authenticate: x402
   request_id=abc123
 ```
 
-#### Demo Page
+#### Demo Page: How Widget is Used
+
+**Key Points:**
+- ✅ Widget is **pre-loaded** via `<script>` tag (NOT in 402 response!)
+- ✅ Widget **intercepts** all fetch() calls automatically
+- ✅ Merchant writes **normal JavaScript** (no special payment handling!)
+- ✅ Widget **injects modal** on top of merchant's page when 402 detected
 
 ```html
 <!DOCTYPE html>
 <html>
 <head>
   <title>Pay402 Demo - Premium Weather API</title>
-  <script src="https://cdn.pay402.com/widget.js"></script>
+  
+  <!-- STEP 1: Load widget from CDN (runs on page load) -->
+  <script src="http://localhost:3000/widget.js"></script>
+  
+  <script>
+    // STEP 2: Initialize widget (one-time setup)
+    Pay402.init({
+      facilitatorUrl: 'http://localhost:3001',
+      googleClientId: 'YOUR_GOOGLE_CLIENT_ID'
+    });
+  </script>
+  
+  <style>
+    body { font-family: sans-serif; max-width: 600px; margin: 50px auto; }
+    button { padding: 12px 24px; font-size: 16px; cursor: pointer; }
+    #result { margin-top: 20px; padding: 20px; background: #f0f0f0; }
+  </style>
 </head>
 <body>
-  <h1>Premium Weather API Demo</h1>
+  <h1>🌤️ Premium Weather API Demo</h1>
+  <p>Click below to access premium weather data ($0.01 per request)</p>
   
-  <div id="content">
-    <p>Click below to access premium weather data ($0.01 per request)</p>
-    <button onclick="fetchWeatherData()">Get Weather Data</button>
-  </div>
+  <!-- STEP 3: Normal button (no special payment handling!) -->
+  <button onclick="fetchWeatherData()">Get Weather Data ($0.01)</button>
   
   <div id="result" style="display:none;"></div>
   
   <script>
-    // Initialize Pay402 widget
-    Pay402.init({
-      facilitatorUrl: 'https://facilitator.pay402.com',
-      googleClientId: 'YOUR_GOOGLE_CLIENT_ID',
-      onPaymentComplete: (content) => {
-        document.getElementById('result').innerHTML = content;
-        document.getElementById('result').style.display = 'block';
-      }
-    });
-    
-    // Fetch protected content
+    // STEP 4: Normal fetch call (merchant doesn't handle payment!)
     async function fetchWeatherData() {
-      const response = await fetch('https://x402.payai.network/echo?message=weather_data');
-      
-      if (response.status === 402) {
-        // Widget automatically handles payment
-        Pay402.handlePayment(response);
-      } else {
-        const data = await response.text();
-        document.getElementById('result').innerHTML = data;
+      try {
+        // Merchant writes normal fetch code
+        const response = await fetch('https://x402.payai.network/echo?message=weather_data');
+        
+        // Widget automatically intercepts 402 responses!
+        // - Detects 402 status
+        // - Parses WWW-Authenticate header
+        // - Shows payment modal
+        // - Handles zkLogin flow
+        // - Retries fetch with payment token
+        // - Returns final response
+        
+        if (response.ok) {
+          const data = await response.text();
+          document.getElementById('result').innerHTML = `
+            <h3>✅ Success!</h3>
+            <pre>${data}</pre>
+          `;
+          document.getElementById('result').style.display = 'block';
+        }
+      } catch (error) {
+        console.error('Error:', error);
+        alert('Payment failed: ' + error.message);
       }
     }
   </script>
+  
+  <!-- STEP 5: Widget handles everything automatically! -->
+  <!-- Merchant doesn't write any payment code -->
 </body>
 </html>
 ```
+
+**Visual Flow in Demo:**
+
+```
+1. User visits demo page
+   ┌────────────────────────────────┐
+   │ 🌤️ Premium Weather API Demo    │
+   │                                │
+   │ Click below to access premium  │
+   │ weather data ($0.01)           │
+   │                                │
+   │ [Get Weather Data ($0.01)]     │
+   └────────────────────────────────┘
+   
+   (Widget loaded in background, listening)
+
+2. User clicks button → fetch() called
+
+3. Server returns 402 → Widget detects!
+
+4. Widget shows modal (overlays page)
+   ┌────────────────────────────────┐
+   │ [Page Content - DIMMED]        │
+   │                                │
+   │  ┌──────────────────────────┐  │
+   │  │ ⚡ Payment Required       │  │
+   │  │                          │  │
+   │  │ Amount: 0.01 USDC        │  │
+   │  │ Merchant: x402.payai...  │  │
+   │  │                          │  │
+   │  │ [Login with Google]      │  │
+   │  └──────────────────────────┘  │
+   │                                │
+   └────────────────────────────────┘
+
+5. Payment flow (zkLogin → pay → settle)
+
+6. Widget closes modal, delivers content
+   ┌────────────────────────────────┐
+   │ 🌤️ Premium Weather API Demo    │
+   │                                │
+   │ ✅ Success!                    │
+   │ weather_data response here     │
+   └────────────────────────────────┘
+```
+
+**Critical Understanding:**
+- Widget is **NOT** sent in the 402 response!
+- Widget is **pre-loaded** by merchant (like Stripe Checkout)
+- Widget **monkey-patches** window.fetch to intercept 402s
+- Merchant writes **normal code**, widget handles payment automatically
 
 ### Demo Script (60 Seconds)
 

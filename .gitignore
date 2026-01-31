@@ -45,3 +45,7 @@ research/
 notes/
 planning/
 strategy/
+
+# Cursor settings (contains strategy references)
+.cursorrules
+.cursor/

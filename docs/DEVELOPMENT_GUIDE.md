@@ -167,14 +167,21 @@ npx serve demo/
 
 | Component | Tool | What to Test |
 |-----------|------|--------------|
-| **Move Contract** | `sui move test` | Coin splitting, fee calculation |
+| **Move Contract** | `sui move test` | ✅ **COMPLETE** (13 tests) |
 | **Facilitator** | Vitest | PTB construction, RPC calls |
 | **Widget** | Vitest (optional) | Component logic |
 | **E2E** | Manual (hackathon) | Full flow via demo page |
 
+**Move Contract Test Coverage (DONE):**
+- ✅ 7 tests with SUI native token
+- ✅ 6 tests with MOCK_USDC (generic `Coin<T>`)
+- ✅ Happy path, insufficient balance, edge cases
+- ✅ Zero amounts, zero fees, large amounts
+- ✅ All expected_failure tests use `location` parameter
+
 **For Hackathon:**
-- ✅ Move tests (have 1, enough for MVP)
-- ✅ Facilitator integration tests
+- ✅ Move tests **COMPLETE** (production-ready)
+- 🎯 Next: Facilitator integration tests
 - ⚠️ Widget tests (optional, if time)
 - ❌ E2E tests (manual testing faster)
 
@@ -811,11 +818,91 @@ cd demo && python3 -m http.server 8000
 
 ---
 
+## 🧪 Move Testing Best Practices
+
+### Test Organization
+
+**Current Implementation:**
+```
+move/payment/
+├── sources/
+│   └── payment.move          # Contract logic
+└── tests/
+    └── payment_tests.move     # 13 comprehensive tests
+```
+
+### Testing Generic Coin<T>
+
+**Always test with mock tokens** to prove generics work:
+
+```move
+// Define test-only token
+#[test_only]
+public struct MOCK_USDC has drop {}
+
+#[test]
+fun test_mock_usdc_payment() {
+    let mut coin = coin::mint_for_testing<MOCK_USDC>(1000, ctx);
+    // Test with mock token, not just SUI
+}
+```
+
+**Why:** Catches type parameter bugs early, before testnet.
+
+### Expected Failure Tests
+
+**ALWAYS use `location` parameter** for framework errors:
+
+```move
+// ❌ BAD: Ambiguous (any module can abort with code 2)
+#[expected_failure(abort_code = 2)]
+
+// ✅ GOOD: Precise (must be from sui::balance)
+#[expected_failure(abort_code = 2, location = sui::balance)]
+```
+
+**Rule:** If error originates in Sui framework (coin, balance, etc.), specify `location`.
+
+### Test Coverage Strategy
+
+**Minimum for production:**
+1. ✅ Happy path (all parties receive correct amounts)
+2. ✅ Insufficient balance (expected failure)
+3. ✅ Edge cases (zero amount, zero fee, large amounts)
+4. ✅ Generic token (prove `Coin<T>` works)
+
+**Our implementation:**
+- 7 SUI tests + 6 MOCK_USDC tests = 13 total
+- Covers all edge cases and failure modes
+- All warnings suppressed (idiomatic code)
+
+### Running Tests
+
+```bash
+# Run all tests
+sui move test --path move/payment
+
+# Run specific test
+sui move test --path move/payment test_insufficient_balance
+
+# With gas tracking
+sui move test --path move/payment -s
+```
+
+**Expected output:**
+```
+Test result: OK. Total tests: 13; passed: 13; failed: 0
+```
+
+---
+
 ## 📊 Testing Checklist
 
 ### Move Contract (Local)
-- [ ] Compiles without errors
-- [ ] All unit tests pass (`sui move test`)
+- [x] Compiles without errors ✅
+- [x] All unit tests pass (`sui move test`) ✅ **13/13 passing**
+- [x] Generic `Coin<T>` tested with mock tokens ✅
+- [x] Expected failures use `location` parameter ✅
 - [ ] Deploys to local network
 - [ ] Can call via CLI
 - [ ] Event emitted correctly

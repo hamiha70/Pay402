@@ -132,7 +132,7 @@ Settle payment on-chain via PTB.
 ```json
 {
   "buyerAddress": "0xBUYER...",
-  "amount": "100000",
+  "amount": "10000",
   "merchant": "0xMERCHANT...",
   "facilitatorFee": "10000",
   "paymentId": "payment_abc123",
@@ -141,7 +141,12 @@ Settle payment on-chain via PTB.
 }
 ```
 
-**Note:** Use USDC for payments. SUI is for gas sponsorship only (limited supply on testnet).
+**Amount guidelines for testing:**
+- Use small amounts: 10000-100000 micro-USDC (0.01-0.10 USDC)
+- Preserves limited testnet USDC supply (~20 USDC available)
+- Each test costs ~0.02-0.11 USDC total (amount + fee)
+
+**Note:** Use USDC for payments. SUI is for gas sponsorship only (even more limited).
 
 **Response:**
 ```json

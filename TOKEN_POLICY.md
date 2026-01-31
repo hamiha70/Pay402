@@ -11,13 +11,27 @@
 
 - **Never use SUI as payment token on testnet**
 - SUI is reserved exclusively for gas sponsorship
-- Limited SUI supply on testnet (must preserve for facilitator operations)
+- **Very limited SUI supply** on testnet (must preserve for facilitator operations)
+- Difficult to obtain (faucet has strict rate limits)
 
 ### ✅ USDC Token = PAYMENTS ONLY
 
 - **USDC is the DEFAULT payment token**
 - All payment flows use USDC
 - Buyers get USDC from Circle faucet: https://faucet.circle.com/
+- **⚠️ Currently limited supply (~20 USDC available)**
+- Easier to get than SUI, but still be conservative
+
+### 💡 Testing Strategy
+
+**Use small amounts for testing:**
+- Test payments: 0.01-0.10 USDC (10,000-100,000 micro-USDC)
+- Facilitator fee: 0.01 USDC (10,000 micro-USDC) - fixed
+- Total per test: ~0.02-0.11 USDC
+
+**Example calculation:**
+- 20 USDC supply ÷ 0.11 USDC per test = ~180 tests possible
+- Be conservative: aim for <50 tests to preserve supply
 
 ---
 
@@ -64,7 +78,9 @@
 ### Buyer
 - Needs: **USDC tokens** (for payments)
 - Source: Circle USDC faucet
-- Amount: 20-100 USDC recommended
+- Amount: Start with small amounts for testing (1-5 USDC)
+- **⚠️ Current supply: ~20 USDC** - be conservative!
+- Use 0.01-0.10 USDC per test to preserve supply
 
 ### Merchant
 - Receives: **USDC tokens** (from payments)
@@ -86,19 +102,27 @@ USDC: "0xa1ec7fc00a6f40db9693ad1415d0c193ad3906494428cf252621037bd7117e29::usdc:
 
 ## Why This Matters
 
-### Problem: Limited SUI on Testnet
+### Problem: Limited Tokens on Testnet
 
+**SUI (Very Limited):**
 1. Facilitator needs SUI for gas sponsorship
 2. Each transaction costs ~0.001-0.003 SUI
-3. Testnet faucet has rate limits
+3. Testnet faucet has strict rate limits
 4. Running out of SUI = no gas = no transactions
+5. **Hardest to obtain**
 
-### Solution: Use USDC for Payments
+**USDC (Limited but Accessible):**
+1. Current supply: ~20 USDC available
+2. Circle faucet is more generous than SUI faucet
+3. Still need to be conservative with testing
+4. Use small amounts: 0.01-0.10 USDC per test
 
-1. Circle USDC faucet is more generous (20 USDC per request)
-2. USDC has no gas implications
-3. Simulates real-world usage (stablecoins for payments)
-4. Preserves SUI for its intended purpose (gas)
+### Solution: Use USDC for Payments + Small Test Amounts
+
+1. USDC has no gas implications (preserves SUI)
+2. Simulates real-world usage (stablecoins for payments)
+3. Use minimal amounts for testing (0.01-0.10 USDC)
+4. Preserves both token supplies for extended testing
 
 ---
 

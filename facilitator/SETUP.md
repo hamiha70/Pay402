@@ -141,19 +141,27 @@ Expected response:
 
 ### 3. Settle Payment (requires funded address)
 
+**⚠️ Use small amounts to preserve limited USDC supply (~20 USDC available)**
+
 ```bash
+# Test with 0.01 USDC payment + 0.01 USDC fee = 0.02 USDC total
 curl -X POST http://localhost:3001/settle-payment \
   -H "Content-Type: application/json" \
   -d '{
     "buyerAddress": "0xBUYER_ADDRESS",
-    "amount": "100000",
+    "amount": "10000",
     "merchant": "0xMERCHANT_ADDRESS",
     "facilitatorFee": "10000",
     "paymentId": "payment_test_123",
-    "coinType": "0x2::sui::SUI",
+    "coinType": "0xa1ec7fc00a6f40db9693ad1415d0c193ad3906494428cf252621037bd7117e29::usdc::USDC",
     "network": "sui:testnet"
   }'
 ```
+
+**Amount guidelines:**
+- `amount`: 10000-100000 (0.01-0.10 USDC) - keep tests small!
+- `facilitatorFee`: 10000 (0.01 USDC fixed)
+- Total per test: 0.02-0.11 USDC
 
 Expected response:
 ```json

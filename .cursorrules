@@ -9,6 +9,11 @@
 
 **Rule:** If research docs conflict with Pay402 code/docs, Pay402 wins.
 
+**Temporary Files Rule:**
+- Handoff docs (e.g., `HANDOFF_*.md`) are temporary
+- DELETE when phase is complete and content is documented in permanent docs
+- If unsure: "Can I recreate this info from code + docs?" → YES = delete
+
 ---
 
 ## 🚨 Rule #0: FIGHT BLOAT

@@ -45,6 +45,15 @@ module payment::payment {
     /// Generic over any Coin<T> (USDC, SUI, custom tokens)
     /// Uses &mut to prevent buyer from front-running settlement
     /// 
+    /// # Fee Model
+    /// Facilitator fee is ADDED ON TOP of merchant amount:
+    /// - Buyer pays: amount + facilitator_fee
+    /// - Merchant receives: amount (full amount)
+    /// - Facilitator receives: facilitator_fee (fixed fee, e.g., $0.01)
+    /// 
+    /// Fee is determined off-chain by facilitator (in TypeScript config)
+    /// Buyer must sign PTB with explicit amounts before submission
+    /// 
     /// # Arguments
     /// * `buyer_coin` - Mutable reference to buyer's coin (prevents front-running)
     /// * `amount` - Payment amount (to merchant)
@@ -56,6 +65,7 @@ module payment::payment {
     /// 
     /// # Returns
     /// EphemeralReceipt with payment details (zero storage cost)
+    #[allow(lint(self_transfer))]
     public fun settle_payment<T>(
         buyer_coin: &mut Coin<T>,
         amount: u64,
@@ -66,28 +76,27 @@ module payment::payment {
         ctx: &mut TxContext
     ): EphemeralReceipt {
         use sui::coin;
-        use sui::transfer;
         use sui::clock;
         use std::type_name;
         use std::ascii;
         
         let facilitator = ctx.sender();
         
-        // Split merchant payment from buyer's coin
+        // Split merchant payment from buyer's coin (full amount)
         // CRITICAL: &mut prevents buyer from spending coin elsewhere during settlement
-        let mut merchant_payment = coin::split(buyer_coin, amount, ctx);
+        let merchant_payment = coin::split(buyer_coin, amount, ctx);
         
-        // Split facilitator fee from merchant payment
-        let fee_payment = coin::split(&mut merchant_payment, facilitator_fee, ctx);
+        // Split facilitator fee from buyer's coin (added on top, not subtracted!)
+        let fee_payment = coin::split(buyer_coin, facilitator_fee, ctx);
         
-        // Transfer merchant payment (amount - fee)
+        // Transfer merchant payment (full amount)
         transfer::public_transfer(merchant_payment, merchant);
         
-        // Transfer facilitator fee
+        // Transfer facilitator fee (separate from merchant payment)
         transfer::public_transfer(fee_payment, facilitator);
         
         // Get coin type name for event/receipt
-        let coin_type_name = type_name::get<T>();
+        let coin_type_name = type_name::with_defining_ids<T>();
         let coin_type_string = type_name::into_string(coin_type_name);
         let coin_type_bytes = *ascii::as_bytes(&coin_type_string);
         

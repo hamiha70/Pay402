@@ -33,6 +33,189 @@
 
 ---
 
+## 🛠️ Tech Stack & Tooling
+
+### Overview
+
+```
+┌─────────────────────────────────────────────────┐
+│ Pay402 Technology Stack                         │
+├─────────────────────────────────────────────────┤
+│ Move Contract:   Sui Move (Move 2024 edition)   │
+│ Facilitator:     TypeScript + Express + Vitest  │
+│ Widget:          React + Vite + Vitest           │
+│ Demo:            Plain HTML                      │
+└─────────────────────────────────────────────────┘
+```
+
+### 1. Move Contract (Blockchain)
+
+**Language:** Move 2024  
+**Compiler:** `sui move build`  
+**Testing:** `sui move test`  
+**Network:** SUI Testnet (then Mainnet)
+
+**No bundler needed** - Move compiler handles everything.
+
+---
+
+### 2. Facilitator (Backend API)
+
+**Runtime:** Node.js  
+**Language:** TypeScript  
+**Framework:** Express  
+**Build:** `tsc` (TypeScript compiler)  
+**Dev Server:** `tsx` (TypeScript execution)  
+**Testing:** Vitest  
+
+**Setup:**
+```bash
+cd facilitator
+npm init -y
+npm install express @mysten/sui.js cors dotenv
+npm install -D typescript @types/node @types/express tsx vitest
+```
+
+**Scripts:**
+```json
+{
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "test": "vitest"
+  }
+}
+```
+
+**Why this stack:**
+- ✅ No bundler needed for Node.js (runs TS directly with `tsx`)
+- ✅ Fast dev experience (tsx watch)
+- ✅ Simple build (tsc outputs to dist/)
+- ✅ Vitest for fast testing
+
+---
+
+### 3. Widget (React Component → JS Bundle)
+
+**Framework:** React + TypeScript  
+**Bundler:** Vite  
+**Testing:** Vitest (included with Vite)  
+**Output:** Single `widget.js` file (for CDN)
+
+**Setup:**
+```bash
+cd widget
+npm create vite@latest . -- --template react-ts
+npm install @mysten/dapp-kit @mysten/sui.js
+```
+
+**Scripts:**
+```json
+{
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "test": "vitest"
+  }
+}
+```
+
+**Why Vite:**
+- ✅ Fast HMR (Hot Module Replacement)
+- ✅ Bundles React → single widget.js
+- ✅ Tree-shaking (small bundle size)
+- ✅ Vitest included
+- ✅ Modern, actively developed
+
+**Why NOT Next.js:**
+- ❌ Overkill for embedded library
+- ❌ No need for SSR/routing/API routes
+- ❌ Larger bundle size
+- ❌ More complexity
+
+---
+
+### 4. Demo Page (Test Site)
+
+**Tech:** Plain HTML + JavaScript  
+**Bundler:** None (or Vite dev server for convenience)  
+**Testing:** Manual
+
+**Setup:**
+```html
+<!-- demo/index.html -->
+<script src="http://localhost:5173/widget.js"></script>
+<script>
+  Pay402.init({
+    facilitatorUrl: 'http://localhost:3001',
+    googleClientId: 'YOUR_CLIENT_ID'
+  });
+</script>
+```
+
+**Serve locally:**
+```bash
+npx serve demo/
+# Or: python3 -m http.server 8000
+```
+
+---
+
+### Testing Strategy
+
+| Component | Tool | What to Test |
+|-----------|------|--------------|
+| **Move Contract** | `sui move test` | Coin splitting, fee calculation |
+| **Facilitator** | Vitest | PTB construction, RPC calls |
+| **Widget** | Vitest (optional) | Component logic |
+| **E2E** | Manual (hackathon) | Full flow via demo page |
+
+**For Hackathon:**
+- ✅ Move tests (have 1, enough for MVP)
+- ✅ Facilitator integration tests
+- ⚠️ Widget tests (optional, if time)
+- ❌ E2E tests (manual testing faster)
+
+---
+
+### Development Servers (3 Terminals)
+
+```bash
+# Terminal 1: Facilitator
+cd facilitator && npm run dev
+# Runs on: http://localhost:3001
+
+# Terminal 2: Widget
+cd widget && npm run dev
+# Runs on: http://localhost:5173
+
+# Terminal 3: Demo page
+cd demo && npx serve .
+# Runs on: http://localhost:3000
+```
+
+---
+
+### Production Build
+
+```bash
+# Build widget for CDN
+cd widget
+npm run build  # → dist/widget.js
+
+# Build facilitator
+cd facilitator
+npm run build  # → dist/
+
+# Deploy
+# Widget: Upload to S3/Cloudflare
+# Facilitator: Deploy to Railway/Fly.io/Vercel
+```
+
+---
+
 ## 🏗️ Development Workflow
 
 ### Phase 1: Local Development (Move Contract)

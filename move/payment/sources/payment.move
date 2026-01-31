@@ -57,24 +57,63 @@ module payment::payment {
     /// # Returns
     /// EphemeralReceipt with payment details (zero storage cost)
     public fun settle_payment<T>(
-        _buyer_coin: &mut Coin<T>,
-        _amount: u64,
-        _merchant: address,
-        _facilitator_fee: u64,
-        _payment_id: vector<u8>,
-        _clock: &Clock,
+        buyer_coin: &mut Coin<T>,
+        amount: u64,
+        merchant: address,
+        facilitator_fee: u64,
+        payment_id: vector<u8>,
+        clock: &Clock,
         ctx: &mut TxContext
     ): EphemeralReceipt {
-        // Placeholder - will implement logic next
+        use sui::coin;
+        use sui::transfer;
+        use sui::clock;
+        use std::type_name;
+        use std::ascii;
+        
         let facilitator = ctx.sender();
         
+        // Split merchant payment from buyer's coin
+        // CRITICAL: &mut prevents buyer from spending coin elsewhere during settlement
+        let mut merchant_payment = coin::split(buyer_coin, amount, ctx);
+        
+        // Split facilitator fee from merchant payment
+        let fee_payment = coin::split(&mut merchant_payment, facilitator_fee, ctx);
+        
+        // Transfer merchant payment (amount - fee)
+        transfer::public_transfer(merchant_payment, merchant);
+        
+        // Transfer facilitator fee
+        transfer::public_transfer(fee_payment, facilitator);
+        
+        // Get coin type name for event/receipt
+        let coin_type_name = type_name::get<T>();
+        let coin_type_string = type_name::into_string(coin_type_name);
+        let coin_type_bytes = *ascii::as_bytes(&coin_type_string);
+        
+        // Get timestamp
+        let timestamp_ms = clock::timestamp_ms(clock);
+        
+        // Emit event for off-chain indexing
+        event::emit(PaymentSettled {
+            payment_id,
+            buyer: @0x0, // TODO: derive from coin ownership
+            merchant,
+            facilitator,
+            amount,
+            facilitator_fee,
+            coin_type: coin_type_bytes,
+            timestamp_ms,
+        });
+        
+        // Return ephemeral receipt (zero storage)
         EphemeralReceipt {
-            payment_id: b"placeholder",
-            buyer: facilitator, // placeholder
-            merchant: facilitator, // placeholder
-            amount: 0,
-            coin_type: b"placeholder",
-            timestamp_ms: 0,
+            payment_id,
+            buyer: @0x0, // TODO: derive from coin ownership
+            merchant,
+            amount,
+            coin_type: coin_type_bytes,
+            timestamp_ms,
         }
     }
 }

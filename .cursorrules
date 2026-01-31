@@ -1,6 +1,110 @@
 # Pay402 - Cursor AI Rules for Hackathon Development
 
-## 🚨 CRITICAL: Hackathon Commit Strategy
+## 🚨 CRITICAL #0: FIGHT BLOAT (Code & Documentation)
+
+### Rule #0a: NO DOCUMENTATION BLOAT
+**WHY:** Duplicate docs diverge, become untrustworthy, waste time
+
+**MANDATORY RULES:**
+- ✅ ONE topic = ONE file (single source of truth)
+- ✅ Update docs IN PLACE (don't create "v2" or "updated" versions)
+- ✅ Delete redundant files IMMEDIATELY
+- ❌ NEVER create "summary of another doc" files (use git log instead)
+- ❌ NEVER duplicate information across multiple files
+- ❌ NEVER create "comparison" or "update notes" files (use git commit messages)
+
+**EXAMPLES OF BLOAT TO AVOID:**
+```bash
+# BAD (will diverge):
+docs/ARCHITECTURE.md           # Main doc
+docs/ARCHITECTURE_SUMMARY.md   # Summary of main doc ❌
+docs/ARCHITECTURE_UPDATES.md   # What changed ❌
+docs/ARCHITECTURE_v2.md        # New version ❌
+
+# GOOD (single source):
+docs/ARCHITECTURE.md           # One file, updated in place ✅
+git log docs/ARCHITECTURE.md   # See what changed ✅
+```
+
+**WHEN TO CREATE NEW DOC:**
+- ✅ Different PURPOSE (e.g., ARCHITECTURE.md = design, DEVELOPMENT_GUIDE.md = workflow)
+- ✅ Different AUDIENCE (e.g., README.md = users, ARCHITECTURE.md = developers)
+- ❌ NOT for "quick reference" (use TOC in main doc instead)
+- ❌ NOT for "summary" (git log shows changes)
+
+**ALLOWED DOCS FOR PAY402:**
+- `README.md` - Project overview (for users/judges)
+- `docs/ARCHITECTURE.md` - Design decisions (what & why)
+- `docs/DEVELOPMENT_GUIDE.md` - Build workflow (how & when)
+- `docs/WIDGET_DEPLOYMENT.md` - Specific deployment topic (focused reference)
+- `CHECKLIST.md` - Task tracking (active, deleted when done)
+- **NOTHING ELSE!**
+
+### Rule #0b: NO CODE BLOAT
+**WHY:** Unused code confuses, slows down, creates bugs
+
+**MANDATORY RULES:**
+- ✅ Write MINIMAL code that works
+- ✅ Delete unused functions/imports IMMEDIATELY
+- ✅ One function = one purpose (no multi-purpose helpers)
+- ❌ NO "just in case" code (YAGNI - You Ain't Gonna Need It)
+- ❌ NO premature abstraction (wait until you need it 3 times)
+- ❌ NO commented-out code (delete it, git remembers)
+
+**EXAMPLES:**
+```typescript
+// BAD (bloated):
+function processPayment(data, options = {}) {
+  // Handle multiple payment types (only need one!)
+  if (options.type === 'card') { ... }      // ❌ Unused
+  if (options.type === 'crypto') { ... }    // ✅ Only this used
+  if (options.type === 'paypal') { ... }    // ❌ Unused
+  
+  // Old implementation (commented out)
+  // const oldWay = ...  // ❌ DELETE THIS!
+}
+
+// GOOD (minimal):
+function processPayment(data) {
+  // Only handle crypto (what we actually need)
+  return handleCryptoPayment(data);
+}
+```
+
+### Rule #0c: TEST WHAT YOU BUILD, WHEN YOU BUILD IT
+**WHY:** Untested code breaks later, wastes time debugging
+
+**MANDATORY RULES:**
+- ✅ Test EACH function BEFORE moving to next
+- ✅ Add test BEFORE committing feature
+- ✅ Run full test suite BEFORE pushing
+- ❌ NO "I'll test it later" (you won't)
+- ❌ NO untested code in commits
+- ❌ NO skipping tests because "it's simple" (simple code breaks too)
+
+**WORKFLOW:**
+```bash
+# 1. Write function
+vim payment.move
+
+# 2. Write test IMMEDIATELY
+vim payment_tests.move
+
+# 3. Run test
+sui move test
+
+# 4. Only commit when test passes
+git add payment.move payment_tests.move
+git commit -m "feat: add settle_payment with unit test"
+
+# NEVER do this:
+git add payment.move
+git commit -m "feat: add settle_payment (will test later)"  # ❌
+```
+
+---
+
+## 🚨 CRITICAL #1: Hackathon Commit Strategy
 
 ### Rule #1: FREQUENT COMMITS (Every 30-60 Minutes)
 **WHY:** Hackathon judges look at git history to verify work was done during event, not pre-written.

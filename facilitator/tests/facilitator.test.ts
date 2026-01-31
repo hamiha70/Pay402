@@ -4,7 +4,7 @@ import { Ed25519Keypair } from '@mysten/sui/keypairs/ed25519';
 import { Transaction } from '@mysten/sui/transactions';
 
 // Test configuration
-const USE_TESTNET = true; // Set to false to test local network (requires running sui-test-validator)
+const USE_LOCALNET = true; // Set to false to test against testnet
 
 describe('SUI Client Tests', () => {
   let client: SuiGrpcClient;
@@ -13,15 +13,15 @@ describe('SUI Client Tests', () => {
 
   beforeAll(async () => {
     // Initialize client
-    if (USE_TESTNET) {
-      client = new SuiGrpcClient({
-        network: 'testnet',
-        baseUrl: 'https://fullnode.testnet.sui.io:443',
-      });
-    } else {
+    if (USE_LOCALNET) {
       client = new SuiGrpcClient({
         network: 'localnet',
         baseUrl: 'http://127.0.0.1:9000',
+      });
+    } else {
+      client = new SuiGrpcClient({
+        network: 'testnet',
+        baseUrl: 'https://fullnode.testnet.sui.io:443',
       });
     }
 
@@ -30,7 +30,7 @@ describe('SUI Client Tests', () => {
     testAddress = testKeypair.getPublicKey().toSuiAddress();
 
     console.log('Test configuration:');
-    console.log('  Network:', USE_TESTNET ? 'testnet' : 'localnet');
+    console.log('  Network:', USE_LOCALNET ? 'localnet' : 'testnet');
     console.log('  Test address:', testAddress);
   });
 
@@ -54,8 +54,13 @@ describe('SUI Client Tests', () => {
     expect(coins.objects).toBeInstanceOf(Array);
     console.log('  Address has', coins.objects.length, 'SUI coins');
     
-    if (coins.objects.length === 0 && USE_TESTNET) {
-      console.log('  ℹ️  No coins found - get testnet SUI from faucet first');
+    if (coins.objects.length === 0) {
+      if (USE_LOCALNET) {
+        console.log('  ℹ️  No coins - run: sui client faucet');
+        console.log('  ℹ️  Make sure local network is running: sui start --with-faucet');
+      } else {
+        console.log('  ℹ️  No coins - get testnet SUI from faucet');
+      }
     }
   });
 
@@ -75,8 +80,10 @@ describe('SUI Client Tests', () => {
       console.log('  Balance structure:', Object.keys(balance));
     }
     
-    if (USE_TESTNET) {
-      console.log('  ℹ️  Zero or no balance - fund address from faucet for full tests');
+    if (USE_LOCALNET) {
+      console.log('  ℹ️  Fund address with: sui client faucet');
+    } else {
+      console.log('  ℹ️  Fund address from testnet faucet for full tests');
     }
   });
 

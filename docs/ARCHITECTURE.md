@@ -1739,6 +1739,233 @@ This is Pay402 - bringing Stripe-level UX to crypto payments."
 
 ## Technical Specifications
 
+### PTB (Programmable Transaction Block) Mental Model
+
+**Critical Understanding: Where is PTB Construction Done?**
+
+**Answer: In TypeScript (client-side), NOT in Move contracts!**
+
+This is fundamentally different from EVM/Solidity development and critical to understand:
+
+#### SUI/Move Model vs EVM/Solidity Model
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│  EVM/Solidity Model (IN-CONTRACT COMPOSITION)                   │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                 │
+│  Smart Contract (Solidity):                                     │
+│  ┌────────────────────────────────────────────────────────┐    │
+│  │ function payMerchant() external {                      │    │
+│  │   // CONTRACT orchestrates multiple calls              │    │
+│  │   USDC.transferFrom(buyer, address(this), amount);     │    │
+│  │   USDC.transfer(merchant, amount - fee);               │    │
+│  │   USDC.transfer(facilitator, fee);                     │    │
+│  │   emit PaymentSettled(...);                            │    │
+│  │ }                                                      │    │
+│  └────────────────────────────────────────────────────────┘    │
+│                                                                 │
+│  TypeScript (Hardhat Script):                                   │
+│  ┌────────────────────────────────────────────────────────┐    │
+│  │ // Just ONE contract call                              │    │
+│  │ await contract.payMerchant();                          │    │
+│  └────────────────────────────────────────────────────────┘    │
+│                                                                 │
+│  ✅ Composition happens IN CONTRACT                             │
+│  ✅ Script just triggers entry point                            │
+│                                                                 │
+└─────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────┐
+│  SUI/Move Model (CLIENT-SIDE COMPOSITION)                       │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                 │
+│  Move Contract (Simple Logic ONLY):                             │
+│  ┌────────────────────────────────────────────────────────┐    │
+│  │ public fun settle_payment<T>(                          │    │
+│  │   buyer_coin: &mut Coin<T>,  // Takes coin reference   │    │
+│  │   amount: u64,                                         │    │
+│  │   merchant: address,                                   │    │
+│  │   fee: u64,                                            │    │
+│  │   // ...                                               │    │
+│  │ ): Receipt {                                           │    │
+│  │   // Simple split & transfer logic                     │    │
+│  │   let payment = coin::split(buyer_coin, amount, ctx);  │    │
+│  │   transfer::public_transfer(payment, merchant);        │    │
+│  │   // No orchestration - just pure logic!               │    │
+│  │ }                                                      │    │
+│  └────────────────────────────────────────────────────────┘    │
+│                                                                 │
+│  TypeScript (PTB Construction - THE ORCHESTRATOR):              │
+│  ┌────────────────────────────────────────────────────────┐    │
+│  │ const tx = new TransactionBlock();                     │    │
+│  │                                                        │    │
+│  │ // CLIENT orchestrates multiple operations!            │    │
+│  │ const [coin] = tx.splitCoins(tx.gas, [amount]);       │    │
+│  │                                                        │    │
+│  │ tx.moveCall({                                          │    │
+│  │   target: `${PKG}::payment::settle_payment`,          │    │
+│  │   typeArguments: [coinType],                          │    │
+│  │   arguments: [                                         │    │
+│  │     tx.object(coinObjectId),  // Which coin?          │    │
+│  │     tx.pure(amount, 'u64'),   // How much?            │    │
+│  │     tx.pure(merchant, 'address'), // To whom?         │    │
+│  │     // ...                                             │    │
+│  │   ]                                                   │    │
+│  │ });                                                    │    │
+│  │                                                        │    │
+│  │ // Add more calls if needed (e.g., merge coins first)  │    │
+│  │ // All executed ATOMICALLY in one transaction          │    │
+│  │                                                        │    │
+│  │ await client.signAndExecuteTransactionBlock({ tx });   │    │
+│  └────────────────────────────────────────────────────────┘    │
+│                                                                 │
+│  ✅ Composition happens IN TYPESCRIPT (client-side)             │
+│  ✅ Move contract is just simple, reusable functions            │
+│  ✅ PTB = "Transaction script" built by client                  │
+│                                                                 │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+#### Key Differences
+
+| Aspect | EVM/Solidity | SUI/Move |
+|--------|-------------|----------|
+| **Orchestration** | In contract (Solidity) | In client (TypeScript) |
+| **Contract Role** | Entry point + logic | Pure functions only |
+| **Transaction Construction** | Contract decides flow | Client decides flow |
+| **Flexibility** | Fixed in contract | Dynamic per call |
+| **Gas Optimization** | Contract optimizes | Client optimizes |
+| **Script Language** | Solidity (contract calls Solidity) | TypeScript (client calls Move) |
+
+#### Where PTBs Live in Our Codebase
+
+```
+pay402/
+├── move/
+│   └── payment/
+│       └── sources/
+│           └── payment.move          ← Pure logic functions
+│                                       ❌ NO PTB construction here!
+│                                       ✅ Just settle_payment() function
+│
+├── facilitator/
+│   └── src/
+│       ├── api/
+│       │   └── settle-payment.ts     ← PTB construction HERE! ✅
+│       │       // const tx = new TransactionBlock();
+│       │       // tx.moveCall({ ... })
+│       │
+│       └── services/
+│           └── sui-client.ts         ← PTB construction HERE! ✅
+│                                       (for balance checks via devInspect)
+│
+└── widget/
+    └── src/
+        └── ZkLoginManager.ts         ← PTB construction HERE! ✅
+            // User might construct PTB in browser
+            // (if we allow client-side settlement)
+```
+
+#### Example: Payment Settlement PTB
+
+**Move Contract (move/payment/sources/payment.move):**
+```move
+// Simple function - NO orchestration!
+public fun settle_payment<T>(
+    buyer_coin: &mut Coin<T>,
+    amount: u64,
+    merchant: address,
+    facilitator_fee: u64,
+    // ...
+): EphemeralReceipt {
+    // Just split & transfer logic
+    let payment = coin::split(buyer_coin, amount, ctx);
+    let fee = coin::split(&mut payment, facilitator_fee, ctx);
+    transfer::public_transfer(payment, merchant);
+    transfer::public_transfer(fee, ctx.sender());
+    // Return receipt
+}
+```
+
+**TypeScript (facilitator/src/api/settle-payment.ts):**
+```typescript
+// PTB construction - THE ORCHESTRATOR!
+async function settleMerchant(buyerAddress: string, amount: string) {
+  // 1. Discover coins (client-side logic)
+  const coins = await client.getCoins({ owner: buyerAddress, coinType });
+  
+  // 2. Find suitable coin (client-side logic)
+  const coin = coins.data.find(c => BigInt(c.balance) >= BigInt(amount));
+  
+  // 3. BUILD PTB (client-side orchestration!)
+  const tx = new TransactionBlock();
+  
+  // 4. Call Move function (one operation in PTB)
+  tx.moveCall({
+    target: `${PACKAGE_ID}::payment::settle_payment`,
+    typeArguments: [coinType],  // Client specifies coin type!
+    arguments: [
+      tx.object(coin.coinObjectId),  // Client chooses which coin!
+      tx.pure(amount, 'u64'),
+      tx.pure(merchantAddress, 'address'),
+      tx.pure(FIXED_FEE, 'u64'),
+      tx.object(CLOCK_ID),
+    ]
+  });
+  
+  // 5. Could add more operations (e.g., merge coins first)
+  // tx.mergeCoins(...)
+  // tx.moveCall(...)  // Another call
+  // All atomic!
+  
+  // 6. Sign and execute (client submits!)
+  const result = await client.signAndExecuteTransactionBlock({
+    transactionBlock: tx,
+    signer: facilitatorKeypair,
+  });
+  
+  return result.digest;
+}
+```
+
+#### Why This Matters
+
+**Move Contracts:**
+- ✅ Keep them **simple** (just pure logic)
+- ✅ Make functions **reusable** (one function, many use cases)
+- ✅ Focus on **correctness** (Move's strong typing helps)
+- ❌ DON'T try to orchestrate complex flows
+- ❌ DON'T worry about coin discovery
+- ❌ DON'T handle conditionals/branches
+
+**TypeScript Code:**
+- ✅ Do **all orchestration** (discover, choose, compose)
+- ✅ Handle **complex logic** (if/else, loops, retries)
+- ✅ Optimize **gas costs** (merge coins, batch operations)
+- ✅ Provide **flexibility** (different PTBs for different scenarios)
+
+#### Mental Model Summary
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│  "Move contracts are like SQL stored procedures                 │
+│   TypeScript PTBs are like SQL queries"                         │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                 │
+│  Move:       CREATE FUNCTION get_user(id) RETURNS user { ... } │
+│              ↑ Define WHAT can be done                          │
+│                                                                 │
+│  TypeScript: SELECT * FROM users WHERE id = 123;               │
+│              ↑ Decide WHEN and HOW to do it                     │
+│                                                                 │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+**Confidence: 100%** - This is the fundamental SUI programming model!
+
+---
+
 ### Blockchain Details
 
 **Network:** SUI Testnet (mainnet-ready)  

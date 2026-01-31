@@ -18,9 +18,9 @@ const NETWORK_URLS = {
  */
 export function getSuiClient(): SuiGrpcClient {
   if (!client) {
-    const network = config.suiNetwork === 'mainnet' ? 'mainnet' : 'testnet';
+    const network = config.suiNetwork as keyof typeof NETWORK_URLS;
     client = new SuiGrpcClient({
-      network,
+      network: network === 'localnet' ? 'testnet' : network, // localnet uses testnet network config
       baseUrl: NETWORK_URLS[network],
     });
   }

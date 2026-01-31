@@ -14,7 +14,11 @@ export const config = {
 export const CLOCK_OBJECT_ID = '0x0000000000000000000000000000000000000000000000000000000000000006';
 
 // Coin type constants (testnet)
+// CRITICAL: SUI is ONLY for gas, never for payments on testnet!
 export const COIN_TYPES = {
-  SUI: '0x2::sui::SUI',
-  USDC: '0xa1ec7fc00a6f40db9693ad1415d0c193ad3906494428cf252621037bd7117e29::usdc::USDC',
+  SUI: '0x2::sui::SUI',  // ⚠️ GAS ONLY - Do not use for payments on testnet
+  USDC: '0xa1ec7fc00a6f40db9693ad1415d0c193ad3906494428cf252621037bd7117e29::usdc::USDC',  // ✅ DEFAULT for payments
 } as const;
+
+// Default coin type for payments (USDC on testnet)
+export const DEFAULT_PAYMENT_COIN_TYPE = COIN_TYPES.USDC;

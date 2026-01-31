@@ -118,24 +118,26 @@ curl -X POST http://localhost:3001/check-balance \
   -d '{
     "address": "0xYOUR_ADDRESS",
     "network": "sui:testnet",
-    "coinType": "0x2::sui::SUI"
+    "coinType": "0xa1ec7fc00a6f40db9693ad1415d0c193ad3906494428cf252621037bd7117e29::usdc::USDC"
   }'
 ```
 
 Expected response:
 ```json
 {
-  "balance": "1000000000",
-  "coinType": "0x2::sui::SUI",
+  "balance": "20000000",
+  "coinType": "0xa1ec7fc00a6f40db9693ad1415d0c193ad3906494428cf252621037bd7117e29::usdc::USDC",
   "coins": [
     {
       "coinObjectId": "0x...",
-      "balance": "1000000000"
+      "balance": "20000000"
     }
   ],
   "coinCount": 1
 }
 ```
+
+**Note:** Endpoint defaults to USDC if no `coinType` specified. SUI is for gas only.
 
 ### 3. Settle Payment (requires funded address)
 

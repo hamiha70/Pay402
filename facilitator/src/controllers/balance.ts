@@ -1,6 +1,6 @@
 import { Request, Response } from 'express';
 import { getSuiClient } from '../sui.js';
-import { COIN_TYPES } from '../config.js';
+import { DEFAULT_PAYMENT_COIN_TYPE } from '../config.js';
 
 interface CheckBalanceRequest {
   address: string;
@@ -32,8 +32,8 @@ export async function checkBalanceController(req: Request, res: Response): Promi
       return;
     }
     
-    // Default to SUI if no coin type specified
-    const requestedCoinType = coinType || COIN_TYPES.SUI;
+    // Default to USDC for payments (SUI is for gas only!)
+    const requestedCoinType = coinType || DEFAULT_PAYMENT_COIN_TYPE;
     
     const client = getSuiClient();
     

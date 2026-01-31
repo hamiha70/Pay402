@@ -79,6 +79,13 @@ Examples:
 - Ephemeral receipts (zero storage)
 - **Testing:** Use `expected_failure(abort_code=X, location=module)` for framework errors
 
+### Token Usage (CRITICAL)
+- **SUI is ONLY for gas** - Never use as payment token on testnet
+- **USDC is for payments** - Default token for all payment flows
+- **Reason:** Limited SUI supply on testnet (need to preserve for gas sponsorship)
+- All examples, tests, and docs should use USDC as payment token
+- Coin type: `0xa1ec7fc00a6f40db9693ad1415d0c193ad3906494428cf252621037bd7117e29::usdc::USDC`
+
 ### Security
 - Never log private keys
 - Validate all inputs

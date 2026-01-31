@@ -99,28 +99,30 @@ Check buyer's balance and discover coin objects.
 {
   "address": "0xABC...DEF",
   "network": "sui:testnet",
-  "coinType": "0x2::sui::SUI"
+  "coinType": "0xa1ec7fc00a6f40db9693ad1415d0c193ad3906494428cf252621037bd7117e29::usdc::USDC"
 }
 ```
 
 **Response:**
 ```json
 {
-  "balance": "1000000000",
-  "coinType": "0x2::sui::SUI",
+  "balance": "20000000",
+  "coinType": "0xa1ec7fc00a6f40db9693ad1415d0c193ad3906494428cf252621037bd7117e29::usdc::USDC",
   "coins": [
     {
       "coinObjectId": "0xCOIN1...",
-      "balance": "500000000"
+      "balance": "10000000"
     },
     {
       "coinObjectId": "0xCOIN2...",
-      "balance": "500000000"
+      "balance": "10000000"
     }
   ],
   "coinCount": 2
 }
 ```
+
+**Note:** Defaults to USDC if `coinType` not specified. **Do not use SUI for payments on testnet** - SUI is reserved for gas only due to limited supply.
 
 ### POST /settle-payment
 
@@ -138,6 +140,8 @@ Settle payment on-chain via PTB.
   "network": "sui:testnet"
 }
 ```
+
+**Note:** Use USDC for payments. SUI is for gas sponsorship only (limited supply on testnet).
 
 **Response:**
 ```json

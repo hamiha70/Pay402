@@ -1,576 +1,140 @@
-# Pay402 - Cursor AI Rules for Hackathon Development
+# Pay402 - Cursor AI Rules
 
-## 🚨 CRITICAL #0: FIGHT BLOAT (Code & Documentation)
+## 🚨 Rule #0: FIGHT BLOAT
 
-### Rule #0a: NO DOCUMENTATION BLOAT
-**WHY:** Duplicate docs diverge, become untrustworthy, waste time
+### Documentation
+- ONE topic = ONE file (single source of truth)
+- Update IN PLACE (no v2, no summaries, no "updated" versions)
+- Delete redundant files IMMEDIATELY
+- Use git log for change history (not separate docs)
 
-**MANDATORY RULES:**
-- ✅ ONE topic = ONE file (single source of truth)
-- ✅ Update docs IN PLACE (don't create "v2" or "updated" versions)
-- ✅ Delete redundant files IMMEDIATELY
-- ❌ NEVER create "summary of another doc" files (use git log instead)
-- ❌ NEVER duplicate information across multiple files
-- ❌ NEVER create "comparison" or "update notes" files (use git commit messages)
+### Code
+- Write MINIMAL code that works
+- Delete unused code IMMEDIATELY (functions, imports, commented code)
+- No "just in case" features (YAGNI)
+- No premature abstraction (wait until needed 3 times)
 
-**EXAMPLES OF BLOAT TO AVOID:**
-```bash
-# BAD (will diverge):
-docs/ARCHITECTURE.md           # Main doc
-docs/ARCHITECTURE_SUMMARY.md   # Summary of main doc ❌
-docs/ARCHITECTURE_UPDATES.md   # What changed ❌
-docs/ARCHITECTURE_v2.md        # New version ❌
-
-# GOOD (single source):
-docs/ARCHITECTURE.md           # One file, updated in place ✅
-git log docs/ARCHITECTURE.md   # See what changed ✅
-```
-
-**WHEN TO CREATE NEW DOC:**
-- ✅ Different PURPOSE (e.g., ARCHITECTURE.md = design, DEVELOPMENT_GUIDE.md = workflow)
-- ✅ Different AUDIENCE (e.g., README.md = users, ARCHITECTURE.md = developers)
-- ❌ NOT for "quick reference" (use TOC in main doc instead)
-- ❌ NOT for "summary" (git log shows changes)
-
-**ALLOWED DOCS FOR PAY402:**
-- `README.md` - Project overview (for users/judges)
-- `docs/ARCHITECTURE.md` - Design decisions (what & why)
-- `docs/DEVELOPMENT_GUIDE.md` - Build workflow (how & when)
-- `docs/WIDGET_DEPLOYMENT.md` - Specific deployment topic (focused reference)
-- `CHECKLIST.md` - Task tracking (active, deleted when done)
-- **NOTHING ELSE!**
-
-### Rule #0b: NO CODE BLOAT
-**WHY:** Unused code confuses, slows down, creates bugs
-
-**MANDATORY RULES:**
-- ✅ Write MINIMAL code that works
-- ✅ Delete unused functions/imports IMMEDIATELY
-- ✅ One function = one purpose (no multi-purpose helpers)
-- ❌ NO "just in case" code (YAGNI - You Ain't Gonna Need It)
-- ❌ NO premature abstraction (wait until you need it 3 times)
-- ❌ NO commented-out code (delete it, git remembers)
-
-**EXAMPLES:**
-```typescript
-// BAD (bloated):
-function processPayment(data, options = {}) {
-  // Handle multiple payment types (only need one!)
-  if (options.type === 'card') { ... }      // ❌ Unused
-  if (options.type === 'crypto') { ... }    // ✅ Only this used
-  if (options.type === 'paypal') { ... }    // ❌ Unused
-  
-  // Old implementation (commented out)
-  // const oldWay = ...  // ❌ DELETE THIS!
-}
-
-// GOOD (minimal):
-function processPayment(data) {
-  // Only handle crypto (what we actually need)
-  return handleCryptoPayment(data);
-}
-```
-
-### Rule #0c: TEST WHAT YOU BUILD, WHEN YOU BUILD IT
-**WHY:** Untested code breaks later, wastes time debugging
-
-**MANDATORY RULES:**
-- ✅ Test EACH function BEFORE moving to next
-- ✅ Add test BEFORE committing feature
-- ✅ Run full test suite BEFORE pushing
-- ❌ NO "I'll test it later" (you won't)
-- ❌ NO untested code in commits
-- ❌ NO skipping tests because "it's simple" (simple code breaks too)
-
-**WORKFLOW:**
-```bash
-# 1. Write function
-vim payment.move
-
-# 2. Write test IMMEDIATELY
-vim payment_tests.move
-
-# 3. Run test
-sui move test
-
-# 4. Only commit when test passes
-git add payment.move payment_tests.move
-git commit -m "feat: add settle_payment with unit test"
-
-# NEVER do this:
-git add payment.move
-git commit -m "feat: add settle_payment (will test later)"  # ❌
-```
+### Testing
+- Test EACH function BEFORE moving to next
+- Add test BEFORE committing
+- No "I'll test it later"
 
 ---
 
-## 🚨 CRITICAL #1: Hackathon Commit Strategy
+## 🚨 Rule #1: Hackathon Commits
 
-### Rule #1: FREQUENT COMMITS (Every 30-60 Minutes)
-**WHY:** Hackathon judges look at git history to verify work was done during event, not pre-written.
+**Commit every 30-60 minutes** - Judges verify work was done during event
 
-**MANDATORY COMMIT FREQUENCY:**
-- ✅ Commit EVERY time you complete a logical unit of work
-- ✅ Commit BEFORE taking breaks
-- ✅ Commit AFTER fixing bugs/errors
-- ✅ Commit when switching between components
-- ✅ NEVER bulk commit large changes
+**Commit when:**
+- Complete a logical unit of work
+- Before breaks
+- After fixing bugs
+- Switching components
 
-**EXAMPLES OF GOOD COMMIT PATTERNS:**
-```bash
-# DO THIS:
-git add contracts/Move.toml
-git commit -m "chore: initialize Move project structure"
-
-git add contracts/sources/payment.move
-git commit -m "feat(contract): add generic Coin<T> struct definitions"
-
-git add contracts/sources/payment.move
-git commit -m "feat(contract): implement settle_payment function skeleton"
-
-git add contracts/sources/payment.move
-git commit -m "feat(contract): add coin splitting logic"
-
-git add contracts/sources/payment.move
-git commit -m "feat(contract): add event emission for PaymentSettled"
-
-git add contracts/tests/payment_tests.move
-git commit -m "test(contract): add basic settlement test"
-
-# DON'T DO THIS:
-git add contracts/
-git commit -m "Add complete contract implementation"  # ❌ TOO BIG!
-```
-
-**COMMIT MESSAGE FORMAT:**
+**Commit format:**
 ```
 <type>(<scope>): <subject>
 
-Types:
-- feat: New feature
-- fix: Bug fix
-- refactor: Code restructuring
-- test: Adding tests
-- docs: Documentation
-- chore: Build/tooling changes
-- style: Formatting changes
-- perf: Performance improvement
-
+Types: feat, fix, test, docs, chore, refactor
 Examples:
-- feat(widget): add zkLogin Google OAuth integration
-- fix(facilitator): correct balance check RPC call
-- test(contract): add coin splitting edge cases
-- docs(readme): update setup instructions
-- chore(deps): add @mysten/sui.js dependency
+  feat(move): add settle_payment function
+  test(move): add coin split test
+  fix(facilitator): handle missing coins
 ```
 
-### Rule #2: INCREMENTAL DEVELOPMENT
-**Build in small, testable increments:**
+**Never:**
+- Bulk commit 500 lines
+- Commit untested code
+- Commit "WIP" without working state
 
-1. **Contracts:**
-   - Commit: Struct definitions
-   - Commit: Function signatures
-   - Commit: Function implementations (one at a time)
-   - Commit: Tests (one test at a time)
-   - Commit: Deployment script
+---
 
-2. **Facilitator:**
-   - Commit: Project setup (package.json)
-   - Commit: Each endpoint skeleton
-   - Commit: Each endpoint implementation
-   - Commit: Each service module
-   - Commit: Error handling
-   - Commit: Tests
+## 💻 Tech Stack Rules
 
-3. **Widget:**
-   - Commit: Project setup
-   - Commit: Each component
-   - Commit: zkLogin integration steps
-   - Commit: x402 client integration
-   - Commit: Styling
+### TypeScript
+- Strict mode enabled
+- No `any` types (use `unknown`)
+- async/await (not .then chains)
 
-### Rule #3: COMMIT BEFORE ASKING AI FOR HELP
-**Always commit working code before requesting changes:**
+### Move
+- Generic `Coin<T>` (not USDC-only)
+- Use `&mut` for coins (prevent front-running)
+- Emit events for state changes
+- Ephemeral receipts (zero storage)
+
+### Security
+- Never log private keys
+- Validate all inputs
+- Use nonces (prevent replay)
+- Token expiration (5 min)
+
+---
+
+## 📁 File Structure
+
+```
+move/payment/              - Move contract
+facilitator/src/           - Backend API (TypeScript)
+widget/src/                - Frontend (React + TypeScript)
+demo/                      - Demo page
+docs/                      - Architecture, dev guide only
+```
+
+---
+
+## 🧪 Development Workflow
+
+1. **Local first** - Test on local SUI network
+2. **Incremental** - Build one function at a time
+3. **Test immediately** - Write test, run test, then commit
+4. **Testnet last** - Only when local works
+
+Example:
 ```bash
-# Current working state
-git add .
-git commit -m "chore: checkpoint before refactoring balance check"
+# Write function
+vim payment.move
 
-# Now safe to experiment with AI suggestions
+# Write test
+vim payment_tests.move
+
+# Run test
+sui move test
+
+# Commit (only if test passes!)
+git commit -m "feat(move): add settle_payment with test"
 ```
-
----
-
-## 💻 Development Guidelines
-
-### TypeScript Everywhere
-- ✅ All widget code: TypeScript
-- ✅ All facilitator code: TypeScript
-- ✅ All tests: TypeScript
-- ✅ Strict mode enabled
-- ✅ No `any` types (use `unknown` if needed)
-
-### Move Contract Guidelines
-- ✅ Use generic `Coin<T>` (not USDC-specific)
-- ✅ Document security considerations (front-running, etc.)
-- ✅ Use `&mut` for coins to prevent front-running
-- ✅ Emit events for all state changes
-- ✅ Use ephemeral receipts (zero storage cost)
-
-### API Design
-- ✅ RESTful endpoints
-- ✅ Type-safe request/response interfaces
-- ✅ Comprehensive error handling
-- ✅ Input validation
-- ✅ Rate limiting considerations
-
-### Security First
-- ✅ Never log private keys or secrets
-- ✅ Validate all user inputs
-- ✅ Use nonces to prevent replay attacks
-- ✅ Implement token expiration
-- ✅ Document all security assumptions
-
-### Testing
-- ✅ Write tests as you build (not after)
-- ✅ Test happy path first
-- ✅ Then test edge cases
-- ✅ Test security scenarios
-- ✅ Commit tests separately from implementation
-
----
-
-## 📁 File Organization
-
-### Naming Conventions
-- **Files:** `kebab-case.ts` (lowercase with hyphens)
-- **Components:** `PascalCase.tsx` (React components)
-- **Classes:** `PascalCase` (TypeScript classes)
-- **Functions:** `camelCase` (functions, methods)
-- **Constants:** `SCREAMING_SNAKE_CASE` (constants)
-- **Types/Interfaces:** `PascalCase` (types, interfaces)
-
-### Import Order
-```typescript
-// 1. External dependencies
-import { SuiClient } from '@mysten/sui.js/client';
-import express from 'express';
-
-// 2. Internal modules
-import { checkBalance } from './services/balance';
-import { ZkLoginManager } from './zklogin';
-
-// 3. Types
-import type { PaymentRequest } from './types';
-
-// 4. Constants
-import { FACILITATOR_FEE } from './constants';
-```
-
----
-
-## 🎯 Code Quality Standards
-
-### DRY (Don't Repeat Yourself)
-- Extract repeated logic into functions
-- Use shared types/interfaces
-- Create utility functions for common operations
-
-### Error Handling
-```typescript
-// ✅ DO THIS:
-try {
-  const result = await riskyOperation();
-  return result;
-} catch (error) {
-  console.error('Operation failed:', error);
-  throw new Error(`Failed to perform operation: ${error.message}`);
-}
-
-// ❌ DON'T DO THIS:
-try {
-  return await riskyOperation();
-} catch (error) {
-  // Silent failure
-}
-```
-
-### Async/Await
-- ✅ Use async/await (not .then() chains)
-- ✅ Handle errors with try/catch
-- ✅ Use Promise.all() for parallel operations
-- ✅ Add timeouts for external calls
-
-### Comments
-```typescript
-// ✅ DO THIS:
-// Check buyer has sufficient USDC for payment + fee
-// Uses devInspectTransactionBlock (off-chain, free)
-const balance = await checkBalance(address);
-
-// ❌ DON'T DO THIS:
-// Check balance
-const balance = await checkBalance(address);
-```
-
----
-
-## 🔧 Configuration
-
-### Environment Variables
-```typescript
-// Always use environment variables for:
-- API keys (Google OAuth client ID)
-- RPC endpoints
-- Private keys (facilitator keypair)
-- Service URLs
-- Network selection (testnet/mainnet)
-
-// Never commit:
-- .env files (add to .gitignore)
-- Private keys
-- API secrets
-```
-
-### Constants File
-```typescript
-// constants.ts
-export const FACILITATOR_FEE_USDC = 10000; // 0.01 USDC (6 decimals)
-export const TOKEN_EXPIRATION_MS = 5 * 60 * 1000; // 5 minutes
-export const MAX_RETRIES = 3;
-export const CLOCK_ID = '0x6';
-
-// Use constants instead of magic numbers!
-```
-
----
-
-## 🐛 Debugging
-
-### Logging Best Practices
-```typescript
-// ✅ Structured logging
-console.log('Payment verification started', {
-  buyer: address,
-  amount: amount,
-  timestamp: Date.now()
-});
-
-// ❌ Unstructured
-console.log('verifying payment');
-```
-
-### Development vs Production
-```typescript
-// Use environment checks
-if (process.env.NODE_ENV === 'development') {
-  console.log('Debug info:', debugData);
-}
-
-// Never log sensitive data in production
-```
-
----
-
-## 📝 Documentation
-
-### Inline Documentation
-- Document complex algorithms
-- Explain security decisions
-- Note any hacks or temporary solutions
-- Reference relevant specs/docs
-
-### README Updates
-- Update README as features are added
-- Keep setup instructions current
-- Document known issues
-- Add examples
-
-### API Documentation
-- Document all endpoints
-- Include request/response examples
-- Note error codes
-- Specify authentication requirements
-
----
-
-## 🚀 Performance
-
-### Optimization Guidelines
-- ✅ Use `devInspectTransactionBlock` for read-only operations (free!)
-- ✅ Cache zkLogin sessions (avoid re-generating ZK proofs)
-- ✅ Batch RPC calls when possible
-- ✅ Use async/await properly (don't block unnecessarily)
-- ⚠️ Don't optimize prematurely (get it working first)
-
-### Gas Optimization
-- Contract: Use `&mut` instead of owned transfers when possible
-- Contract: Prefer ephemeral structs (zero storage)
-- Facilitator: Sponsor gas for better UX
-- Widget: Minimize RPC calls
 
 ---
 
 ## ✅ Pre-Commit Checklist
 
-Before EVERY commit, verify:
-- [ ] Code compiles/runs without errors
-- [ ] No TypeScript errors (`npm run type-check`)
-- [ ] No console.errors in production code
-- [ ] No TODO comments (fix or create issue)
-- [ ] No commented-out code (delete it)
-- [ ] Sensitive data removed (keys, secrets)
-- [ ] Commit message is descriptive
+- [ ] Code compiles/runs
+- [ ] Tests pass
+- [ ] No console errors
+- [ ] No TODOs (fix or remove)
+- [ ] No commented code (delete it)
+- [ ] No secrets (keys, .env)
+- [ ] Descriptive commit message
 
 ---
 
-## 🎬 Demo Preparation
+## 🎯 Priorities
 
-### Before Demo Day
-- [ ] Test entire flow end-to-end
-- [ ] Record demo video (backup)
-- [ ] Prepare slides (architecture diagram)
-- [ ] Practice 60-second pitch
-- [ ] Test on different browsers
-- [ ] Deploy to public URL
+**Must Have:**
+- Move contract with Coin<T>
+- Facilitator balance + payment endpoints
+- zkLogin integration
+- Basic widget UI
+- Demo with x402 Echo
 
-### During Demo
-- [ ] Have backup video ready
-- [ ] Clear browser cache before demo
-- [ ] Use prepared demo accounts
-- [ ] Show git history (proves work during hackathon)
-
----
-
-## 🎓 Learning Resources
-
-### SUI/Move
-- SUI Docs: https://docs.sui.io/
-- Move Book: https://move-book.com/
-- zkLogin Guide: https://docs.sui.io/guides/developer/cryptography/zklogin-integration
-
-### x402 Protocol
-- Coinbase Docs: https://docs.cdp.coinbase.com/x402/
-- PayAI Docs: https://docs.payai.network/
-
-### TypeScript
-- TypeScript Handbook: https://www.typescriptlang.org/docs/handbook/
+**Defer:**
+- Payment channels
+- CCTP integration (show diagram only)
+- AI agent mode (mention only)
+- Analytics, dashboards
 
 ---
 
-## 🔒 Security Reminders
+**Target: 50-100+ commits in 2-day hackathon**
 
-**NEVER commit:**
-- Private keys
-- Mnemonics/seed phrases
-- API secrets
-- OAuth client secrets
-- `.env` files
-
-**ALWAYS:**
-- Use environment variables
-- Validate all inputs
-- Implement rate limiting
-- Use HTTPS in production
-- Log security events
-
----
-
-## 📊 Progress Tracking
-
-### Milestones
-- [ ] Move contract deployed to testnet
-- [ ] Facilitator API running locally
-- [ ] Widget integrated with zkLogin
-- [ ] End-to-end payment flow working
-- [ ] Demo page deployed
-- [ ] Demo video recorded
-
-### Daily Targets (Hackathon)
-**Day 1:**
-- [ ] Contract implementation (4-6h)
-- [ ] Facilitator API skeleton (4h)
-
-**Day 2:**
-- [ ] zkLogin integration (4h)
-- [ ] x402 client implementation (4h)
-
-**Day 3:**
-- [ ] Widget UI components (4h)
-- [ ] Demo page (2h)
-
-**Day 4:**
-- [ ] Testing & bug fixes
-- [ ] Demo prep & submission
-
----
-
-## 💡 AI Assistant Guidelines
-
-### When to Use AI
-- ✅ Debugging complex errors
-- ✅ Optimizing algorithms
-- ✅ Learning new APIs
-- ✅ Writing boilerplate
-- ✅ Reviewing code
-
-### When NOT to Use AI
-- ❌ Architecture decisions (discuss with team)
-- ❌ Security design (review with experts)
-- ❌ Committing code (you verify first)
-- ❌ Deployment to production (manual verification)
-
-### AI Best Practices
-1. Always review AI-generated code
-2. Test before committing
-3. Understand what the code does
-4. Refactor to match project style
-5. Add proper error handling
-
----
-
-## 🎯 Focus Areas for Hackathon
-
-### High Priority (Must Have)
-- ✅ Move contract (generic Coin<T>)
-- ✅ Facilitator balance checking
-- ✅ Facilitator payment verification
-- ✅ zkLogin integration
-- ✅ Basic widget UI
-- ✅ Demo page with x402 Echo
-
-### Medium Priority (Should Have)
-- ⚠️ Comprehensive error handling
-- ⚠️ Loading states in UI
-- ⚠️ Transaction links in widget
-- ⚠️ Gas sponsorship
-- ⚠️ Nonce tracking
-
-### Low Priority (Nice to Have)
-- ❌ Payment channels (defer to post-hackathon)
-- ❌ CCTP integration (show diagram only)
-- ❌ AI agent mode (mention in pitch)
-- ❌ Merchant dashboard (future)
-- ❌ Analytics (future)
-
----
-
-## 📞 Communication
-
-### Commit Messages as Communication
-Your git history tells a story:
-- Shows your thought process
-- Proves work was done during hackathon
-- Helps judges understand your approach
-- Documents decisions and trade-offs
-
-**Make your commits tell a good story!**
-
----
-
-**Remember: Frequent, small commits are your friend in a hackathon!** 🚀
-
-**Target: 50-100+ commits during the 2-day hackathon**
-
-**Current Status:** Architecture complete, ready to implement
-**Next Step:** Initialize git repository and make first commit
+See `docs/DEVELOPMENT_GUIDE.md` for detailed workflow.

@@ -1,7 +1,31 @@
 # Widget Deployment: Quick Reference
 
-**Last Updated:** January 31, 2026  
-**Status:** Architecture Complete
+**Last Updated:** February 1, 2026  
+**Status:** **Hackathon Scope: Payment Page Only** (Full Widget Post-Hackathon)
+
+---
+
+## ⚠️ Important: Hackathon vs Production
+
+### Hackathon Scope (What We're Building)
+
+**Payment Page:** Standalone URL that handles payments
+- URL: `https://pay402.com/pay?invoice_jwt=...&callback=...`
+- Not embedded in merchant pages
+- Merchant redirects to payment page on 402
+- After payment, redirects back to merchant
+
+**Why:** Faster to build, demonstrates core flow without widget complexity.
+
+### Post-Hackathon (Full Widget)
+
+**Embedded Widget:** CDN-hosted JavaScript embedded in merchant pages (Stripe model)
+- Pre-loaded via `<script>` tag
+- Intercepts fetch() calls automatically
+- Shows modal overlay on 402 detection
+- No redirect (seamless UX)
+
+**This document describes the post-hackathon widget model** for future reference.
 
 ---
 
@@ -10,6 +34,8 @@
 **Q: Where does the widget live in production?**
 
 **A: CDN-hosted JavaScript, embedded in merchant's page (Stripe model)**
+
+**Note:** For hackathon, we use a simpler payment page approach first.
 
 ---
 

@@ -120,6 +120,26 @@ export function verifyPaymentPTB(
       return null;
     };
 
+    // Helper: Resolve amount from Input reference (u64 little-endian)
+    const resolveAmount = (amountRef: any): bigint | null => {
+      if (!amountRef) return null;
+      
+      if (amountRef.$kind === 'Input' && typeof amountRef.Input === 'number') {
+        const input = inputs[amountRef.Input];
+        if (input?.$kind === 'Pure' && input.Pure?.bytes) {
+          // Decode base64 to bytes
+          const bytes = Buffer.from(input.Pure.bytes, 'base64');
+          
+          // Read as little-endian u64
+          if (bytes.length === 8) {
+            return bytes.readBigUInt64LE(0);
+          }
+        }
+      }
+      
+      return null;
+    };
+
     // Check expiry
     const now = Math.floor(Date.now() / 1000);
     if (invoice.expiry < now) {
@@ -224,11 +244,62 @@ export function verifyPaymentPTB(
       };
     }
 
-    // Parse split amounts
-    // Note: Full amount verification requires inspecting the split amounts
-    // which are Input references pointing to Pure values
-    // For Tier 1 (hackathon), we verify structure and recipients
-    // Full amount matching would require decoding all Input references
+    // Parse and verify split amounts
+    // Extract all amounts from all SplitCoins commands
+    const splitAmounts: bigint[] = [];
+    for (const split of splits) {
+      const amounts = split.SplitCoins?.amounts || [];
+      for (const amountRef of amounts) {
+        const amount = resolveAmount(amountRef);
+        if (amount !== null) {
+          splitAmounts.push(amount);
+        }
+      }
+    }
+
+    // Expected amounts
+    const expectedMerchantAmount = BigInt(invoice.amount);
+    const expectedFeeAmount = BigInt(invoice.facilitatorFee);
+    const totalExpected = expectedMerchantAmount + expectedFeeAmount;
+
+    // Verify merchant amount exists
+    if (!splitAmounts.some(amt => amt === expectedMerchantAmount)) {
+      return {
+        pass: false,
+        reason: 'Merchant payment amount mismatch',
+        details: {
+          expectedAmount: invoice.amount,
+          foundAmount: splitAmounts.map(a => a.toString()).join(', '),
+        },
+      };
+    }
+
+    // Verify fee amount (if > 0)
+    if (expectedFeeAmount > 0n) {
+      if (!splitAmounts.some(amt => amt === expectedFeeAmount)) {
+        return {
+          pass: false,
+          reason: 'Facilitator fee amount mismatch',
+          details: {
+            expectedAmount: invoice.facilitatorFee,
+            foundAmount: splitAmounts.map(a => a.toString()).join(', '),
+          },
+        };
+      }
+    }
+
+    // Verify no extra splits (sum should equal total expected)
+    const totalSplit = splitAmounts.reduce((sum, amt) => sum + amt, 0n);
+    if (totalSplit !== totalExpected) {
+      return {
+        pass: false,
+        reason: 'Total split amount does not match invoice total',
+        details: {
+          expectedAmount: totalExpected.toString(),
+          foundAmount: totalSplit.toString(),
+        },
+      };
+    }
 
     // Compute invoice hash for receipt verification
     const invoiceHash = computeInvoiceHash(invoiceJwt);

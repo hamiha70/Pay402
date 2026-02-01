@@ -237,6 +237,46 @@ describe('PTB Verifier', () => {
       const result = verifyPaymentPTB(ptb, invoice, 'mock-jwt');
       expect(result.pass).toBe(false);
     });
+
+    it('should block PTB with wrong merchant amount (underpayment)', () => {
+      const invoice = createInvoice();
+      const tx = new Transaction();
+      const [paymentCoin, feeCoin] = tx.splitCoins(tx.gas, [1, 10000]); // Only 1 instead of 100000!
+      tx.transferObjects([paymentCoin], MERCHANT_ADDRESS);
+      tx.transferObjects([feeCoin], FACILITATOR_ADDRESS);
+      const ptb = tx.serialize();
+      
+      const result = verifyPaymentPTB(ptb, invoice, 'mock-jwt');
+      expect(result.pass).toBe(false);
+      expect(result.reason).toContain('amount mismatch');
+    });
+
+    it('should block PTB with wrong fee amount (fee stealing)', () => {
+      const invoice = createInvoice();
+      const tx = new Transaction();
+      const [paymentCoin, feeCoin] = tx.splitCoins(tx.gas, [100000, 1]); // Fee is 1 instead of 10000!
+      tx.transferObjects([paymentCoin], MERCHANT_ADDRESS);
+      tx.transferObjects([feeCoin], FACILITATOR_ADDRESS);
+      const ptb = tx.serialize();
+      
+      const result = verifyPaymentPTB(ptb, invoice, 'mock-jwt');
+      expect(result.pass).toBe(false);
+      expect(result.reason).toContain('amount mismatch');
+    });
+
+    it('should block PTB with extra splits (total mismatch)', () => {
+      const invoice = createInvoice();
+      const tx = new Transaction();
+      const [p, f, extra] = tx.splitCoins(tx.gas, [100000, 10000, 50000]); // Extra 50000!
+      tx.transferObjects([p], MERCHANT_ADDRESS);
+      tx.transferObjects([f], FACILITATOR_ADDRESS);
+      // Note: extra coin not transferred, but split exists
+      const ptb = tx.serialize();
+      
+      const result = verifyPaymentPTB(ptb, invoice, 'mock-jwt');
+      expect(result.pass).toBe(false);
+      expect(result.reason).toContain('Total split amount does not match');
+    });
   });
 
   describe('Edge Cases', () => {

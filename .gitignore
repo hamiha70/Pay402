@@ -62,3 +62,6 @@ coverage/
 # Cursor settings (contains strategy references)
 .cursorrules
 .cursor/
+
+# Temprary files and scratch files
+temp/

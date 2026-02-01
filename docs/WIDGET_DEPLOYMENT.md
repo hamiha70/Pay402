@@ -10,7 +10,7 @@
 ### Hackathon Scope (What We're Building)
 
 **Payment Page:** Standalone URL that handles payments
-- URL: `https://pay402.com/pay?invoice_jwt=...&callback=...`
+- URL: `https://pay402.io/pay?invoice_jwt=...&callback=...`
 - Not embedded in merchant pages
 - Merchant redirects to payment page on 402
 - After payment, redirects back to merchant
@@ -42,9 +42,9 @@
 ## 📦 Physical Location
 
 ```
-Production:  https://cdn.pay402.com/widget.js
+Production:  https://cdn.pay402.io/widget.js
 Development: http://localhost:3000/widget.js
-Version:     https://cdn.pay402.com/v1.2.3/widget.js
+Version:     https://cdn.pay402.io/v1.2.3/widget.js
 ```
 
 **Hosted On:**
@@ -60,10 +60,10 @@ Version:     https://cdn.pay402.com/v1.2.3/widget.js
 
 ```html
 <!-- Add to merchant's website -->
-<script src="https://cdn.pay402.com/widget.js"></script>
+<script src="https://cdn.pay402.io/widget.js"></script>
 <script>
   Pay402.init({
-    facilitatorUrl: 'https://facilitator.pay402.com',
+    facilitatorUrl: 'https://facilitator.pay402.io',
     googleClientId: 'MERCHANT_GOOGLE_CLIENT_ID'
   });
 </script>
@@ -203,7 +203,7 @@ vercel deploy --prod
 ### Subresource Integrity (SRI)
 ```html
 <script 
-  src="https://cdn.pay402.com/v1.2.3/widget.js"
+  src="https://cdn.pay402.io/v1.2.3/widget.js"
   integrity="sha384-oqVuAfXRKap7fdgcCY5uykM6+R9GqQ8K/uxy9rx7HNQlGYl1kPzQho1wx4JwY8wC"
   crossorigin="anonymous">
 </script>

@@ -226,7 +226,7 @@ if (ENABLE_RECEIPT_EVENTS) {
 ```
 ┌─────────────────────────────────┐
 │  Facilitator-hosted web page    │
-│  https://pay402.com/pay          │
+│  https://pay402.io/pay          │
 │                                  │
 │  ┌───────────────────────────┐  │
 │  │ verifier.ts (runs here)   │  │
@@ -789,6 +789,171 @@ await suiClient.executeTransaction(signedTx);
 
 ---
 
+## Implementation Details Resolved
+
+### PTB Verifier Library Choice
+
+**Question:** Which library to use for parsing PTB bytes?
+
+**Decision:** Use `@mysten/sui` built-in transaction deserializer
+
+**Rationale:**
+- ✅ Official SDK (maintained by Mysten Labs)
+- ✅ Handles all PTB formats correctly
+- ✅ Well-tested in production
+- ✅ No custom parsing needed
+
+**Usage:**
+```typescript
+import { Transaction } from '@mysten/sui/transactions';
+
+function verifyPaymentPTB(ptbBytes: Uint8Array, invoice: InvoiceJWT) {
+  const tx = Transaction.from(ptbBytes);
+  // Inspect tx.commands array
+  // Verify against template
+}
+```
+
+### JWT Signing Algorithm
+
+**Question:** Which algorithm for merchant-signed invoices?
+
+**Decision:** EdDSA (Ed25519)
+
+**Rationale:**
+- ✅ Matches SUI keypairs (Ed25519 is native)
+- ✅ Simplest for demo (reuse existing key management)
+- ✅ Fast signature verification
+- ✅ Standard in modern crypto (not deprecated like RS256)
+
+**Alternative considered:** ES256 (ECDSA) - more enterprise-standard but adds complexity
+
+**Usage:**
+```typescript
+import jwt from 'jsonwebtoken';
+import { Ed25519Keypair } from '@mysten/sui/keypairs/ed25519';
+
+const merchantKeypair = Ed25519Keypair.fromSecretKey(merchantPrivateKey);
+const invoiceJwt = jwt.sign(invoice, merchantKeypair.getSecretKey(), { 
+  algorithm: 'EdDSA' 
+});
+```
+
+### Demo Merchant Sophistication
+
+**Question:** Hardcoded JWT vs real generation?
+
+**Decision:** Real JWT generation (multiple endpoints supported)
+
+**Rationale:**
+- ✅ Demonstrates protocol works end-to-end
+- ✅ Not much more complex (~20 lines)
+- ✅ Easy to add multiple resources (different prices)
+- ✅ Easier testing (generate new JWTs on demand)
+- ⚠️ Adds `jsonwebtoken` dependency (acceptable)
+
+**Implementation:**
+```typescript
+// demo-merchant/server.ts
+app.get('/api/premium-data', (req, res) => {
+  const invoice = createInvoice({
+    resource: '/api/premium-data',
+    amount: '100000', // 0.1 USDC
+    merchantRecipient: MERCHANT_ADDRESS
+  });
+  
+  const invoiceJwt = signInvoice(invoice, merchantKeypair);
+  
+  res.status(402)
+    .setHeader('X-X402-Invoice-JWT', invoiceJwt)
+    .json({ 
+      error: 'Payment required',
+      facilitator_url: FACILITATOR_URL,
+      callback_url: `${MERCHANT_URL}/api/verify`
+    });
+});
+```
+
+### Funding Strategy
+
+**Decision:** Auto-detect + script for local/testnet, manual for deployment
+
+**Implementation:**
+```typescript
+// facilitator/src/controllers/faucet.ts
+export async function fundIfNeeded(address: string) {
+  const balance = await getBalance(address);
+  
+  if (balance > 0) {
+    return { alreadyFunded: true, balance };
+  }
+  
+  // Fund with 2 USDC (enough for multiple payments)
+  const txDigest = await transferUSDC(address, 2_000_000);
+  
+  return { funded: true, amount: 2_000_000, txDigest };
+}
+```
+
+**UI:**
+```typescript
+// For localhost/testnet
+if (balance === 0) {
+  <button onClick={autoFund}>Fund 2 USDC (auto)</button>
+}
+
+// For deployed demo (testnet)
+if (balance === 0) {
+  <div>
+    Your address: <code>{address}</code>
+    <a href="https://faucet.circle.com" target="_blank">
+      Get testnet USDC from Circle Faucet
+    </a>
+  </div>
+}
+```
+
+### Attack Demo Priority
+
+**Decision:** Nice-to-have (implement if time permits)
+
+**Implementation sketch:**
+```typescript
+// facilitator config
+export const DEMO_ATTACK_MODE = process.env.DEMO_ATTACK_MODE === 'true';
+
+// In PTB construction
+if (DEMO_ATTACK_MODE) {
+  // Intentionally create PTB with 10x amount
+  const [paymentCoin] = ptb.splitCoins(coins[0], [amount * 10]);
+}
+
+// Verifier catches this:
+// ❌ Amount mismatch: expected 0.1 USDC, found 1.0 USDC
+```
+
+**Demo flow:**
+1. Show normal payment (passes verification)
+2. Toggle "attack mode" in facilitator
+3. Show verifier blocking malicious PTB
+4. Explains: "Even if facilitator is malicious, buyer is protected"
+
+**Priority:** Add after core flow works (Day 3-4 of hackathon)
+
+### Salt Persistence (Enoki Verification)
+
+**Confirmed from Enoki docs:**
+- ✅ Same Google account + same Enoki app → **same salt** → **same address**
+- ✅ Salt is deterministic per `(issuer, subject, app_id)`
+- ✅ Works across devices automatically
+- ✅ Enoki manages salt server (no DIY needed)
+
+**Reference:** https://docs.enoki.mystenlabs.com/zklogin#salt-management
+
+**For demo:** Same device is sufficient. Cross-device works automatically if judges want to test.
+
+---
+
 **Last Updated:** February 1, 2026  
-**Version:** 1.0 (Initial)  
+**Version:** 1.1 (Added implementation details)  
 **Companion to:** `ARCHITECTURE.md` (implementation spec)

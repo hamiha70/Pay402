@@ -217,7 +217,7 @@ X-X402-Invoice-JWT: eyJhbGciOiJFZERTQSIsInR5cCI6IkpXVCJ9...
 
 {
   "error": "Payment required",
-  "facilitator_url": "https://pay402.com/pay",
+  "facilitator_url": "https://pay402.io/pay",
   "callback_url": "https://api.merchant.com/verify"
 }
 ```
@@ -226,7 +226,7 @@ X-X402-Invoice-JWT: eyJhbGciOiJFZERTQSIsInR5cCI6IkpXVCJ9...
 ```json
 {
   "iss": "merchant.com",
-  "aud": "pay402.com",
+  "aud": "pay402.io",
   "iat": 1738396800,
   "exp": 1738397400,
   "payment_id": "pmt_abc123",
@@ -246,7 +246,7 @@ X-X402-Invoice-JWT: eyJhbGciOiJFZERTQSIsInR5cCI6IkpXVCJ9...
 #### Step 3: Browser Redirects to Facilitator Payment Page
 
 ```
-https://pay402.com/pay?invoice_jwt=<token>&callback=<url>
+https://pay402.io/pay?invoice_jwt=<token>&callback=<url>
 ```
 
 Payment page displays:
@@ -864,7 +864,7 @@ app.get('/premium-data', async (req, res) => {
   
   res.status(402).json({
     error: 'Payment required',
-    facilitator_url: 'https://pay402.com/pay',
+    facilitator_url: 'https://pay402.io/pay',
     callback_url: 'https://api.merchant.com/verify'
   });
   res.setHeader('X-X402-Invoice-JWT', invoiceJwt);
@@ -1231,6 +1231,230 @@ What if buyer signs malicious PTB that drains facilitator gas?
 - Fetch API
 - Web Crypto API (SHA-256)
 - LocalStorage (session caching)
+
+---
+
+## Deployment & Routes Strategy
+
+### Evolution: Localhost → Testnet → Deployed
+
+#### Phase 1: Local Development (Day 1-2)
+
+**All on localhost, different ports:**
+
+```
+┌─────────────────────────────────────────────────┐
+│ Developer Machine (WSL2 + Suibase)              │
+├─────────────────────────────────────────────────┤
+│                                                 │
+│ Suibase Localnet                                │
+│  └─ RPC: http://localhost:9000                  │
+│     (or :44340 via proxy)                       │
+│                                                 │
+│ Demo Merchant (Express)                         │
+│  └─ http://localhost:3000                       │
+│     ├─ GET / (demo page with "Get Data" button)│
+│     ├─ GET /api/premium-data (402 response)     │
+│     └─ GET /api/verify?payment_id=... (callback)│
+│                                                 │
+│ Facilitator Backend (Express)                   │
+│  └─ http://localhost:3001                       │
+│     ├─ GET /health                              │
+│     ├─ POST /check-balance                      │
+│     ├─ POST /settle-payment                     │
+│     ├─ POST /submit-signature                   │
+│     └─ POST /fund (demo faucet)                 │
+│                                                 │
+│ Payment Page (React + Vite)                     │
+│  └─ http://localhost:5173                       │
+│     └─ Renders at /?invoice_jwt=...&callback=...│
+│                                                 │
+└─────────────────────────────────────────────────┘
+
+tmux layout (recommended):
+- Pane 1: Facilitator (npm run dev)
+- Pane 2: Demo merchant (npm run dev)
+- Pane 3: Payment page (npm run dev)
+- Pane 4: Suibase (localnet status, lsui commands)
+```
+
+**Configuration:**
+```bash
+# facilitator/.env.local
+SUI_NETWORK=localnet
+PACKAGE_ID=0x...local
+FACILITATOR_PRIVATE_KEY=suiprivkey1...
+MERCHANT_DEMO_URL=http://localhost:3000
+PAYMENT_PAGE_URL=http://localhost:5173
+
+# demo-merchant/.env.local
+PORT=3000
+FACILITATOR_URL=http://localhost:3001
+MERCHANT_PRIVATE_KEY=suiprivkey1...
+MERCHANT_ADDRESS=0x...
+
+# widget/.env.local (Vite)
+VITE_FACILITATOR_URL=http://localhost:3001
+```
+
+**Flow test:**
+1. Open http://localhost:3000 in browser
+2. Click "Get Data ($0.01)"
+3. Browser redirects to http://localhost:5173?invoice_jwt=...&callback=http://localhost:3000/api/verify
+4. Payment page calls http://localhost:3001/* (facilitator)
+5. After payment, redirects to http://localhost:3000/api/verify?payment_id=...&tx_digest=...
+6. Merchant verifies, displays content
+
+#### Phase 2: Testnet Testing (Day 3)
+
+**Same localhost ports, switch to testnet blockchain:**
+
+```
+Change:
+- Suibase: localnet → SUI testnet RPC
+- Facilitator: SUI_NETWORK=testnet, PACKAGE_ID=0x...testnet
+- Rest unchanged (still localhost)
+```
+
+**Commands:**
+```bash
+# Deploy to testnet
+cd move/payment
+tsui client publish --gas-budget 100000000
+
+# Update facilitator config
+cd ../../facilitator
+cp .env.testnet .env  # or update SUI_NETWORK, PACKAGE_ID
+
+# Restart
+npm run dev
+```
+
+#### Phase 3: Demo Deployment (Day 4 - Hackathon)
+
+**All on pay402.io domain (or pay402.vercel.app):**
+
+```
+┌─────────────────────────────────────────────────┐
+│ pay402.io (or pay402.vercel.app)                │
+├─────────────────────────────────────────────────┤
+│                                                 │
+│ SUI Testnet (Mysten)                            │
+│  └─ https://fullnode.testnet.sui.io:443         │
+│                                                 │
+│ https://pay402.io (or pay402.vercel.app)        │
+│  ├─ / (landing page)                            │
+│  ├─ /demo (merchant demo page)                  │
+│  ├─ /demo/api/premium-data (402 endpoint)       │
+│  ├─ /demo/api/verify (callback)                 │
+│  ├─ /pay (payment page React SPA)               │
+│  └─ /api/* (facilitator APIs)                   │
+│      ├─ /api/health                             │
+│      ├─ /api/check-balance                      │
+│      ├─ /api/settle-payment                     │
+│      ├─ /api/submit-signature                   │
+│      └─ /api/fund                               │
+│                                                 │
+└─────────────────────────────────────────────────┘
+
+Vercel deployment (single project):
+- demo/* → demo merchant (static + API routes)
+- pay → payment page (React SPA)
+- api/* → facilitator backend (serverless functions)
+```
+
+**Directory structure for Vercel:**
+```
+Pay402/
+├── demo/                    # Merchant demo
+│   ├── public/
+│   │   └── index.html       # Demo page
+│   └── api/
+│       ├── premium-data.ts  # Vercel serverless
+│       └── verify.ts        # Vercel serverless
+│
+├── widget/                  # Payment page
+│   └── dist/                # Built React app
+│       └── index.html       # Deployed to /pay
+│
+└── facilitator/             # Facilitator backend
+    └── api/                 # Vercel serverless functions
+        ├── health.ts
+        ├── check-balance.ts
+        ├── settle-payment.ts
+        ├── submit-signature.ts
+        └── fund.ts
+```
+
+**Configuration:**
+```bash
+# .env.production (Vercel environment variables)
+SUI_NETWORK=testnet
+PACKAGE_ID=0x...testnet
+FACILITATOR_PRIVATE_KEY=suiprivkey1...
+MERCHANT_DEMO_URL=https://pay402.io/demo
+PAYMENT_PAGE_URL=https://pay402.io/pay
+```
+
+**Vercel setup:**
+```bash
+# Install Vercel CLI
+npm i -g vercel
+
+# Deploy
+vercel --prod
+
+# Set environment variables
+vercel env add FACILITATOR_PRIVATE_KEY
+vercel env add PACKAGE_ID
+vercel env add SUI_NETWORK
+```
+
+**Alternative (separate subdomains):**
+```
+https://demo.pay402.io    → merchant demo
+https://pay.pay402.io     → payment page
+https://api.pay402.io     → facilitator backend
+```
+
+### URL Structure Summary
+
+| Phase | Merchant | Payment Page | Facilitator | Blockchain |
+|-------|----------|--------------|-------------|------------|
+| **Local** | :3000 | :5173 | :3001 | localhost:9000 (localnet) |
+| **Testnet Test** | :3000 | :5173 | :3001 | testnet.sui.io (testnet) |
+| **Deployed** | pay402.io/demo | pay402.io/pay | pay402.io/api | testnet.sui.io (testnet) |
+
+### CORS Configuration
+
+**Local development:** No CORS issues (all localhost)
+
+**Deployed:** Need CORS headers on facilitator
+
+```typescript
+// facilitator/src/index.ts
+app.use(cors({
+  origin: [
+    'https://pay402.io',
+    'https://pay402.vercel.app',
+    'http://localhost:5173', // Dev
+    'http://localhost:3000'  // Dev
+  ],
+  credentials: true
+}));
+```
+
+### Environment Detection
+
+```typescript
+// shared/config.ts
+export const ENV = {
+  isDev: process.env.NODE_ENV === 'development',
+  facilitatorUrl: process.env.FACILITATOR_URL || 'http://localhost:3001',
+  paymentPageUrl: process.env.PAYMENT_PAGE_URL || 'http://localhost:5173',
+  merchantUrl: process.env.MERCHANT_URL || 'http://localhost:3000'
+};
+```
 
 ---
 

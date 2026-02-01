@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react';
-import { EnokiFlowProvider } from '@mysten/enoki/react';
 import { SuiClientProvider, WalletProvider } from '@mysten/dapp-kit';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import AuthTest from './components/AuthTest';
@@ -27,15 +26,7 @@ function App() {
     <QueryClientProvider client={queryClient}>
       <SuiClientProvider>
         <WalletProvider autoConnect>
-          {ENOKI_AVAILABLE ? (
-            // Enoki available - use zkLogin
-            <EnokiFlowProvider apiKey={ENOKI_API_KEY}>
-              <AppContent mode="enoki" />
-            </EnokiFlowProvider>
-          ) : (
-            // No Enoki - use keypair fallback
-            <AppContent mode="keypair" />
-          )}
+          <AppContent mode={ENOKI_AVAILABLE ? 'enoki' : 'keypair'} />
         </WalletProvider>
       </SuiClientProvider>
     </QueryClientProvider>

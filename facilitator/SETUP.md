@@ -76,7 +76,39 @@ tsui keytool export --key-identity 0xYOUR_ADDRESS --json
 # Copy the "key" value
 ```
 
-### 3. Deploy Move Contract
+### 3. ⚠️ CRITICAL: Fund the Facilitator Wallet
+
+**The facilitator needs SUI to pay gas when funding buyer wallets!**
+
+**For localnet:**
+```bash
+# Switch to the facilitator's address
+# (Use the address from step 2, or one of the pre-funded addresses)
+lsui client switch --address sharp-hiddenite  # Or your address alias
+
+# Fund it with localnet faucet (unlimited!)
+lsui client faucet
+
+# Verify balance (should have 10-20 SUI)
+lsui client gas
+```
+
+**For testnet:**
+```bash
+# Switch to facilitator address
+tsui client switch --address YOUR_ALIAS
+
+# Fund it (limited - use sparingly!)
+tsui client faucet
+
+# Verify
+tsui client gas
+```
+
+**❌ Common Issue:** "insufficient SUI balance" error when funding buyers
+**✅ Solution:** Make sure facilitator wallet has at least 10 SUI before starting
+
+### 4. Deploy Move Contract
 
 **For localnet:**
 ```bash

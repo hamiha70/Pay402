@@ -1,5 +1,4 @@
 import { useKeypairAuth } from './useKeypairAuth';
-import { useEnokiAuth } from './useEnokiAuth';
 import type { AuthProvider } from '../types/auth';
 
 /**
@@ -16,14 +15,17 @@ export function useAuth(): AuthProvider & { authMethod: 'enoki' | 'keypair' } {
   const ENOKI_API_KEY = import.meta.env.VITE_ENOKI_API_KEY;
   const ENOKI_AVAILABLE = ENOKI_API_KEY && ENOKI_API_KEY !== 'your_public_api_key_here';
 
-  // Choose auth provider
-  const enokiAuth = useEnokiAuth();
+  // For now, always use keypair
+  // When Enoki is ready, we'll import useEnokiAuth conditionally
   const keypairAuth = useKeypairAuth();
 
-  const activeAuth = ENOKI_AVAILABLE ? enokiAuth : keypairAuth;
+  if (ENOKI_AVAILABLE) {
+    // TODO: When Enoki API key is available, use useEnokiAuth()
+    console.warn('Enoki API key detected but Enoki auth not yet implemented. Using keypair fallback.');
+  }
 
   return {
-    ...activeAuth,
+    ...keypairAuth,
     authMethod: ENOKI_AVAILABLE ? 'enoki' : 'keypair',
   };
 }

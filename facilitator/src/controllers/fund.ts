@@ -1,8 +1,7 @@
 import { Request, Response } from 'express';
-import { getClient } from '../sui/client.js';
+import { getSuiClient } from '../sui.js';
 import { Transaction } from '@mysten/sui/transactions';
 import { Ed25519Keypair } from '@mysten/sui/keypairs/ed25519';
-import { fromBase64 } from '@mysten/sui/utils';
 import { config } from '../config.js';
 
 interface FundRequest {
@@ -41,7 +40,7 @@ export async function fundController(req: Request, res: Response) {
       return;
     }
 
-    const client = getClient();
+    const client = getSuiClient();
 
     // Check current balance
     const balance = await client.getBalance({
@@ -65,9 +64,7 @@ export async function fundController(req: Request, res: Response) {
     // Fund the wallet
     const FUND_AMOUNT = 2_000_000_000; // 2 SUI for testing (in nanoSUI)
 
-    const keypair = Ed25519Keypair.fromSecretKey(
-      fromBase64(config.facilitatorPrivateKey!).slice(1) // Remove scheme byte
-    );
+    const keypair = Ed25519Keypair.fromSecretKey(config.facilitatorPrivateKey!);
 
     const tx = new Transaction();
     

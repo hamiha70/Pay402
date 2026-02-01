@@ -36,10 +36,16 @@ export function getFacilitatorKeypair(): Ed25519Keypair {
       throw new Error('FACILITATOR_PRIVATE_KEY not set in environment');
     }
     
-    // Parse private key (format: "suiprivkey..." base64)
-    keypair = Ed25519Keypair.fromSecretKey(
-      Buffer.from(config.facilitatorPrivateKey, 'base64')
-    );
+    // Parse private key - supports both suiprivkey format and raw base64
+    if (config.facilitatorPrivateKey.startsWith('suiprivkey')) {
+      // Use fromSecretKey for suiprivkey format (Bech32 encoded)
+      keypair = Ed25519Keypair.fromSecretKey(config.facilitatorPrivateKey);
+    } else {
+      // Legacy: raw base64 format
+      keypair = Ed25519Keypair.fromSecretKey(
+        Buffer.from(config.facilitatorPrivateKey, 'base64')
+      );
+    }
   }
   return keypair;
 }

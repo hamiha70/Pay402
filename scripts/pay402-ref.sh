@@ -104,7 +104,7 @@ cat << 'EOF'
 ║  Suibase Guide:     ~/Projects/.../HackMoney_Research/SUI_Dev_Setup/      ║
 ║                     SUIBASE_GUIDE.md                                       ║
 ║  Project Docs:      ~/Projects/.../Pay402/docs/DEVELOPMENT_GUIDE.md       ║
-║  Token Policy:      ~/Projects/.../Pay402/TOKEN_POLICY.md                 ║
+║  Facilitator Setup: ~/Projects/.../Pay402/facilitator/SETUP.md            ║
 ║  Architecture:      ~/Projects/.../Pay402/docs/ARCHITECTURE.md            ║
 ║                                                                             ║
 ║  Suibase Docs:      https://suibase.io/                                    ║

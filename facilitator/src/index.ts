@@ -3,6 +3,7 @@ import { config } from './config.js';
 import { healthController } from './controllers/health.js';
 import { checkBalanceController } from './controllers/balance.js';
 import { settlePaymentController } from './controllers/payment.js';
+import { fundController } from './controllers/fund.js';
 
 const app: Express = express();
 
@@ -39,6 +40,7 @@ app.use((req, res, next) => {
 app.get('/health', healthController);
 app.post('/check-balance', checkBalanceController);
 app.post('/settle-payment', settlePaymentController);
+app.post('/fund', fundController);
 
 // 404 handler
 app.use((req, res) => {
@@ -73,6 +75,7 @@ app.listen(PORT, () => {
     GET  /health           - Health check
     POST /check-balance    - Check buyer balance
     POST /settle-payment   - Settle payment on-chain
+    POST /fund             - Fund wallet (demo faucet)
     
   Environment:
     PACKAGE_ID:            ${config.packageId || '❌ Not set'}

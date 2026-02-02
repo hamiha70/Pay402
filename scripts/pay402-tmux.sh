@@ -173,24 +173,31 @@ if [ $? != 0 ]; then
   tmux send-keys -t $SESSION_NAME:0.5 "echo ''" C-m
   
   # Custom layout: Testing-heavy (Option C)
-  # Strategy: Use main-vertical (left column + right main), then split right side
+  # Create a vertical split layout: narrow left column + wide right side
+  # Then split right side horizontally: large testing (top) + medium move dev (bottom)
   
-  # Step 1: Start with tiled for now
-  tmux select-layout -t $SESSION_NAME:0 tiled
+  # Step 1: Get window dimensions
+  WINDOW_INFO=$(tmux display-message -p -t $SESSION_NAME:0 "#{window_width},#{window_height}")
+  WINDOW_WIDTH=$(echo $WINDOW_INFO | cut -d',' -f1)
+  WINDOW_HEIGHT=$(echo $WINDOW_INFO | cut -d',' -f2)
   
-  # Step 2: Select pane 4 (Testing) and make it larger
+  # Calculate target dimensions
+  LEFT_COL_WIDTH=$((WINDOW_WIDTH / 5))           # 20% for left column
+  RIGHT_COL_WIDTH=$((WINDOW_WIDTH - LEFT_COL_WIDTH))
+  TESTING_HEIGHT=$((WINDOW_HEIGHT * 6 / 10))      # 60% for testing pane
+  
+  # Step 2: Apply a base layout that's close to what we want
+  tmux select-layout -t $SESSION_NAME:0 main-vertical
+  
+  # Step 3: Set main pane percentage to give right side 80% width
+  tmux set-window-option -t $SESSION_NAME:0 main-pane-width $RIGHT_COL_WIDTH
+  tmux select-layout -t $SESSION_NAME:0 main-vertical
+  
+  # Step 4: Now resize pane 4 (Testing) to be 60% of window height
+  tmux resize-pane -t $SESSION_NAME:0.4 -y $TESTING_HEIGHT 2>/dev/null || true
+  
+  # Step 5: Select pane 4 as focus (where user will copy from)
   tmux select-pane -t $SESSION_NAME:0.4
-  tmux resize-pane -t $SESSION_NAME:0.4 -Z  # Temporarily zoom
-  tmux resize-pane -t $SESSION_NAME:0.4 -Z  # Unzoom to apply
-  
-  # Step 3: Make left column (panes 0,1,2,5) narrower - 25 columns wide
-  tmux resize-pane -t $SESSION_NAME:0.0 -x 25 2>/dev/null || true
-  tmux resize-pane -t $SESSION_NAME:0.1 -x 25 2>/dev/null || true
-  tmux resize-pane -t $SESSION_NAME:0.2 -x 25 2>/dev/null || true
-  tmux resize-pane -t $SESSION_NAME:0.5 -x 25 2>/dev/null || true
-  
-  # Step 4: Make pane 4 (Testing) taller - give it more lines
-  tmux resize-pane -t $SESSION_NAME:0.4 -y 35 2>/dev/null || true
   
   # Configure custom key bindings
   # Ctrl-b s: Save current pane to file

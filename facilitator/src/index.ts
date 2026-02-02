@@ -3,6 +3,7 @@ import { config } from './config.js';
 import { healthController } from './controllers/health.js';
 import { checkBalanceController } from './controllers/balance.js';
 import { settlePaymentController } from './controllers/payment.js';
+import { buildPTBController } from './controllers/build-ptb.js';
 import { fundController } from './controllers/fund.js';
 
 const app: Express = express();
@@ -45,7 +46,8 @@ app.get('/', (req, res) => {
     endpoints: {
       'GET /health': 'Health check',
       'POST /check-balance': 'Check buyer USDC balance',
-      'POST /settle-payment': 'Construct PTB for payment',
+      'POST /build-ptb': 'Build unsigned PTB from invoice JWT',
+      'POST /settle-payment': 'Submit signed payment transaction',
       'POST /fund': 'Fund wallet with test USDC (dev only)',
     },
     docs: 'See facilitator/SETUP.md for API documentation',
@@ -54,6 +56,7 @@ app.get('/', (req, res) => {
 
 app.get('/health', healthController);
 app.post('/check-balance', checkBalanceController);
+app.post('/build-ptb', buildPTBController);
 app.post('/settle-payment', settlePaymentController);
 app.post('/fund', fundController);
 

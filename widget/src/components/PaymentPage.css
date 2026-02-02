@@ -33,9 +33,10 @@
 }
 
 .card p {
-  color: #6b7280;
+  color: #1f2937;
   margin: 10px 0;
   line-height: 1.6;
+  font-weight: 500;
 }
 
 /* Invoice Input */
@@ -57,7 +58,8 @@
 
 /* Invoice Details */
 .invoice-details {
-  background: #f9fafb;
+  background: #ffffff;
+  border: 2px solid #e5e7eb;
   border-radius: 8px;
   padding: 20px;
   margin: 20px 0;
@@ -66,7 +68,8 @@
 .invoice-details h3 {
   margin: 0 0 15px 0;
   font-size: 18px;
-  color: #374151;
+  color: #000000;
+  font-weight: 700;
 }
 
 .detail-row {
@@ -89,15 +92,18 @@
 }
 
 .detail-row code {
-  background: #e5e7eb;
+  background: #f3f4f6;
+  color: #000000;
   padding: 2px 6px;
   border-radius: 4px;
   font-size: 12px;
+  font-weight: 600;
 }
 
 .detail-row strong {
-  color: #059669;
+  color: #000000;
   font-size: 16px;
+  font-weight: 700;
 }
 
 /* Balance Info */

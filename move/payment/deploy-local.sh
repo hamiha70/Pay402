@@ -1,26 +1,54 @@
 #!/bin/bash
-# Deploy Move contract to localnet
+# Deploy Move contract using Suibase active chain (or fallback to sui client)
+# Works on: localnet, testnet, devnet, mainnet
 # Auto-run by pay402-tmux.sh on startup
 
 set -e
 
-echo "🔨 Building Move contract..."
+echo "🔨 Deploying Move contract..."
 cd "$(dirname "$0")"
 
-# Remove old publication file (chain ID might have changed)
-rm -f Pub.local.toml
+# Try Suibase first (if installed)
+if command -v suibase &> /dev/null; then
+  echo "🔍 Using Suibase for network detection..."
+  ACTIVE_WORKDIR=$(suibase get-active-workdir 2>/dev/null || echo "")
+  if [ -n "$ACTIVE_WORKDIR" ]; then
+    CHAIN_NAME=$(basename "$ACTIVE_WORKDIR")
+    echo "📍 Active Suibase workdir: $CHAIN_NAME"
+  fi
+fi
 
-# Request gas if needed
-echo "💰 Checking gas..."
-sui client gas --json | jq -e '.[0]' > /dev/null 2>&1 || {
-  echo "💰 Requesting gas from faucet..."
-  sui client faucet
-  sleep 3
-}
+# Fallback: Use sui client active-env
+if [ -z "$CHAIN_NAME" ]; then
+  echo "🔍 Using sui client for network detection..."
+  CHAIN_NAME=$(sui client active-env 2>/dev/null || echo "localnet")
+  echo "📍 Active environment: $CHAIN_NAME"
+fi
 
-# Test-publish (works without Move.toml env config)
+echo "🌐 Deploying to: $CHAIN_NAME"
+
+# Normalize chain name (sui uses "local", Move.toml uses "localnet")
+BUILD_ENV="$CHAIN_NAME"
+if [ "$CHAIN_NAME" = "local" ]; then
+  BUILD_ENV="localnet"
+fi
+
+# Remove old publication files (both variants to be safe)
+rm -f "Pub.${CHAIN_NAME}.toml" "Pub.${BUILD_ENV}.toml"
+
+# Request gas if needed (skip for mainnet)
+if [ "$CHAIN_NAME" != "mainnet" ]; then
+  echo "💰 Checking gas..."
+  sui client gas --json | jq -e '.[0]' > /dev/null 2>&1 || {
+    echo "💰 Requesting gas from faucet..."
+    sui client faucet
+    sleep 3
+  }
+fi
+
+# Test-publish (works across all networks)
 echo "📦 Publishing contract..."
-sui client test-publish --build-env local --json > /tmp/deploy-result.json 2>&1
+sui client test-publish --build-env "$BUILD_ENV" --json > /tmp/deploy-result.json 2>&1
 
 # Extract package ID from JSON (handle spaces)
 PACKAGE_ID=$(grep "packageId" /tmp/deploy-result.json | grep -o '0x[a-f0-9]\{64\}' | head -1)
@@ -28,6 +56,7 @@ PACKAGE_ID=$(grep "packageId" /tmp/deploy-result.json | grep -o '0x[a-f0-9]\{64\
 if [ -n "$PACKAGE_ID" ]; then
   echo "✅ Contract deployed!"
   echo "📦 Package ID: $PACKAGE_ID"
+  echo "🌐 Network: $CHAIN_NAME"
   
   # Update .env files
   echo ""
@@ -35,9 +64,16 @@ if [ -n "$PACKAGE_ID" ]; then
   sed -i "s/^PACKAGE_ID=.*/PACKAGE_ID=$PACKAGE_ID/" ../../facilitator/.env
   echo "✅ Updated facilitator/.env"
   
+  # Also update merchant .env if it has PACKAGE_ID
+  if grep -q "^PACKAGE_ID=" ../../merchant/.env 2>/dev/null; then
+    sed -i "s/^PACKAGE_ID=.*/PACKAGE_ID=$PACKAGE_ID/" ../../merchant/.env
+    echo "✅ Updated merchant/.env"
+  fi
+  
   echo ""
   echo "🎉 Deployment complete!"
-  echo "Package ID: $PACKAGE_ID"
+  echo "📦 Package ID: $PACKAGE_ID"
+  echo "🌐 Network: $CHAIN_NAME"
   exit 0
 else
   echo "❌ Deployment failed"

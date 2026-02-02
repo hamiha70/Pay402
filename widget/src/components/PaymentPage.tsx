@@ -110,7 +110,7 @@ export default function PaymentPage({ invoiceJWT: propInvoiceJWT }: PaymentPageP
       setPtbBytes(ptbBytesArray);
 
       // Verify PTB client-side
-      const result = verifyPaymentPTB(ptbBytesArray, invoice, invoiceJWT);
+      const result = await verifyPaymentPTB(ptbBytesArray, invoice, invoiceJWT);
       setVerificationResult(result);
 
       if (!result.pass) {

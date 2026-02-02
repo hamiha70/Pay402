@@ -11,7 +11,6 @@
  */
 
 import { Transaction } from '@mysten/sui/transactions';
-import crypto from 'crypto';
 
 /**
  * Browser-compatible base64 to hex conversion
@@ -93,12 +92,17 @@ const AllowedCommand = {
 } as const;
 
 /**
- * Compute invoice hash (SHA-256)
+ * Compute invoice hash (SHA-256) - Browser-compatible
  * This will be emitted in the receipt event
  */
-export function computeInvoiceHash(invoiceJwt: string): string {
-  const hash = crypto.createHash('sha256').update(invoiceJwt).digest('hex');
-  return hash;
+export async function computeInvoiceHash(invoiceJwt: string): Promise<string> {
+  // Use Web Crypto API (available in browsers)
+  const encoder = new TextEncoder();
+  const data = encoder.encode(invoiceJwt);
+  const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+  return hashHex;
 }
 
 /**
@@ -118,11 +122,11 @@ export function computeInvoiceHash(invoiceJwt: string): string {
  * - Asset type matches invoice
  * - Not expired
  */
-export function verifyPaymentPTB(
+export async function verifyPaymentPTB(
   ptbBytes: Uint8Array,
   invoice: InvoiceJWT,
   invoiceJwt: string
-): VerificationResult {
+): Promise<VerificationResult> {
   try {
     // Parse PTB
     const tx = Transaction.from(ptbBytes);
@@ -341,7 +345,7 @@ export function verifyPaymentPTB(
     }
 
     // Compute invoice hash for receipt verification
-    const invoiceHash = computeInvoiceHash(invoiceJwt);
+    const invoiceHash = await computeInvoiceHash(invoiceJwt);
 
     // ✅ All checks passed
     return {

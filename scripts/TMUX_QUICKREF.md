@@ -22,6 +22,28 @@
 
 ---
 
+## 🧪 Running Tests
+
+```bash
+# Facilitator tests (vitest)
+cd ~/Projects/ETHGlobal/HackMoney_Jan26/Pay402/facilitator
+npm test                           # Run all tests
+npm test -- --watch                # Watch mode
+npm test -- --coverage             # With coverage
+npm test build-ptb.test.ts         # Specific test file
+
+# Move contract tests
+cd ~/Projects/ETHGlobal/HackMoney_Jan26/Pay402/move/payment
+sui move test                      # Run all Move tests
+```
+
+**Test Status:**
+- ✅ `build-ptb.test.ts` - Production PTB logic (PASSES)
+- ✅ `facilitator.test.ts` - SUI client tests (PASSES)
+- ⏭️ `ptb-codec.test.ts` - 9 skipped (need funded addresses)
+
+---
+
 ## ⌨️ Essential tmux Keys
 
 ### Navigation

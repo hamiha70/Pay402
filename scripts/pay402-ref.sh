@@ -73,6 +73,13 @@ cat << 'EOF'
 ║  lsui client gas               Check gas balances                          ║
 ║  lsui client faucet            Get test SUI for active address             ║
 ╠════════════════════════════════════════════════════════════════════════════╣
+║ TESTING (Pane 4 - MAIN)                                                    ║
+║  cd ~/Projects/.../Pay402/facilitator                                      ║
+║  npm test                      Run all facilitator tests (vitest)          ║
+║  npm test -- --watch           Watch mode (re-run on changes)              ║
+║  npm test build-ptb.test.ts    Run specific test file                      ║
+║  npm test -- --coverage        With coverage report                        ║
+╠════════════════════════════════════════════════════════════════════════════╣
 ║ MOVE DEVELOPMENT (Pane 3)                                                  ║
 ║  cd ~/Projects/.../Pay402/move/payment                                     ║
 ║  ./deploy-local.sh             Deploy/check contract (auto on startup)     ║

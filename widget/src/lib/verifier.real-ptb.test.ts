@@ -42,22 +42,12 @@ describe('PTB Verifier - Real PTB Tests', () => {
       expect(result.pass).toBe(true);
     });
 
-    it('should accept second valid payment PTB', () => {
+    it('should reject PTB when recipient does not match (attack scenario)', () => {
       if (!fixtures) return;
 
-      const { ptbBytes, invoice } = fixtures.validPayment2;
-      const result = verifyPaymentPTBBasic(new Uint8Array(ptbBytes), invoice.merchantRecipient);
-      
-      expect(result.pass).toBe(true);
-    });
-
-    it('should reject PTB when recipient does not match', () => {
-      if (!fixtures) return;
-
-      // Use PTB from first payment but wrong recipient
-      const { ptbBytes } = fixtures.validPayment;
-      const wrongRecipient = '0x9999999999999999999999999999999999999999999999999999999999999999';
-      const result = verifyPaymentPTBBasic(new Uint8Array(ptbBytes), wrongRecipient);
+      // Use valid PTB but check against attacker's address
+      const { ptbBytes, attackerRecipient } = fixtures.wrongRecipient;
+      const result = verifyPaymentPTBBasic(new Uint8Array(ptbBytes), attackerRecipient);
       
       expect(result.pass).toBe(false);
       expect(result.reason).toContain('recipient');
@@ -79,21 +69,57 @@ describe('PTB Verifier - Real PTB Tests', () => {
       expect(result.reason).toBeUndefined();
     });
 
-    it('should accept second valid payment', async () => {
+    it('should reject PTB when amount is wrong (attack: double charge)', async () => {
       if (!fixtures) return;
 
-      const { ptbBytes, invoice, invoiceJWT } = fixtures.validPayment2;
+      // Attacker modified invoice to charge double
+      const { ptbBytes, invoice, invoiceJWT, actualAmount } = fixtures.wrongAmount;
+      const modifiedInvoice = { ...invoice, amount: actualAmount }; // Attacker's modified amount
+      
       const result = await verifyPaymentPTB(
         new Uint8Array(ptbBytes),
-        invoice,
+        modifiedInvoice,
         invoiceJWT
       );
       
-      expect(result.pass).toBe(true);
+      // Should fail because PTB has correct amount but invoice claims double
+      expect(result.pass).toBe(false);
+      expect(result.reason).toMatch(/amount|mismatch/i);
     });
 
-    // Note: Both fixtures have same amounts/recipients (just different nonces)
-    // So we can't easily test mismatch without generating more fixtures
-    // The facilitator integration tests cover mismatch scenarios
+    it('should reject PTB when recipient is wrong (attack: redirect payment)', async () => {
+      if (!fixtures) return;
+
+      // Attacker tries to redirect payment to their address
+      const { ptbBytes, invoice, invoiceJWT, attackerRecipient } = fixtures.wrongRecipient;
+      const modifiedInvoice = { ...invoice, merchantRecipient: attackerRecipient };
+      
+      const result = await verifyPaymentPTB(
+        new Uint8Array(ptbBytes),
+        modifiedInvoice,
+        invoiceJWT
+      );
+      
+      // Should fail because PTB sends to real merchant but invoice claims attacker
+      expect(result.pass).toBe(false);
+      expect(result.reason).toMatch(/recipient|mismatch|not found/i);
+    });
+
+    it('should reject expired invoice (attack: replay old invoice)', async () => {
+      if (!fixtures) return;
+
+      // Attacker tries to reuse an old expired invoice
+      const { ptbBytes, invoice, invoiceJWT } = fixtures.expiredInvoice;
+      
+      const result = await verifyPaymentPTB(
+        new Uint8Array(ptbBytes),
+        invoice, // Invoice with expiry in the past
+        invoiceJWT
+      );
+      
+      // Should fail because invoice is expired
+      expect(result.pass).toBe(false);
+      expect(result.reason).toMatch(/expired|expiry/i);
+    });
   });
 });

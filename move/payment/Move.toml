@@ -11,4 +11,4 @@ Sui = { git = "https://github.com/MystenLabs/sui.git", subdir = "crates/sui-fram
 payment = "0x0"
 
 [environments]
-local = "f63c9540"
+local = "3f37401a"

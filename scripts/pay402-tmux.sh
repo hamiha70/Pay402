@@ -173,21 +173,24 @@ if [ $? != 0 ]; then
   tmux send-keys -t $SESSION_NAME:0.5 "echo ''" C-m
   
   # Custom layout: Testing-heavy (Option C)
-  # Left column: narrow server logs (0,1,2,5)
-  # Right column: large Testing (4) + medium Move Dev (3)
+  # Strategy: Use main-vertical (left column + right main), then split right side
   
-  # First set base layout
+  # Step 1: Start with tiled for now
   tmux select-layout -t $SESSION_NAME:0 tiled
   
-  # Resize left column (servers) to be narrow (20% width)
-  tmux resize-pane -t $SESSION_NAME:0.0 -x 30
-  tmux resize-pane -t $SESSION_NAME:0.1 -x 30
-  tmux resize-pane -t $SESSION_NAME:0.2 -x 30
-  tmux resize-pane -t $SESSION_NAME:0.5 -x 30
+  # Step 2: Select pane 4 (Testing) and make it larger
+  tmux select-pane -t $SESSION_NAME:0.4
+  tmux resize-pane -t $SESSION_NAME:0.4 -Z  # Temporarily zoom
+  tmux resize-pane -t $SESSION_NAME:0.4 -Z  # Unzoom to apply
   
-  # Make pane 4 (Testing) taller than pane 3 (Move Dev)
-  # Testing gets 60% height, Move Dev gets 40%
-  tmux resize-pane -t $SESSION_NAME:0.4 -y 40
+  # Step 3: Make left column (panes 0,1,2,5) narrower - 25 columns wide
+  tmux resize-pane -t $SESSION_NAME:0.0 -x 25 2>/dev/null || true
+  tmux resize-pane -t $SESSION_NAME:0.1 -x 25 2>/dev/null || true
+  tmux resize-pane -t $SESSION_NAME:0.2 -x 25 2>/dev/null || true
+  tmux resize-pane -t $SESSION_NAME:0.5 -x 25 2>/dev/null || true
+  
+  # Step 4: Make pane 4 (Testing) taller - give it more lines
+  tmux resize-pane -t $SESSION_NAME:0.4 -y 35 2>/dev/null || true
   
   # Configure custom key bindings
   # Ctrl-b s: Save current pane to file

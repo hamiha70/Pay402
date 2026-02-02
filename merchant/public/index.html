@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Premium Data API - Pay402 Demo</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      padding: 40px 20px;
+      color: #333;
+    }
+
+    .container {
+      max-width: 900px;
+      margin: 0 auto;
+    }
+
+    .card {
+      background: white;
+      border-radius: 12px;
+      padding: 40px;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+      margin-bottom: 20px;
+    }
+
+    h1 {
+      font-size: 2.5rem;
+      margin-bottom: 10px;
+      display: flex;
+      align-items: center;
+      gap: 15px;
+    }
+
+    .icon {
+      font-size: 3rem;
+    }
+
+    .price {
+      font-size: 2rem;
+      color: #059669;
+      font-weight: 700;
+      margin: 20px 0;
+    }
+
+    .btn {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      border: none;
+      padding: 15px 30px;
+      border-radius: 8px;
+      font-size: 1.1rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: transform 0.2s;
+      width: 100%;
+      margin-bottom: 10px;
+    }
+
+    .btn:hover {
+      transform: translateY(-2px);
+    }
+
+    .btn:active {
+      transform: translateY(0);
+    }
+
+    .btn-copy {
+      background: #10b981;
+    }
+
+    .btn-copy:hover {
+      background: #059669;
+    }
+
+    .alert {
+      background: #fef3c7;
+      border: 2px solid #f59e0b;
+      border-radius: 8px;
+      padding: 15px;
+      margin: 20px 0;
+      display: none;
+    }
+
+    .alert.show {
+      display: block;
+    }
+
+    .alert.success {
+      background: #d1fae5;
+      border-color: #10b981;
+      color: #065f46;
+    }
+
+    .invoice-box {
+      background: #1e293b;
+      color: #e2e8f0;
+      padding: 20px;
+      border-radius: 8px;
+      font-family: 'Courier New', monospace;
+      font-size: 0.9rem;
+      max-height: 400px;
+      overflow-y: auto;
+      margin: 20px 0;
+      display: none;
+      position: relative;
+    }
+
+    .invoice-box.show {
+      display: block;
+    }
+
+    .invoice-box pre {
+      margin: 0;
+      white-space: pre-wrap;
+      word-wrap: break-word;
+    }
+
+    .jwt-display {
+      background: #f3f4f6;
+      border: 2px solid #e5e7eb;
+      padding: 15px;
+      border-radius: 8px;
+      font-family: 'Courier New', monospace;
+      font-size: 0.85rem;
+      word-break: break-all;
+      margin: 10px 0;
+      display: none;
+    }
+
+    .jwt-display.show {
+      display: block;
+    }
+
+    .loading {
+      display: none;
+      text-align: center;
+      padding: 20px;
+    }
+
+    .loading.show {
+      display: block;
+    }
+
+    .spinner {
+      border: 4px solid #f3f4f6;
+      border-top: 4px solid #667eea;
+      border-radius: 50%;
+      width: 40px;
+      height: 40px;
+      animation: spin 1s linear infinite;
+      margin: 0 auto 10px;
+    }
+
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+
+    .next-step {
+      background: #f0f9ff;
+      border: 2px solid #3b82f6;
+      border-radius: 8px;
+      padding: 20px;
+      margin-top: 20px;
+    }
+
+    .next-step h3 {
+      color: #1e40af;
+      margin-bottom: 10px;
+    }
+
+    .payment-link {
+      display: inline-block;
+      margin: 10px 0;
+      padding: 10px 20px;
+      background: #3b82f6;
+      color: white;
+      text-decoration: none;
+      border-radius: 6px;
+      font-weight: 600;
+    }
+
+    .payment-link:hover {
+      background: #2563eb;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="card">
+      <h1>
+        <span class="icon">🔐</span>
+        Premium Data API
+      </h1>
+      <p>Unlock exclusive market insights with Pay402!</p>
+      
+      <div class="price">0.1 USDC per request</div>
+
+      <button class="btn" onclick="requestData()">Get Premium Data</button>
+
+      <div class="alert" id="alert"></div>
+      
+      <div class="loading" id="loading">
+        <div class="spinner"></div>
+        <p>Generating invoice...</p>
+      </div>
+
+      <div class="invoice-box" id="invoiceBox">
+        <h3>Invoice Received:</h3>
+        <pre id="invoiceJson"></pre>
+      </div>
+
+      <div class="jwt-display" id="jwtDisplay"></div>
+
+      <button class="btn btn-copy" id="copyBtn" onclick="copyJWT()" style="display: none;">
+        📋 Copy Invoice JWT
+      </button>
+
+      <div class="next-step" id="nextStep" style="display: none;">
+        <h3>Next Step:</h3>
+        <p>Open Pay402 payment page with this invoice JWT to complete payment.</p>
+        <a href="http://localhost:5173" target="_blank" class="payment-link">
+          → Open Payment Page
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let currentInvoiceJWT = '';
+
+    async function requestData() {
+      const loading = document.getElementById('loading');
+      const alert = document.getElementById('alert');
+      const invoiceBox = document.getElementById('invoiceBox');
+      const jwtDisplay = document.getElementById('jwtDisplay');
+      const copyBtn = document.getElementById('copyBtn');
+      const nextStep = document.getElementById('nextStep');
+
+      // Reset UI
+      alert.className = 'alert';
+      invoiceBox.classList.remove('show');
+      jwtDisplay.classList.remove('show');
+      copyBtn.style.display = 'none';
+      nextStep.style.display = 'none';
+      loading.classList.add('show');
+
+      try {
+        const response = await fetch('/api/premium-data');
+        const data = await response.json();
+
+        loading.classList.remove('show');
+
+        if (response.status === 402 && data.invoice) {
+          // Success - got invoice
+          currentInvoiceJWT = data.invoice;
+
+          // Show full JSON response
+          document.getElementById('invoiceJson').textContent = JSON.stringify(data, null, 2);
+          invoiceBox.classList.add('show');
+
+          // Show just the JWT token
+          jwtDisplay.textContent = currentInvoiceJWT;
+          jwtDisplay.classList.add('show');
+
+          // Show copy button
+          copyBtn.style.display = 'block';
+
+          // Show next step
+          nextStep.style.display = 'block';
+
+          // Show success alert
+          alert.textContent = '⚠️ Payment Required (HTTP 402)';
+          alert.className = 'alert show';
+        } else {
+          throw new Error('Unexpected response');
+        }
+      } catch (error) {
+        loading.classList.remove('show');
+        alert.textContent = `❌ Error: ${error.message}`;
+        alert.className = 'alert show';
+      }
+    }
+
+    function copyJWT() {
+      const copyBtn = document.getElementById('copyBtn');
+      
+      navigator.clipboard.writeText(currentInvoiceJWT).then(() => {
+        // Success feedback
+        const originalText = copyBtn.textContent;
+        copyBtn.textContent = '✅ Copied!';
+        copyBtn.style.background = '#10b981';
+        
+        setTimeout(() => {
+          copyBtn.textContent = originalText;
+          copyBtn.style.background = '';
+        }, 2000);
+      }).catch(err => {
+        alert('Failed to copy: ' + err.message);
+      });
+    }
+
+    // Auto-request on page load for demo
+    window.addEventListener('DOMContentLoaded', () => {
+      requestData();
+    });
+  </script>
+</body>
+</html>

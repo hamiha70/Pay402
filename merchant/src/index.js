@@ -12,10 +12,15 @@
 
 import express from 'express';
 import cors from 'cors';
+import path from 'path';
+import { fileURLToPath } from 'url';
 import { config } from './config.js';
 import { healthController } from './controllers/health.js';
 import { premiumDataController } from './controllers/premium-data.js';
 import { verifyPaymentController } from './controllers/verify-payment.js';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const app = express();
 
@@ -26,13 +31,17 @@ app.use(cors({
 }));
 app.use(express.json());
 
-// Routes
+// Serve static files from public directory
+app.use(express.static(path.join(__dirname, '../public')));
+
+// API Routes
 app.get('/health', healthController);
 app.get('/api/premium-data', premiumDataController);
 app.get('/api/verify-payment', verifyPaymentController);
 
-// Demo page
-app.get('/', (req, res) => {
+// Demo page (served from public/index.html via static middleware)
+// Fallback for old inline demo
+app.get('/demo-old', (req, res) => {
   res.send(`
     <!DOCTYPE html>
     <html>

@@ -9,14 +9,20 @@
     "start": "node dist/index.js",
     "test": "vitest"
   },
-  "keywords": ["pay402", "sui", "x402", "facilitator"],
+  "keywords": [
+    "pay402",
+    "sui",
+    "x402",
+    "facilitator"
+  ],
   "author": "",
   "license": "MIT",
   "description": "Pay402 Facilitator Backend - x402 payment facilitator on SUI blockchain",
   "dependencies": {
     "@mysten/sui": "^2.1.0",
     "dotenv": "^17.2.3",
-    "express": "^5.2.1"
+    "express": "^5.2.1",
+    "jose": "^6.1.3"
   },
   "devDependencies": {
     "@types/express": "^5.0.6",

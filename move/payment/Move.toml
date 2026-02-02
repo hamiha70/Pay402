@@ -12,7 +12,9 @@ payment = "0x0"
 
 [environments]
 # Suibase workdirs (chain IDs populated on first publish)
-localnet = "0x0"
+# Note: sui cli uses 'local' not 'localnet'
+local = "3f37401a"
+localnet = "3f37401a"
 testnet = "0x0"
 devnet = "0x0"
 mainnet = "0x0"

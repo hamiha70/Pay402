@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { SuiClientProvider, WalletProvider, createNetworkConfig } from '@mysten/dapp-kit';
+import { SuiClientProvider, WalletProvider } from '@mysten/dapp-kit';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import PaymentPage from './components/PaymentPage';
 import AuthTest from './components/AuthTest';
@@ -12,14 +12,6 @@ const queryClient = new QueryClient();
 
 const ENOKI_API_KEY = import.meta.env.VITE_ENOKI_API_KEY;
 const ENOKI_AVAILABLE = ENOKI_API_KEY && ENOKI_API_KEY !== 'your_public_api_key_here';
-const SUI_NETWORK = import.meta.env.VITE_SUI_NETWORK || 'localnet';
-
-// Create network config
-const { networkConfig } = createNetworkConfig({
-  localnet: { url: 'http://localhost:9000' },
-  testnet: { url: 'https://fullnode.testnet.sui.io:443' },
-  mainnet: { url: 'https://fullnode.mainnet.sui.io:443' },
-});
 
 function App() {
   const [mounted, setMounted] = useState(false);
@@ -39,7 +31,7 @@ function App() {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <SuiClientProvider networks={networkConfig} defaultNetwork={SUI_NETWORK as any}>
+      <SuiClientProvider>
         <WalletProvider autoConnect>
           <AppContent 
             mode={ENOKI_AVAILABLE ? 'enoki' : 'keypair'} 

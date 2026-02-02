@@ -19,6 +19,11 @@ import {
   type InvoiceJWT,
 } from './verifier';
 
+// Helper: Normalize serialize() output to Uint8Array
+const toUint8Array = (serialized: string | Uint8Array): Uint8Array => {
+  return typeof serialized === 'string' ? new TextEncoder().encode(serialized) : serialized;
+};
+
 // Test addresses
 const MERCHANT_ADDRESS = '0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef';
 const FACILITATOR_ADDRESS = '0xfedcba0987654321fedcba0987654321fedcba0987654321fedcba0987654321';
@@ -51,8 +56,7 @@ function createValidPaymentPTB(): Uint8Array {
   // Transfer fee to facilitator
   tx.transferObjects([feeCoin], FACILITATOR_ADDRESS);
   
-  const serialized = tx.serialize();
-  return typeof serialized === 'string' ? new TextEncoder().encode(serialized) : serialized;
+  return toUint8Array(tx.serialize());
 }
 
 // Helper: Create PTB with wrong recipient
@@ -60,8 +64,7 @@ function createWrongRecipientPTB(): Uint8Array {
   const tx = new Transaction();
   const [paymentCoin] = tx.splitCoins(tx.gas, [100000]);
   tx.transferObjects([paymentCoin], ATTACKER_ADDRESS); // Wrong!
-  const serialized = tx.serialize();
-  return typeof serialized === 'string' ? new TextEncoder().encode(serialized) : serialized;
+  return toUint8Array(tx.serialize());
 }
 
 // Helper: Create PTB with unauthorized transfer
@@ -71,8 +74,7 @@ function createUnauthorizedTransferPTB(): Uint8Array {
   tx.transferObjects([paymentCoin], MERCHANT_ADDRESS);
   tx.transferObjects([feeCoin], FACILITATOR_ADDRESS);
   tx.transferObjects([extraCoin], ATTACKER_ADDRESS); // Unauthorized!
-  const serialized = tx.serialize();
-  return typeof serialized === 'string' ? new TextEncoder().encode(serialized) : serialized;
+  return toUint8Array(tx.serialize());
 }
 
 describe('PTB Verifier', () => {
@@ -112,8 +114,7 @@ describe('PTB Verifier', () => {
 
     it('should fail for empty PTB', () => {
       const tx = new Transaction();
-      const serialized = tx.serialize();
-      const ptb = typeof serialized === 'string' ? new TextEncoder().encode(serialized) : serialized;
+      const ptb = toUint8Array(tx.serialize());
       const result = verifyPaymentPTBBasic(ptb, MERCHANT_ADDRESS);
       
       expect(result.pass).toBe(false);
@@ -136,7 +137,7 @@ describe('PTB Verifier', () => {
       const tx = new Transaction();
       const [paymentCoin] = tx.splitCoins(tx.gas, [100000]);
       tx.transferObjects([paymentCoin], MERCHANT_ADDRESS);
-      const ptb = tx.serialize();
+      const ptb = toUint8Array(tx.serialize());
       
       const result = verifyPaymentPTB(ptb, invoice, 'mock-jwt');
       expect(result.pass).toBe(true);
@@ -160,7 +161,7 @@ describe('PTB Verifier', () => {
       const tx = new Transaction();
       const [feeCoin] = tx.splitCoins(tx.gas, [10000]);
       tx.transferObjects([feeCoin], FACILITATOR_ADDRESS); // Only fee, no payment
-      const ptb = tx.serialize();
+      const ptb = toUint8Array(tx.serialize());
       
       const result = verifyPaymentPTB(ptb, invoice, 'mock-jwt');
       expect(result.pass).toBe(false);
@@ -172,7 +173,7 @@ describe('PTB Verifier', () => {
       const tx = new Transaction();
       const [paymentCoin] = tx.splitCoins(tx.gas, [100000]);
       tx.transferObjects([paymentCoin], MERCHANT_ADDRESS); // No fee transfer
-      const ptb = tx.serialize();
+      const ptb = toUint8Array(tx.serialize());
       
       const result = verifyPaymentPTB(ptb, invoice, 'mock-jwt');
       expect(result.pass).toBe(false);
@@ -201,7 +202,7 @@ describe('PTB Verifier', () => {
     it('should fail for empty transaction', () => {
       const invoice = createInvoice();
       const tx = new Transaction();
-      const ptb = tx.serialize();
+      const ptb = toUint8Array(tx.serialize());
       const result = verifyPaymentPTB(ptb, invoice, 'mock-jwt');
       
       expect(result.pass).toBe(false);
@@ -215,7 +216,7 @@ describe('PTB Verifier', () => {
       const tx = new Transaction();
       const [paymentCoin] = tx.splitCoins(tx.gas, [100000]);
       tx.transferObjects([paymentCoin], ATTACKER_ADDRESS);
-      const ptb = tx.serialize();
+      const ptb = toUint8Array(tx.serialize());
       
       const result = verifyPaymentPTB(ptb, invoice, 'mock-jwt');
       expect(result.pass).toBe(false);
@@ -236,7 +237,7 @@ describe('PTB Verifier', () => {
       const [paymentCoin, feeCoin] = tx.splitCoins(tx.gas, [100000, 10000]);
       tx.transferObjects([paymentCoin], MERCHANT_ADDRESS);
       tx.transferObjects([feeCoin], ATTACKER_ADDRESS); // Stealing fee!
-      const ptb = tx.serialize();
+      const ptb = toUint8Array(tx.serialize());
       
       const result = verifyPaymentPTB(ptb, invoice, 'mock-jwt');
       expect(result.pass).toBe(false);
@@ -248,7 +249,7 @@ describe('PTB Verifier', () => {
       const [paymentCoin, feeCoin] = tx.splitCoins(tx.gas, [1, 10000]); // Only 1 instead of 100000!
       tx.transferObjects([paymentCoin], MERCHANT_ADDRESS);
       tx.transferObjects([feeCoin], FACILITATOR_ADDRESS);
-      const ptb = tx.serialize();
+      const ptb = toUint8Array(tx.serialize());
       
       const result = verifyPaymentPTB(ptb, invoice, 'mock-jwt');
       expect(result.pass).toBe(false);
@@ -261,7 +262,7 @@ describe('PTB Verifier', () => {
       const [paymentCoin, feeCoin] = tx.splitCoins(tx.gas, [100000, 1]); // Fee is 1 instead of 10000!
       tx.transferObjects([paymentCoin], MERCHANT_ADDRESS);
       tx.transferObjects([feeCoin], FACILITATOR_ADDRESS);
-      const ptb = tx.serialize();
+      const ptb = toUint8Array(tx.serialize());
       
       const result = verifyPaymentPTB(ptb, invoice, 'mock-jwt');
       expect(result.pass).toBe(false);
@@ -275,8 +276,7 @@ describe('PTB Verifier', () => {
       tx.transferObjects([p], MERCHANT_ADDRESS);
       tx.transferObjects([f], FACILITATOR_ADDRESS);
       // Note: extra coin not transferred, but split exists
-      const serialized = tx.serialize();
-      const ptb = typeof serialized === 'string' ? new TextEncoder().encode(serialized) : serialized;
+      const ptb = toUint8Array(tx.serialize());
       
       const result = verifyPaymentPTB(ptb, invoice, 'mock-jwt');
       expect(result.pass).toBe(false);
@@ -303,7 +303,7 @@ describe('PTB Verifier', () => {
       const [p, f] = tx.splitCoins(tx.gas, [999999999999999, 99999999999]);
       tx.transferObjects([p], MERCHANT_ADDRESS);
       tx.transferObjects([f], FACILITATOR_ADDRESS);
-      const ptb = tx.serialize();
+      const ptb = toUint8Array(tx.serialize());
       
       const result = verifyPaymentPTB(ptb, invoice, 'mock-jwt');
       expect(result.pass).toBe(true);
@@ -316,7 +316,7 @@ describe('PTB Verifier', () => {
       });
       const tx = new Transaction();
       // No splits or transfers needed for zero amount
-      const ptb = tx.serialize();
+      const ptb = toUint8Array(tx.serialize());
       
       const result = verifyPaymentPTB(ptb, invoice, 'mock-jwt');
       // This will fail because no transfers, which is correct

@@ -45,12 +45,12 @@ export interface VerificationResult {
 /**
  * PTB command types we allow
  */
-enum AllowedCommand {
-  MergeCoins = 'MergeCoins',
-  SplitCoins = 'SplitCoins',
-  TransferObjects = 'TransferObjects',
-  MoveCall = 'MoveCall',
-}
+const AllowedCommand = {
+  MergeCoins: 'MergeCoins',
+  SplitCoins: 'SplitCoins',
+  TransferObjects: 'TransferObjects',
+  MoveCall: 'MoveCall',
+} as const;
 
 /**
  * Compute invoice hash (SHA-256)

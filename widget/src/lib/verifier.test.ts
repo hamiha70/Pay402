@@ -22,7 +22,7 @@ import {
 // Test addresses
 const MERCHANT_ADDRESS = '0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef';
 const FACILITATOR_ADDRESS = '0xfedcba0987654321fedcba0987654321fedcba0987654321fedcba0987654321';
-const BUYER_ADDRESS = '0xabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcd';
+// const BUYER_ADDRESS = '0xabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcd';  // Unused
 const ATTACKER_ADDRESS = '0x9999999999999999999999999999999999999999999999999999999999999999';
 
 // Sample invoice
@@ -51,7 +51,8 @@ function createValidPaymentPTB(): Uint8Array {
   // Transfer fee to facilitator
   tx.transferObjects([feeCoin], FACILITATOR_ADDRESS);
   
-  return tx.serialize();
+  const serialized = tx.serialize();
+  return typeof serialized === 'string' ? new TextEncoder().encode(serialized) : serialized;
 }
 
 // Helper: Create PTB with wrong recipient
@@ -59,7 +60,8 @@ function createWrongRecipientPTB(): Uint8Array {
   const tx = new Transaction();
   const [paymentCoin] = tx.splitCoins(tx.gas, [100000]);
   tx.transferObjects([paymentCoin], ATTACKER_ADDRESS); // Wrong!
-  return tx.serialize();
+  const serialized = tx.serialize();
+  return typeof serialized === 'string' ? new TextEncoder().encode(serialized) : serialized;
 }
 
 // Helper: Create PTB with unauthorized transfer
@@ -69,7 +71,8 @@ function createUnauthorizedTransferPTB(): Uint8Array {
   tx.transferObjects([paymentCoin], MERCHANT_ADDRESS);
   tx.transferObjects([feeCoin], FACILITATOR_ADDRESS);
   tx.transferObjects([extraCoin], ATTACKER_ADDRESS); // Unauthorized!
-  return tx.serialize();
+  const serialized = tx.serialize();
+  return typeof serialized === 'string' ? new TextEncoder().encode(serialized) : serialized;
 }
 
 describe('PTB Verifier', () => {
@@ -109,7 +112,8 @@ describe('PTB Verifier', () => {
 
     it('should fail for empty PTB', () => {
       const tx = new Transaction();
-      const ptb = tx.serialize();
+      const serialized = tx.serialize();
+      const ptb = typeof serialized === 'string' ? new TextEncoder().encode(serialized) : serialized;
       const result = verifyPaymentPTBBasic(ptb, MERCHANT_ADDRESS);
       
       expect(result.pass).toBe(false);
@@ -267,11 +271,12 @@ describe('PTB Verifier', () => {
     it('should block PTB with extra splits (total mismatch)', () => {
       const invoice = createInvoice();
       const tx = new Transaction();
-      const [p, f, extra] = tx.splitCoins(tx.gas, [100000, 10000, 50000]); // Extra 50000!
+      const [p, f, _extra] = tx.splitCoins(tx.gas, [100000, 10000, 50000]); // Extra 50000!
       tx.transferObjects([p], MERCHANT_ADDRESS);
       tx.transferObjects([f], FACILITATOR_ADDRESS);
       // Note: extra coin not transferred, but split exists
-      const ptb = tx.serialize();
+      const serialized = tx.serialize();
+      const ptb = typeof serialized === 'string' ? new TextEncoder().encode(serialized) : serialized;
       
       const result = verifyPaymentPTB(ptb, invoice, 'mock-jwt');
       expect(result.pass).toBe(false);

@@ -123,21 +123,11 @@ export async function buildPTBController(req: Request, res: Response): Promise<v
     // Set sender (buyer)
     tx.setSender(buyerAddress);
     
-    // Merge coins if needed
-    const coinIds = coins.objects.map(coin => coin.objectId);
-    const [primaryCoin] = tx.splitCoins(tx.object(coinIds[0]), []);
-    
-    if (coinIds.length > 1) {
-      tx.mergeCoins(
-        primaryCoin,
-        coinIds.slice(1).map(id => tx.object(id))
-      );
-    }
-    
-    // Split coins for payment and fee
-    const [merchantCoin, feeCoin] = tx.splitCoins(primaryCoin, [
-      amountBigInt,
-      feeBigInt,
+    // Use gas coin as the source (buyer pays with SUI)
+    // Split the required amounts from gas coin
+    const [merchantCoin, feeCoin] = tx.splitCoins(tx.gas, [
+      tx.pure.u64(amountBigInt),
+      tx.pure.u64(feeBigInt),
     ]);
     
     // Transfer to merchant

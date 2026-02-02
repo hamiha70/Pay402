@@ -14,6 +14,46 @@ import { Transaction } from '@mysten/sui/transactions';
 import crypto from 'crypto';
 
 /**
+ * Browser-compatible base64 to hex conversion
+ * (Buffer is Node.js only, not available in browsers)
+ */
+function base64ToHex(base64: string): string {
+  const binary = atob(base64);
+  let hex = '';
+  for (let i = 0; i < binary.length; i++) {
+    const byte = binary.charCodeAt(i).toString(16).padStart(2, '0');
+    hex += byte;
+  }
+  return hex;
+}
+
+/**
+ * Browser-compatible base64 to Uint8Array conversion
+ */
+function base64ToBytes(base64: string): Uint8Array {
+  const binary = atob(base64);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) {
+    bytes[i] = binary.charCodeAt(i);
+  }
+  return bytes;
+}
+
+/**
+ * Read little-endian u64 from Uint8Array
+ */
+function readU64LE(bytes: Uint8Array): bigint {
+  if (bytes.length !== 8) {
+    throw new Error(`Expected 8 bytes for u64, got ${bytes.length}`);
+  }
+  let value = 0n;
+  for (let i = 0; i < 8; i++) {
+    value |= BigInt(bytes[i]) << BigInt(i * 8);
+  }
+  return value;
+}
+
+/**
  * Invoice JWT structure (signed by merchant)
  */
 export interface InvoiceJWT {
@@ -105,10 +145,9 @@ export function verifyPaymentPTB(
       if (addrRef.$kind === 'Input' && typeof addrRef.Input === 'number') {
         const input = inputs[addrRef.Input];
         if (input?.$kind === 'Pure' && input.Pure?.bytes) {
-          // Decode base64 address
-          const bytes = Buffer.from(input.Pure.bytes, 'base64');
-          // Convert to hex with 0x prefix
-          return '0x' + bytes.toString('hex');
+          // Decode base64 address (browser-compatible)
+          const hex = base64ToHex(input.Pure.bytes);
+          return '0x' + hex;
         }
       }
       
@@ -127,12 +166,12 @@ export function verifyPaymentPTB(
       if (amountRef.$kind === 'Input' && typeof amountRef.Input === 'number') {
         const input = inputs[amountRef.Input];
         if (input?.$kind === 'Pure' && input.Pure?.bytes) {
-          // Decode base64 to bytes
-          const bytes = Buffer.from(input.Pure.bytes, 'base64');
+          // Decode base64 to bytes (browser-compatible)
+          const bytes = base64ToBytes(input.Pure.bytes);
           
           // Read as little-endian u64
           if (bytes.length === 8) {
-            return bytes.readBigUInt64LE(0);
+            return readU64LE(bytes);
           }
         }
       }
@@ -342,8 +381,9 @@ export function verifyPaymentPTBBasic(
       if (addrRef.$kind === 'Input' && typeof addrRef.Input === 'number') {
         const input = inputs[addrRef.Input];
         if (input?.$kind === 'Pure' && input.Pure?.bytes) {
-          const bytes = Buffer.from(input.Pure.bytes, 'base64');
-          return '0x' + bytes.toString('hex');
+          // Browser-compatible base64 to hex
+          const hex = base64ToHex(input.Pure.bytes);
+          return '0x' + hex;
         }
       }
       

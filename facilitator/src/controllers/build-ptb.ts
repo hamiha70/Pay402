@@ -10,16 +10,16 @@ interface BuildPTBRequest {
 }
 
 interface InvoicePayload {
-  resourcePath: string;
+  resource: string;
   amount: string;
-  merchant: string;
-  merchantName: string;
+  merchantRecipient: string;
   facilitatorFee: string;
-  facilitator: string;
+  facilitatorRecipient: string;
   coinType: string;
-  invoiceId: string;
+  nonce: string;
   iat: number;
   exp: number;
+  expiry: number;
 }
 
 /**
@@ -123,20 +123,20 @@ export async function buildPTBController(req: Request, res: Response): Promise<v
     ]);
     
     // Transfer to merchant
-    tx.transferObjects([merchantCoin], invoice.merchant);
+    tx.transferObjects([merchantCoin], invoice.merchantRecipient);
     
     // Transfer fee to facilitator
-    tx.transferObjects([feeCoin], invoice.facilitator);
+    tx.transferObjects([feeCoin], invoice.facilitatorRecipient);
     
     // Call settle_payment on Move contract to emit receipt event
     tx.moveCall({
       target: `${config.packageId}::payment::settle_payment`,
       arguments: [
-        tx.pure.string(invoice.invoiceId),
+        tx.pure.string(invoice.nonce),
         tx.pure.u64(invoice.amount),
-        tx.pure.address(invoice.merchant),
+        tx.pure.address(invoice.merchantRecipient),
         tx.pure.u64(invoice.facilitatorFee),
-        tx.pure.address(invoice.facilitator),
+        tx.pure.address(invoice.facilitatorRecipient),
         tx.pure.string(invoiceJWT), // Invoice hash (JWT itself)
         tx.object(CLOCK_OBJECT_ID),
       ],
@@ -152,13 +152,12 @@ export async function buildPTBController(req: Request, res: Response): Promise<v
     res.json({
       ptbBytes: Array.from(ptbBytes),
       invoice: {
-        resourcePath: invoice.resourcePath,
+        resource: invoice.resource,
         amount: invoice.amount,
-        merchant: invoice.merchant,
-        merchantName: invoice.merchantName,
+        merchant: invoice.merchantRecipient,
         facilitatorFee: invoice.facilitatorFee,
-        facilitator: invoice.facilitator,
-        invoiceId: invoice.invoiceId,
+        facilitator: invoice.facilitatorRecipient,
+        invoiceId: invoice.nonce,
       },
     });
     

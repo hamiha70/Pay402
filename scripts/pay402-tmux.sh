@@ -37,22 +37,32 @@ Tmux Key Bindings:
   Ctrl-b + arrow keys   Navigate between panes
   Ctrl-b + z            Zoom/unzoom current pane (full screen)
   Ctrl-b + d            Detach from session
-  Ctrl-b + [            Enter copy mode (navigate with arrows)
+  
+  Copy Mode (Ctrl-b + [):
+    h,j,k,l or arrows   Navigate (vim style)
+    Space or v          Start selection
+    Enter or y          Copy selection to tmux buffer
+    q                   Exit copy mode
+  Ctrl-b + ]            Paste from tmux buffer
   Ctrl-b + s            Save current pane to file (custom)
   Ctrl-b + :kill-session   Kill entire session
 
-Pane Layout (Option C: Testing-Heavy):
+Pane Layout (Testing-Heavy):
   ┌──────────┬─────────────────────────────┐
   │  0: Fac  │                             │
   │  :3001   │  4: Testing (MAIN)          │
-  ├──────────┤     Easy to copy & share    │
-  │  1: Mer  │                             │
-  │  :3002   ├─────────────────────────────┤
-  ├──────────┤  3: Move Dev                │
-  │  2: Wid  │     (lsui commands)         │
-  │  :5173   │                             │
+  │  (small) │     ← HUGE (easy copy)      │
   ├──────────┤                             │
-  │  5: Sui  │                             │
+  │  1: Mer  ├─────────────────────────────┤
+  │  :3002   │  5: Move Dev                │
+  │  (small) │     ← Medium (lsui)         │
+  ├──────────┤                             │
+  │  2: Wid  │                             │
+  │  :5173   │                             │
+  │  (small) │                             │
+  ├──────────┤                             │
+  │  3: Sui  │                             │
+  │  (small) │                             │
   └──────────┴─────────────────────────────┘
 
 Browser URLs:
@@ -84,10 +94,65 @@ if [ $? != 0 ]; then
   tmux new-session -d -s $SESSION_NAME -n "pay402-dev" -c "$PROJECT_DIR"
   
   # ========================================
-  # TOP ROW: 3 SERVERS
+  # LAYOUT CREATION SEQUENCE
+  # Following the exact split pattern requested:
+  # 1. Vertical split (left | right)
+  # 2. Left side splits into: Fac -> (Fac | Merchant) -> (Fac | Merchant | Widget | Sui)
+  # 3. Right side splits into: (Testing | Move Dev)
   # ========================================
   
-  # Pane 0: Facilitator (top-left)
+  # STEP 1: Split vertically (left | right)
+  # Pane 0 is the initial pane, split it vertically to create pane 1 on the right
+  tmux split-window -h -t $SESSION_NAME:0.0 -c "$PROJECT_DIR"
+  
+  # Now we have:
+  # Pane 0 (left) | Pane 1 (right)
+  
+  # STEP 2: Work on LEFT side - select pane 0
+  tmux select-pane -t $SESSION_NAME:0.0
+  
+  # Split pane 0 horizontally: top becomes Facilitator, bottom becomes Widget (temp)
+  tmux split-window -v -t $SESSION_NAME:0.0 -c "$PROJECT_DIR/widget"
+  
+  # Now we have:
+  # Pane 0 (Fac)     | Pane 2 (right - was pane 1, renumbered)
+  # Pane 1 (Widget)  |
+  
+  # STEP 3: Split Facilitator pane horizontally: top stays Fac, bottom becomes Merchant
+  tmux select-pane -t $SESSION_NAME:0.0
+  tmux split-window -v -t $SESSION_NAME:0.0 -c "$PROJECT_DIR/merchant"
+  
+  # Now we have:
+  # Pane 0 (Fac)     | Pane 3 (right - was pane 2, renumbered)
+  # Pane 1 (Merchant)|
+  # Pane 2 (Widget)  |
+  
+  # STEP 4: Split Widget pane horizontally: top stays Widget, bottom becomes SuiNetwork
+  tmux select-pane -t $SESSION_NAME:0.2
+  tmux split-window -v -t $SESSION_NAME:0.2 -c "$PROJECT_DIR"
+  
+  # Now we have:
+  # Pane 0 (Fac)     | Pane 4 (right - was pane 3, renumbered)
+  # Pane 1 (Merchant)|
+  # Pane 2 (Widget)  |
+  # Pane 3 (Sui)     |
+  
+  # STEP 5: Work on RIGHT side - select pane 4, split into Testing (top) and Move Dev (bottom)
+  tmux select-pane -t $SESSION_NAME:0.4
+  tmux split-window -v -t $SESSION_NAME:0.4 -c "$PROJECT_DIR/contract"
+  
+  # Final layout:
+  # Pane 0 (Fac)     | Pane 4 (Testing/Main)
+  # Pane 1 (Merchant)|
+  # Pane 2 (Widget)  | Pane 5 (Move Dev)
+  # Pane 3 (Sui)     |
+  
+  # ========================================
+  # PANE SETUP & TITLES
+  # ========================================
+  
+  # Pane 0: Facilitator
+  tmux select-pane -t $SESSION_NAME:0.0 -T "Fac :3001"
   tmux send-keys -t $SESSION_NAME:0.0 "cd $PROJECT_DIR/facilitator" C-m
   tmux send-keys -t $SESSION_NAME:0.0 "clear" C-m
   tmux send-keys -t $SESSION_NAME:0.0 "echo '🚀 FACILITATOR (Port 3001)'" C-m
@@ -96,8 +161,8 @@ if [ $? != 0 ]; then
   tmux send-keys -t $SESSION_NAME:0.0 "echo ''" C-m
   tmux send-keys -t $SESSION_NAME:0.0 "sleep 2 && npm run dev" C-m
   
-  # Split horizontally (create pane 1: top-middle)
-  tmux split-window -h -t $SESSION_NAME:0.0 -c "$PROJECT_DIR/merchant"
+  # Pane 1: Merchant
+  tmux select-pane -t $SESSION_NAME:0.1 -T "Mer :3002"
   tmux send-keys -t $SESSION_NAME:0.1 "clear" C-m
   tmux send-keys -t $SESSION_NAME:0.1 "echo '🏪 MERCHANT (Port 3002)'" C-m
   tmux send-keys -t $SESSION_NAME:0.1 "echo '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━'" C-m
@@ -105,8 +170,8 @@ if [ $? != 0 ]; then
   tmux send-keys -t $SESSION_NAME:0.1 "echo ''" C-m
   tmux send-keys -t $SESSION_NAME:0.1 "sleep 3 && node src/index.js" C-m
   
-  # Split horizontally (create pane 2: top-right)
-  tmux split-window -h -t $SESSION_NAME:0.1 -c "$PROJECT_DIR/widget"
+  # Pane 2: Widget
+  tmux select-pane -t $SESSION_NAME:0.2 -T "Wid :5173"
   tmux send-keys -t $SESSION_NAME:0.2 "clear" C-m
   tmux send-keys -t $SESSION_NAME:0.2 "echo '💳 PAYMENT PAGE (Port 5173)'" C-m
   tmux send-keys -t $SESSION_NAME:0.2 "echo '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━'" C-m
@@ -114,24 +179,25 @@ if [ $? != 0 ]; then
   tmux send-keys -t $SESSION_NAME:0.2 "echo ''" C-m
   tmux send-keys -t $SESSION_NAME:0.2 "sleep 4 && npm run dev" C-m
   
-  # ========================================
-  # BOTTOM ROW: 3 TOOLS
-  # ========================================
-  
-  # Split pane 0 vertically (create pane 3: bottom-left - Move Dev)
-  tmux split-window -v -t $SESSION_NAME:0.0 -c "$PROJECT_DIR/contract"
+  # Pane 3: SuiNetwork
+  tmux select-pane -t $SESSION_NAME:0.3 -T "Sui"
   tmux send-keys -t $SESSION_NAME:0.3 "clear" C-m
-  tmux send-keys -t $SESSION_NAME:0.3 "echo '📦 MOVE DEVELOPMENT'" C-m
+  tmux send-keys -t $SESSION_NAME:0.3 "echo '⚡ SUIBASE & NETWORK'" C-m
   tmux send-keys -t $SESSION_NAME:0.3 "echo '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━'" C-m
+  tmux send-keys -t $SESSION_NAME:0.3 "localnet status" C-m
+  tmux send-keys -t $SESSION_NAME:0.3 "echo ''" C-m
   tmux send-keys -t $SESSION_NAME:0.3 "echo 'Commands:'" C-m
-  tmux send-keys -t $SESSION_NAME:0.3 "echo '  lsui move test           # Run tests'" C-m
-  tmux send-keys -t $SESSION_NAME:0.3 "echo '  lsui move build          # Build contract'" C-m
-  tmux send-keys -t $SESSION_NAME:0.3 "echo '  lsui client publish      # Deploy to localnet'" C-m
-  tmux send-keys -t $SESSION_NAME:0.3 "echo '  lsui client gas          # Check gas balance'" C-m
+  tmux send-keys -t $SESSION_NAME:0.3 "echo '  localnet start/stop/status'" C-m
+  tmux send-keys -t $SESSION_NAME:0.3 "echo '  lsui client addresses'" C-m
+  tmux send-keys -t $SESSION_NAME:0.3 "echo '  lsui client gas'" C-m
+  tmux send-keys -t $SESSION_NAME:0.3 "echo '  lsui client faucet  # Get test SUI'" C-m
+  tmux send-keys -t $SESSION_NAME:0.3 "echo ''" C-m
+  tmux send-keys -t $SESSION_NAME:0.3 "echo '📍 Active Address:'" C-m
+  tmux send-keys -t $SESSION_NAME:0.3 "lsui client active-address" C-m
   tmux send-keys -t $SESSION_NAME:0.3 "echo ''" C-m
   
-  # Split pane 1 vertically (create pane 4: bottom-middle - Testing)
-  tmux split-window -v -t $SESSION_NAME:0.1 -c "$PROJECT_DIR"
+  # Pane 4: Testing (MAIN)
+  tmux select-pane -t $SESSION_NAME:0.4 -T "Testing (MAIN)"
   tmux send-keys -t $SESSION_NAME:0.4 "clear" C-m
   tmux send-keys -t $SESSION_NAME:0.4 "echo '🧪 TESTING & MONITORING'" C-m
   tmux send-keys -t $SESSION_NAME:0.4 "echo '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━'" C-m
@@ -155,26 +221,21 @@ if [ $? != 0 ]; then
   tmux send-keys -t $SESSION_NAME:0.4 "echo '  Payment Page:     http://localhost:5173'" C-m
   tmux send-keys -t $SESSION_NAME:0.4 "echo ''" C-m
   
-  # Split pane 2 vertically (create pane 5: bottom-right - Suibase)
-  tmux split-window -v -t $SESSION_NAME:0.2 -c "$PROJECT_DIR"
+  # Pane 5: Move Dev
+  tmux select-pane -t $SESSION_NAME:0.5 -T "Move Dev"
   tmux send-keys -t $SESSION_NAME:0.5 "clear" C-m
-  tmux send-keys -t $SESSION_NAME:0.5 "echo '⚡ SUIBASE & NETWORK'" C-m
+  tmux send-keys -t $SESSION_NAME:0.5 "echo '📦 MOVE DEVELOPMENT'" C-m
   tmux send-keys -t $SESSION_NAME:0.5 "echo '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━'" C-m
-  tmux send-keys -t $SESSION_NAME:0.5 "localnet status" C-m
-  tmux send-keys -t $SESSION_NAME:0.5 "echo ''" C-m
   tmux send-keys -t $SESSION_NAME:0.5 "echo 'Commands:'" C-m
-  tmux send-keys -t $SESSION_NAME:0.5 "echo '  localnet start/stop/status'" C-m
-  tmux send-keys -t $SESSION_NAME:0.5 "echo '  lsui client addresses'" C-m
-  tmux send-keys -t $SESSION_NAME:0.5 "echo '  lsui client gas'" C-m
-  tmux send-keys -t $SESSION_NAME:0.5 "echo '  lsui client faucet  # Get test SUI'" C-m
-  tmux send-keys -t $SESSION_NAME:0.5 "echo ''" C-m
-  tmux send-keys -t $SESSION_NAME:0.5 "echo '📍 Active Address:'" C-m
-  tmux send-keys -t $SESSION_NAME:0.5 "lsui client active-address" C-m
+  tmux send-keys -t $SESSION_NAME:0.5 "echo '  lsui move test           # Run tests'" C-m
+  tmux send-keys -t $SESSION_NAME:0.5 "echo '  lsui move build          # Build contract'" C-m
+  tmux send-keys -t $SESSION_NAME:0.5 "echo '  lsui client publish      # Deploy to localnet'" C-m
+  tmux send-keys -t $SESSION_NAME:0.5 "echo '  lsui client gas          # Check gas balance'" C-m
   tmux send-keys -t $SESSION_NAME:0.5 "echo ''" C-m
   
-  # Custom layout: Testing-heavy (Option C)
-  # Create a vertical split layout: narrow left column + wide right side
-  # Then split right side horizontally: large testing (top) + medium move dev (bottom)
+  # Custom layout: Testing-heavy with narrow left column
+  # Left column (panes 0,1,2,3): narrow, stacked vertically
+  # Right side (panes 4,5): wide, with Testing (4) taking most space
   
   # Step 1: Get window dimensions
   WINDOW_INFO=$(tmux display-message -p -t $SESSION_NAME:0 "#{window_width},#{window_height}")
@@ -182,21 +243,23 @@ if [ $? != 0 ]; then
   WINDOW_HEIGHT=$(echo $WINDOW_INFO | cut -d',' -f2)
   
   # Calculate target dimensions
-  LEFT_COL_WIDTH=$((WINDOW_WIDTH / 5))           # 20% for left column
-  RIGHT_COL_WIDTH=$((WINDOW_WIDTH - LEFT_COL_WIDTH))
-  TESTING_HEIGHT=$((WINDOW_HEIGHT * 6 / 10))      # 60% for testing pane
+  LEFT_COL_WIDTH=$((WINDOW_WIDTH / 5))           # 20% for left column (panes 0-3)
+  RIGHT_COL_WIDTH=$((WINDOW_WIDTH - LEFT_COL_WIDTH))  # 80% for right side (panes 4-5)
+  TESTING_HEIGHT=$((WINDOW_HEIGHT * 65 / 100))   # 65% for Testing pane (4)
   
-  # Step 2: Apply a base layout that's close to what we want
-  tmux select-layout -t $SESSION_NAME:0 main-vertical
+  # Step 2: Resize the left column to be narrow
+  tmux resize-pane -t $SESSION_NAME:0.0 -x $LEFT_COL_WIDTH 2>/dev/null || true
   
-  # Step 3: Set main pane percentage to give right side 80% width
-  tmux set-window-option -t $SESSION_NAME:0 main-pane-width $RIGHT_COL_WIDTH
-  tmux select-layout -t $SESSION_NAME:0 main-vertical
-  
-  # Step 4: Now resize pane 4 (Testing) to be 60% of window height
+  # Step 3: Resize Testing pane (4) to take most of the height on the right
   tmux resize-pane -t $SESSION_NAME:0.4 -y $TESTING_HEIGHT 2>/dev/null || true
   
-  # Step 5: Select pane 4 as focus (where user will copy from)
+  # Step 4: Make left column panes roughly equal height (each gets 1/4 of window)
+  LEFT_PANE_HEIGHT=$((WINDOW_HEIGHT / 4))
+  tmux resize-pane -t $SESSION_NAME:0.0 -y $LEFT_PANE_HEIGHT 2>/dev/null || true
+  tmux resize-pane -t $SESSION_NAME:0.1 -y $LEFT_PANE_HEIGHT 2>/dev/null || true
+  tmux resize-pane -t $SESSION_NAME:0.2 -y $LEFT_PANE_HEIGHT 2>/dev/null || true
+  
+  # Step 5: Select pane 4 (Testing) as focus - this is the main work area
   tmux select-pane -t $SESSION_NAME:0.4
   
   # Configure custom key bindings
@@ -219,20 +282,23 @@ if [ $? != 0 ]; then
   echo "✅ Created tmux session: $SESSION_NAME"
   echo ""
   echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-  echo "📋 PANE LAYOUT (Option C: Testing-Heavy)"
+  echo "📋 PANE LAYOUT (Testing-Heavy)"
   echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
   echo "  ┌──────────┬─────────────────────────────┐"
   echo "  │  0: Fac  │                             │"
-  echo "  │  :3001   │                             │"
-  echo "  ├──────────┤  4: Testing (MAIN)          │"
-  echo "  │  1: Mer  │     Easy to copy & share    │"
-  echo "  │  :3002   │                             │"
+  echo "  │  :3001   │  4: Testing (MAIN)          │"
+  echo "  │  (small) │     ← HUGE (easy copy)      │"
+  echo "  ├──────────┤                             │"
+  echo "  │  1: Mer  ├─────────────────────────────┤"
+  echo "  │  :3002   │  5: Move Dev                │"
+  echo "  │  (small) │     ← Medium (lsui)         │"
   echo "  ├──────────┤                             │"
   echo "  │  2: Wid  │                             │"
-  echo "  │  :5173   ├─────────────────────────────┤"
-  echo "  ├──────────┤  3: Move Dev                │"
-  echo "  │  5: Sui  │     (lsui commands)         │"
-  echo "  │  (logs)  │                             │"
+  echo "  │  :5173   │                             │"
+  echo "  │  (small) │                             │"
+  echo "  ├──────────┤                             │"
+  echo "  │  3: Sui  │                             │"
+  echo "  │  (small) │                             │"
   echo "  └──────────┴─────────────────────────────┘"
   echo ""
   echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
@@ -250,10 +316,13 @@ if [ $? != 0 ]; then
   echo "    Ctrl-b + z         Zoom/unzoom current pane (FULL SCREEN)"
   echo "    Ctrl-b + d         Detach from session"
   echo ""
-  echo "  Copy from Single Pane:"
-  echo "    Ctrl-b + [         Enter copy mode"
+  echo "  Copy & Paste:"
+  echo "    Ctrl-b + [         Enter copy mode (navigate with h,j,k,l or arrows)"
+  echo "    Space or v         Start selection (in copy mode)"
+  echo "    Enter or y         Copy selection to tmux buffer (exits copy mode)"
+  echo "    q                  Exit copy mode without copying"
+  echo "    Ctrl-b + ]         Paste from tmux buffer (works in any pane!)"
   echo "    Ctrl-b + s         Save current pane to ~/pay402-pane-*.txt"
-  echo "    Ctrl-b + ]         Paste copied text"
   echo ""
   echo "  Other:"
   echo "    Ctrl-b + o         Open browsers (merchant + widget)"

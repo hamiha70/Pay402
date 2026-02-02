@@ -23,14 +23,25 @@ cat << 'EOF'
 ║  Ctrl-b + ?                    Show all keybindings                        ║
 ║  Ctrl-b :kill-session          Kill entire session                         ║
 ╠════════════════════════════════════════════════════════════════════════════╣
-║ PANE LAYOUT (6 panes)                                                      ║
-║  ┌──────────────┬──────────────┬──────────────┐                           ║
-║  │ 0: Facilitator│ 1: Merchant  │ 2: Widget    │                           ║
-║  │    :3001     │    :3002     │    :5173     │                           ║
-║  ├──────────────┼──────────────┼──────────────┤                           ║
-║  │ 3: Move Dev  │ 4: Testing   │ 5: Suibase   │                           ║
-║  │    (lsui)    │    (curl)    │  (localnet)  │                           ║
-║  └──────────────┴──────────────┴──────────────┘                           ║
+║ PANE LAYOUT (Option C: Testing-Heavy)                                      ║
+║  ┌──────────┬─────────────────────────────┐                               ║
+║  │  0: Fac  │                             │                               ║
+║  │  :3001   │  4: Testing (MAIN)          │                               ║
+║  ├──────────┤     Easy to copy & share    │                               ║
+║  │  1: Mer  │                             │                               ║
+║  │  :3002   ├─────────────────────────────┤                               ║
+║  ├──────────┤  3: Move Dev                │                               ║
+║  │  2: Wid  │     (lsui commands)         │                               ║
+║  │  :5173   │                             │                               ║
+║  ├──────────┤                             │                               ║
+║  │  5: Sui  │                             │                               ║
+║  └──────────┴─────────────────────────────┘                               ║
+║                                                                             ║
+║  WHY: You code in Cursor on another screen!                                ║
+║  This layout optimizes for running & monitoring:                           ║
+║    - Pane 4 (Testing): HUGE for easy copying logs to share                ║
+║    - Pane 3 (Move Dev): Medium for lsui commands                          ║
+║    - Left column: Narrow server log monitors                              ║
 ╠════════════════════════════════════════════════════════════════════════════╣
 ║ COPY FROM SINGLE PANE (Your Main Concern!) ⭐                             ║
 ║  Method 1: Zoom (BEST)                                                     ║

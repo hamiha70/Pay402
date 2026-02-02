@@ -3,7 +3,7 @@
 ## 🚀 Starting/Stopping
 
 ```bash
-# Start everything (auto-starts all servers + opens browsers)
+# Start everything (auto-deploys Move contract + starts all servers + opens browsers)
 ./scripts/pay402-tmux.sh
 
 # Kill everything (stops all servers + closes session)
@@ -12,6 +12,13 @@
 # Show help
 ./scripts/pay402-tmux.sh --help
 ```
+
+**What happens on startup:**
+1. ✅ Checks if Move contract is deployed (skips if exists)
+2. ✅ Starts Facilitator (:3001)
+3. ✅ Starts Merchant (:3002)
+4. ✅ Starts Payment Widget (:5173)
+5. ✅ Opens browsers automatically
 
 ---
 

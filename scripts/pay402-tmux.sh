@@ -151,6 +151,18 @@ if [ $? != 0 ]; then
   # PANE SETUP & TITLES
   # ========================================
   
+  # ========================================
+  # STEP 0: Deploy Move Contract (if needed)
+  # ========================================
+  echo "📦 Deploying Move contract..."
+  cd "$PROJECT_DIR/move/payment"
+  ./deploy-local.sh
+  echo ""
+  
+  # ========================================
+  # START SERVICES
+  # ========================================
+  
   # Pane 0: Facilitator
   tmux select-pane -t $SESSION_NAME:0.0 -T "Fac :3001"
   tmux send-keys -t $SESSION_NAME:0.0 "cd $PROJECT_DIR/facilitator" C-m

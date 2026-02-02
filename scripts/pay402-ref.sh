@@ -74,10 +74,12 @@ cat << 'EOF'
 ║  lsui client faucet            Get test SUI for active address             ║
 ╠════════════════════════════════════════════════════════════════════════════╣
 ║ MOVE DEVELOPMENT (Pane 3)                                                  ║
-║  cd ~/Projects/.../Pay402/contract                                         ║
-║  lsui move test                Run Move unit tests                         ║
-║  lsui move build               Compile contracts                           ║
-║  lsui client publish \                                                     ║
+║  cd ~/Projects/.../Pay402/move/payment                                     ║
+║  ./deploy-local.sh             Deploy/check contract (auto on startup)     ║
+║  ./deploy-local.sh --force     Force re-deploy                             ║
+║  sui move test                 Run Move unit tests                         ║
+║  sui move build                Compile contracts                           ║
+║  sui client publish \                                                      ║
 ║    --gas-budget 100000000      Deploy package to localnet                  ║
 ║  cat Move.lock                 View deployed package IDs                   ║
 ║  cat Publications.toml         View deployment history                     ║

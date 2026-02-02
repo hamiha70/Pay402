@@ -2,10 +2,19 @@
 # Deploy Move contract using Suibase active chain (or fallback to sui client)
 # Works on: localnet, testnet, devnet, mainnet
 # Auto-run by pay402-tmux.sh on startup
+#
+# Usage:
+#   ./deploy-local.sh           - Deploy (or skip if already deployed)
+#   ./deploy-local.sh --force   - Force re-deploy even if exists
 
 set -e
 
-echo "🔨 Deploying Move contract..."
+FORCE_DEPLOY=false
+if [ "$1" = "--force" ]; then
+  FORCE_DEPLOY=true
+fi
+
+echo "🔨 Checking Move contract deployment..."
 cd "$(dirname "$0")"
 
 # Try Suibase first (if installed)
@@ -31,6 +40,21 @@ echo "🌐 Deploying to: $CHAIN_NAME"
 BUILD_ENV="$CHAIN_NAME"
 if [ "$CHAIN_NAME" = "local" ]; then
   BUILD_ENV="localnet"
+fi
+
+# Check if already deployed (unless --force)
+EXISTING_PACKAGE_ID=$(grep "^PACKAGE_ID=" ../../facilitator/.env 2>/dev/null | cut -d= -f2 || echo "")
+if [ -n "$EXISTING_PACKAGE_ID" ] && [ "$EXISTING_PACKAGE_ID" != "0x0" ] && [ "$FORCE_DEPLOY" = false ]; then
+  echo "✅ Contract already deployed!"
+  echo "📦 Package ID: $EXISTING_PACKAGE_ID"
+  echo "🌐 Network: $CHAIN_NAME"
+  echo ""
+  echo "💡 To re-deploy: ./deploy-local.sh --force"
+  exit 0
+fi
+
+if [ "$FORCE_DEPLOY" = true ]; then
+  echo "⚠️  Force re-deploying..."
 fi
 
 # Remove old publication files (both variants to be safe)

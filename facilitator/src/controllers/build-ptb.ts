@@ -91,13 +91,13 @@ export async function buildPTBController(req: Request, res: Response): Promise<v
       coinType: invoice.coinType,
     });
     logger.info('Coins fetched', { 
-      count: coins.data?.length || 0,
+      count: coins.objects?.length || 0,
       coinsResponse: coins 
     });
     
-    if (coins.data.length === 0) {
+    if (!coins.objects || coins.objects.length === 0) {
       res.status(400).json({
-        error: 'No USDC coins found for buyer',
+        error: 'No coins found for buyer',
         buyerAddress,
         coinType: invoice.coinType,
       });
@@ -105,7 +105,7 @@ export async function buildPTBController(req: Request, res: Response): Promise<v
     }
     
     // Calculate total balance
-    const totalBalance = coins.data.reduce((sum, coin) => sum + BigInt(coin.balance), 0n);
+    const totalBalance = coins.objects.reduce((sum, coin) => sum + BigInt(coin.balance), 0n);
     
     if (totalBalance < totalRequired) {
       res.status(400).json({
@@ -124,7 +124,7 @@ export async function buildPTBController(req: Request, res: Response): Promise<v
     tx.setSender(buyerAddress);
     
     // Merge coins if needed
-    const coinIds = coins.data.map(coin => coin.coinObjectId);
+    const coinIds = coins.objects.map(coin => coin.objectId);
     const [primaryCoin] = tx.splitCoins(tx.object(coinIds[0]), []);
     
     if (coinIds.length > 1) {

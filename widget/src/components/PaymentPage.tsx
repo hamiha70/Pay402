@@ -40,8 +40,25 @@ export default function PaymentPage({ invoiceJWT: propInvoiceJWT }: PaymentPageP
   // Parse invoice JWT
   const parseInvoice = () => {
     try {
+      // Extract JWT if user pasted full JSON response
+      let jwtToken = invoiceJWT.trim();
+      
+      // Check if user pasted the entire JSON response from merchant
+      if (jwtToken.startsWith('{')) {
+        try {
+          const json = JSON.parse(jwtToken);
+          // Extract just the JWT token from {"invoice": "eyJ..."}
+          if (json.invoice) {
+            jwtToken = json.invoice;
+            setInvoiceJWT(jwtToken); // Update state with clean JWT
+          }
+        } catch {
+          // Not valid JSON, treat as raw JWT
+        }
+      }
+      
       // Decode JWT (just parse, don't verify signature - merchant signed it)
-      const parts = invoiceJWT.split('.');
+      const parts = jwtToken.split('.');
       if (parts.length !== 3) {
         throw new Error('Invalid JWT format');
       }

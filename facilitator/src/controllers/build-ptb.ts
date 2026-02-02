@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import { Transaction } from '@mysten/sui/transactions';
 import { getSuiClient } from '../sui.js';
 import { config, CLOCK_OBJECT_ID } from '../config.js';
+import { logger } from '../utils/logger.js';
 import { jwtVerify } from 'jose';
 
 interface BuildPTBRequest {
@@ -27,8 +28,12 @@ interface InvoicePayload {
  * Build unsigned PTB for client-side verification and signing
  */
 export async function buildPTBController(req: Request, res: Response): Promise<void> {
+  logger.info('=== BUILD PTB REQUEST START ===');
+  logger.debug('Request body', req.body);
+  
   try {
     const { buyerAddress, invoiceJWT } = req.body as BuildPTBRequest;
+    logger.info('Parsed request', { buyerAddress, jwtLength: invoiceJWT?.length });
     
     // Validate required fields
     if (!buyerAddress || !invoiceJWT) {
@@ -42,12 +47,15 @@ export async function buildPTBController(req: Request, res: Response): Promise<v
     // Decode and validate JWT (basic validation - merchant signature verified client-side)
     let invoice: InvoicePayload;
     try {
+      logger.debug('Decoding JWT...');
       // Decode without verification (merchant's public key verification happens client-side)
       const decoded = JSON.parse(
         Buffer.from(invoiceJWT.split('.')[1], 'base64').toString()
       );
       invoice = decoded as InvoicePayload;
+      logger.info('JWT decoded successfully', { invoice });
     } catch (err) {
+      logger.error('JWT decode failed', err);
       res.status(400).json({
         error: 'Invalid invoice JWT',
         details: err instanceof Error ? err.message : String(err),
@@ -68,13 +76,23 @@ export async function buildPTBController(req: Request, res: Response): Promise<v
     const amountBigInt = BigInt(invoice.amount);
     const feeBigInt = BigInt(invoice.facilitatorFee || config.facilitatorFee);
     const totalRequired = amountBigInt + feeBigInt;
+    logger.info('Amounts calculated', { 
+      amount: invoice.amount, 
+      fee: invoice.facilitatorFee,
+      total: totalRequired.toString() 
+    });
     
     const client = getSuiClient();
+    logger.debug('Fetching coins', { buyerAddress, coinType: invoice.coinType });
     
     // Get buyer's USDC coins
     const coins = await client.listCoins({
       owner: buyerAddress,
       coinType: invoice.coinType,
+    });
+    logger.info('Coins fetched', { 
+      count: coins.data?.length || 0,
+      coinsResponse: coins 
     });
     
     if (coins.data.length === 0) {
@@ -149,6 +167,9 @@ export async function buildPTBController(req: Request, res: Response): Promise<v
     const ptbBytes = await tx.build({ client });
     
     // Return unsigned PTB bytes for client-side verification
+    logger.info('PTB built successfully', { ptbBytesLength: ptbBytes.length });
+    logger.info('=== BUILD PTB REQUEST SUCCESS ===');
+    
     res.json({
       ptbBytes: Array.from(ptbBytes),
       invoice: {
@@ -162,7 +183,9 @@ export async function buildPTBController(req: Request, res: Response): Promise<v
     });
     
   } catch (err) {
-    console.error('Build PTB error:', err);
+    logger.error('=== BUILD PTB REQUEST FAILED ===', err, { 
+      body: req.body 
+    });
     res.status(500).json({
       error: 'Failed to build PTB',
       details: err instanceof Error ? err.message : String(err),

@@ -34,6 +34,10 @@
 - Test EACH function BEFORE moving to next
 - Add test BEFORE committing
 - No "I'll test it later"
+- **NO SKIPPED TESTS** - Either test is relevant (keep it) or not (delete it)
+- Use `it.skip()` ONLY temporarily during active development
+- Before committing: All tests must pass or be removed
+- If test needs external service, make it fail fast with clear error (not skip)
 
 ---
 

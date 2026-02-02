@@ -37,6 +37,21 @@ app.use((req, res, next) => {
 });
 
 // Routes
+app.get('/', (req, res) => {
+  res.json({
+    service: 'Pay402 Facilitator',
+    version: '1.0.0',
+    status: 'running',
+    endpoints: {
+      'GET /health': 'Health check',
+      'POST /check-balance': 'Check buyer USDC balance',
+      'POST /settle-payment': 'Construct PTB for payment',
+      'POST /fund': 'Fund wallet with test USDC (dev only)',
+    },
+    docs: 'See facilitator/SETUP.md for API documentation',
+  });
+});
+
 app.get('/health', healthController);
 app.post('/check-balance', checkBalanceController);
 app.post('/settle-payment', settlePaymentController);

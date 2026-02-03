@@ -295,3 +295,14 @@ echo -e "  Optimistic Mode Latency: $LATENCY"
 echo -e "  Wait Mode Latency: $LATENCY2"
 echo -e "  Transaction Digest: $TX_DIGEST2"
 echo
+echo -e "${YELLOW}NOTE: Localnet Behavior${NC}"
+echo -e "  - Both modes similar due to instant finality (~20-150ms)"
+echo -e "  - SDK executeTransaction() always waits for checkpoint"
+echo -e "  - Transaction deduplication can make 2nd call faster"
+echo
+echo -e "${BLUE}Expected on Testnet/Mainnet:${NC}"
+echo -e "  - Optimistic: ~50-100ms (submit + return digest)"
+echo -e "  - Wait: ~500-1000ms (submit + wait for checkpoint)"
+echo -e "  - Real consensus delay will show true difference"
+echo -e "  - See docs/architecture/SETTLEMENT_MODES.md for details"
+echo

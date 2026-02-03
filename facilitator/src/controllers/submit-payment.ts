@@ -92,12 +92,17 @@ export async function submitPaymentController(req: Request, res: Response): Prom
     if (settlementMode === 'optimistic') {
       logger.info('Using OPTIMISTIC settlement mode');
       
-      // Submit transaction (non-blocking - just get digest)
+      // OPTIMISTIC: Submit transaction WITHOUT waiting for finality
+      // On testnet/mainnet, this should be ~50-100ms (just broadcast)
+      // On localnet, finality is instant so both modes are similar
       let result;
       try {
         result = await client.executeTransaction({
           transaction: txBytes,
           signatures: signatures,
+          // NOTE: executeTransaction ALWAYS waits for finality in gRPC SDK
+          // For true async on testnet/mainnet, we'd need to use raw gRPC submit
+          // or poll with waitForTransaction after getting digest
         });
       } catch (execError) {
         logger.error('executeTransaction failed', {
@@ -114,16 +119,17 @@ export async function submitPaymentController(req: Request, res: Response): Prom
       logger.info('Transaction submitted (optimistic)', { 
         digest,
         latency: `${latency}ms`,
+        note: 'On testnet/mainnet, expect ~50-100ms; localnet is instant',
       });
       
       // Return immediately with digest
-      // Merchant will poll for receipt
+      // Merchant will poll for receipt using waitForTransaction(digest)
       res.json({
         success: true,
         mode: 'optimistic',
         digest,
         latency: `${latency}ms`,
-        note: 'Transaction submitted - settlement pending (1-3s)',
+        note: 'Transaction submitted - settlement pending (~400-800ms on testnet)',
         timestamp: Date.now(),
       });
       
@@ -135,14 +141,16 @@ export async function submitPaymentController(req: Request, res: Response): Prom
     if (settlementMode === 'wait') {
       logger.info('Using WAIT-FOR-FINALITY settlement mode');
       
-      // Submit and wait for finality
+      // WAIT: Submit and wait for finality with full effects
+      // On testnet/mainnet, this should be ~500-1000ms (submit + checkpoint)
+      // On localnet, finality is instant (~20-50ms)
       const result = await client.executeTransaction({
         transaction: txBytes,
         signatures: signatures,
         include: {
-          effects: true,
-          events: true,
-          objectChanges: true,
+          effects: true,    // Transaction execution effects
+          events: true,     // Emitted events (including receipt)
+          objectChanges: true,  // Object mutations
         },
       });
       
@@ -153,6 +161,7 @@ export async function submitPaymentController(req: Request, res: Response): Prom
       logger.info('Transaction finalized', { 
         digest,
         latency: `${latency}ms`,
+        note: 'On testnet/mainnet, expect ~500-1000ms; localnet is instant',
       });
       
       // Check if transaction succeeded

@@ -10,11 +10,31 @@
  */
 
 import { describe, it, expect, beforeAll } from 'vitest';
-import { getFullnodeUrl, SuiClient } from '@mysten/sui/client';
+import { SuiClient } from '@mysten/sui/client';
 import { Transaction } from '@mysten/sui/transactions';
 import { Ed25519Keypair } from '@mysten/sui/keypairs/ed25519';
 
 const NETWORK = process.env.SUI_NETWORK || 'localnet';
+
+// Get RPC URL based on active sui client environment
+function getRpcUrl(): string {
+  try {
+    const { execSync } = require('child_process');
+    const envOutput = execSync('sui client active-env', { encoding: 'utf8' }).trim();
+    
+    // Check which environment is active
+    if (envOutput === 'localnet_proxy') {
+      return 'http://127.0.0.1:44340'; // Proxy
+    } else if (envOutput === 'local') {
+      return 'http://127.0.0.1:9000'; // Direct
+    }
+  } catch (error) {
+    console.warn('Could not detect active environment, using default');
+  }
+  
+  // Default to direct connection
+  return 'http://127.0.0.1:9000';
+}
 
 describe('Proxy Cache Consistency Test', () => {
   let client: SuiClient;
@@ -23,8 +43,8 @@ describe('Proxy Cache Consistency Test', () => {
   let hasGas = false;
 
   beforeAll(async () => {
-    // Get current network URL (will use proxy if active)
-    const url = getFullnodeUrl(NETWORK);
+    // Get current network URL (will detect proxy or direct)
+    const url = getRpcUrl();
     client = new SuiClient({ url });
     
     // Get active address from sui client

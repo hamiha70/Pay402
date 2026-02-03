@@ -3,6 +3,7 @@
 ## What This Tests
 
 The new `proxy-test.test.ts` verifies that Suibase proxy correctly handles:
+
 - ✅ Consistent reads (balance, coins, chain ID)
 - ✅ PTB building (gas object queries)
 - ✅ Read-after-write patterns (critical for E2E)
@@ -55,12 +56,14 @@ npm test
 **What to look for:**
 
 ✅ **GOOD (Expected):**
+
 - All tests pass on both direct and proxy
 - Proxy shows `:44340` in RPC URL
 - Proxy might be slightly faster
 - Parallel requests handle well
 
 ❌ **BAD (Unexpected, unlikely):**
+
 - Balance queries inconsistent on proxy
 - PTB builds fail on proxy
 - Parallel requests timeout
@@ -78,16 +81,19 @@ sui client envs
 ## Quick Switch Commands
 
 ### To Proxy (recommended):
+
 ```bash
 sui client switch --env localnet_proxy
 ```
 
 ### To Direct:
+
 ```bash
 sui client switch --env local
 ```
 
 ### Check Current:
+
 ```bash
 sui client active-env
 ```
@@ -95,6 +101,7 @@ sui client active-env
 ## Expected Test Output
 
 ### Direct Connection (local):
+
 ```
 Test configuration:
   Network: localnet
@@ -110,6 +117,7 @@ Test configuration:
 ```
 
 ### Proxy Connection (localnet_proxy):
+
 ```
 Test configuration:
   Network: localnet
@@ -129,6 +137,7 @@ Test configuration:
 ### If proxy tests fail:
 
 1. **Check proxy is running:**
+
    ```bash
    curl http://127.0.0.1:44340 -X POST \
      -H "Content-Type: application/json" \
@@ -136,6 +145,7 @@ Test configuration:
    ```
 
 2. **Restart localnet:**
+
    ```bash
    localnet stop
    localnet start
@@ -149,6 +159,7 @@ Test configuration:
 ## Why This Test Matters
 
 Your future E2E tests will do:
+
 ```typescript
 // 1. Execute transaction
 await client.signAndExecuteTransaction(...);
@@ -169,6 +180,7 @@ If proxy caches stale balance, tests would be flaky. Our test proves it doesn't!
 After running both tests, **keep using proxy** unless you see issues.
 
 Benefits:
+
 - 🚀 2-10x faster RPC calls
 - ⚡ Better for rapid dev iteration
 - 🔄 Auto-retry on failures

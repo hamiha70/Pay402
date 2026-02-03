@@ -114,89 +114,66 @@ export async function submitPaymentController(req: Request, res: Response): Prom
       
       const validateLatency = Date.now() - validateStart;
       
-      // Step 2: Submit to blockchain IMMEDIATELY (lock buyer's coins)
+      // Step 2: Submit to blockchain and return IMMEDIATELY (don't wait!)
       // This is THE critical step - submit before buyer can front-run
       const submitStart = Date.now();
       
-      let result;
-      try {
-        // Fire transaction to blockchain (returns when SUBMITTED, not finalized)
-        // Note: SDK executeTransaction() actually waits for finality
-        // TODO: Use raw gRPC submit for true async behavior
-        result = await client.executeTransaction({
-          transaction: txBytes,
-          signatures: signatures,
-        });
-      } catch (submitError) {
-        logger.error('Submit to blockchain failed', {
-          error: submitError instanceof Error ? submitError.message : String(submitError),
-          stack: submitError instanceof Error ? submitError.stack : undefined,
-        });
-        
-        res.status(500).json({
-          error: 'Failed to submit transaction',
-          details: submitError instanceof Error ? submitError.message : String(submitError),
-        });
-        return;
-      }
-      
-      const submitLatency = Date.now() - submitStart;
-      const digest = result.$kind === 'Transaction' ? result.Transaction.digest : null;
-      
-      // Step 3: "SAFE TO DELIVER" signal (BEFORE waiting for finality)
-      // Merchant trusts facilitator's validation + immediate submit
-      // Facilitator guarantees payment (takes risk if settlement fails)
+      // Return "safe to deliver" IMMEDIATELY after validation
+      // Submit happens in background (non-blocking)
       const httpLatency = Date.now() - startTime;
       
       res.json({
         success: true,
         mode: 'optimistic',
         safeToDeliver: true,
-        digest,  // Available immediately after submit
+        digest: null,  // Will be available in background
         receipt: null,  // Not available yet (transaction not finalized)
         validateLatency: `${validateLatency}ms`,
-        submitLatency: `${submitLatency}ms`,
+        submitLatency: 'pending',
         httpLatency: `${httpLatency}ms`,
         timestamp: Date.now(),
       });
       
-      logger.info('=== OPTIMISTIC: SAFE TO DELIVER ===', { 
-        digest,
-        validateLatency: `${validateLatency}ms`,
-        submitLatency: `${submitLatency}ms`,
+      logger.info('=== OPTIMISTIC: SAFE TO DELIVER (IMMEDIATE) ===', { 
         httpLatency: `${httpLatency}ms`,
-        note: 'Submitted to blockchain, merchant delivering now, finality happens async',
+        note: 'HTTP response sent BEFORE blockchain submit - true optimistic!',
       });
       
-      // Step 4: Monitor finality in background (optional - for logging/webhook)
-      // Transaction already submitted, just waiting for confirmation
+      // Step 3: Submit to blockchain in background (async, non-blocking)
       setImmediate(async () => {
-        const finalityStart = Date.now();
-        
         try {
-          // Transaction already submitted above - this is just monitoring
-          // In production, could poll for finality status or use websocket
-          logger.info('Monitoring finality (background)', { digest });
+          logger.info('Background: Submitting to blockchain', { buyerAddress });
           
-          // Note: result already has finality (SDK limitation)
-          // In true async implementation, would poll here
-          const finalityLatency = Date.now() - finalityStart;
+          const result = await client.executeTransaction({
+            transaction: txBytes,
+            signatures: signatures,
+          });
           
-          logger.info('=== FINALITY CONFIRMED (BACKGROUND) ===', {
+          const digest = result.$kind === 'Transaction' ? result.Transaction.digest : null;
+          const submitLatency = Date.now() - submitStart;
+          
+          logger.info('=== BACKGROUND: TRANSACTION SUBMITTED & FINALIZED ===', {
             digest,
-            finalityLatency: `${finalityLatency}ms`,
+            submitLatency: `${submitLatency}ms`,
             note: 'Merchant already delivered content',
           });
           
-          // TODO: Notify merchant with confirmed digest (webhook)
+          // TODO: Notify merchant with confirmed digest (webhook or polling endpoint)
           // await notifyMerchantFinality(invoiceJWT, digest);
           
-        } catch (finalityError) {
-          // Should rarely happen (transaction already submitted successfully)
-          logger.error('Finality monitoring error (non-critical)', {
-            digest,
-            error: finalityError instanceof Error ? finalityError.message : String(finalityError),
+        } catch (submitError) {
+          // CRITICAL: Settlement failed AFTER we told merchant "safe to deliver"
+          // This is the facilitator's liability!
+          logger.error('=== FACILITATOR LIABILITY: SETTLEMENT FAILED ===', {
+            error: submitError instanceof Error ? submitError.message : String(submitError),
+            stack: submitError instanceof Error ? submitError.stack : undefined,
+            buyerAddress,
+            invoiceJWT,
+            note: 'Merchant already delivered - facilitator must compensate!',
           });
+          
+          // TODO: Trigger facilitator compensation flow
+          // await facilitatorCompensatesMerchant(invoiceJWT, amount);
         }
       });
       

@@ -7,20 +7,24 @@
 import { describe, it, expect, beforeAll } from 'vitest';
 import { Transaction } from '@mysten/sui/transactions';
 import { SuiGrpcClient } from '@mysten/sui/grpc';
+import { execSync } from 'child_process';
 
-const TEST_BUYER = '0xf9341346cec98488e8018af8b99c2b88a1eabddc2ee84c7d9945e1c2870775d7';
 const TEST_MERCHANT = '0xbf8c50a85dbb19deaec5a9712869a03959c81ec1eba43223deae594afa5a8248';
 const TEST_FACILITATOR = '0x44118d0b343e8cb4203bdd4d75321a2eec4a9ec3c4778dcdda715fee18945995';
 const CLOCK_OBJECT_ID = '0x6';
 
 describe('Build PTB - EXACT Production Logic', () => {
   let client: SuiGrpcClient;
+  let TEST_BUYER: string;
 
   beforeAll(() => {
     client = new SuiGrpcClient({
       network: 'localnet',
       baseUrl: 'http://127.0.0.1:9000',
     });
+    
+    // Get active funded address
+    TEST_BUYER = execSync('sui client active-address', { encoding: 'utf8' }).trim();
   });
 
   it('should build PTB using tx.gas (EXACT production code)', async () => {

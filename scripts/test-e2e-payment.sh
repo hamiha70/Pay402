@@ -293,20 +293,32 @@ echo -e "${GREEN}  ✓ END-TO-END TEST PASSED${NC}"
 echo -e "${GREEN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
 echo
 echo -e "${BLUE}Summary:${NC}"
-echo -e "  Optimistic Mode:"
-echo -e "    Submit: $SUBMIT_LAT | HTTP: $HTTP_LAT"
-echo -e "  Wait Mode:"
-echo -e "    Submit: $SUBMIT_LAT2 | HTTP: $HTTP_LAT2"
-echo -e "  Transaction Digest: $TX_DIGEST2"
+echo
+echo -e "  ${GREEN}Optimistic Mode:${NC}"
+echo -e "    Digest: $TX_DIGEST"
+echo -e "    Client HTTP: ${CLIENT_LAT}ms"
+echo -e "    Server submit: $SUBMIT_LAT"
+echo -e "    Server HTTP: $HTTP_LAT"
+echo -e "    Receipt: no (not finalized yet)"
+echo
+echo -e "  ${GREEN}Pessimistic Mode:${NC}"
+echo -e "    Digest: $TX_DIGEST2"
+echo -e "    Client HTTP: ${CLIENT_LAT2}ms"
+echo -e "    Server submit: $SUBMIT_LAT2"
+echo -e "    Server HTTP: $HTTP_LAT2"
+echo -e "    Receipt: $(echo "$SUBMIT_RESPONSE2" | jq -e '.receipt' > /dev/null 2>&1 && echo "yes" || echo "no")"
+echo
+echo -e "  ${YELLOW}Key Difference:${NC}"
+DIFF=$((CLIENT_LAT2 - CLIENT_LAT))
+echo -e "    Pessimistic is ${DIFF}ms slower (~500ms on testnet)"
 echo
 echo -e "${YELLOW}NOTE: Localnet Behavior${NC}"
 echo -e "  - Both modes similar due to instant finality (~20-150ms)"
 echo -e "  - SDK executeTransaction() always waits for checkpoint"
-echo -e "  - Transaction deduplication can make 2nd call faster"
+echo -e "  - Got 2 DIFFERENT digests (separate transactions)"
 echo
 echo -e "${BLUE}Expected on Testnet/Mainnet:${NC}"
-echo -e "  - Optimistic: ~50-100ms (submit + return digest)"
-echo -e "  - Wait: ~500-1000ms (submit + wait for checkpoint)"
-echo -e "  - Real consensus delay will show true difference"
-echo -e "  - See docs/architecture/SETTLEMENT_MODES.md for details"
+echo -e "  - Optimistic: ~50-100ms (validate + submit + return)"
+echo -e "  - Pessimistic: ~550-600ms (validate + submit + WAIT + return)"
+echo -e "  - Real consensus delay will show ~500ms difference"
 echo

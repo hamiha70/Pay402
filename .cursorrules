@@ -27,6 +27,16 @@
 **Controllers:** src/controllers/ (NOT src/api/)
 **Tests:** src/**tests**/ and scripts/
 
+## Debugging Protocol: CHECK LOGS FIRST
+
+**MANDATORY SEQUENCE when debugging:**
+1. Read logs BEFORE guessing (facilitator: /tmp/facilitator.log or terminal)
+2. Read FULL error context (stack, request/response, data shapes)
+3. Inspect actual API responses in logs before changing code
+4. Never assume data formats - log them and verify
+
+**If error persists >2 attempts → READ THE LOGS**
+
 ## Common Traps We Hit
 
 - Widget tests need jsdom (browser env), not plain Node.js

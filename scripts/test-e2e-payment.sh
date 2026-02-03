@@ -54,17 +54,24 @@ fi
 echo -e "${GREEN}✓ Services running${NC}"
 echo
 
-# Get facilitator address from health check (we have its private key)
+# Role separation for proper testing
 FACILITATOR_ADDRESS=$(curl -s http://localhost:3001/health | jq -r '.facilitator')
 echo -e "${BLUE}Facilitator Address:${NC} $FACILITATOR_ADDRESS"
 
-# For E2E testing: Use facilitator address as buyer (we have the key)
-# In production, buyer would use their own wallet
-BUYER_ADDRESS=$FACILITATOR_ADDRESS
-echo -e "${BLUE}Buyer Address (test):${NC} $BUYER_ADDRESS ${YELLOW}(using facilitator key for testing)${NC}"
+# Use separate suibase addresses for buyer and merchant
+# FIXME: Currently using facilitator key for buyer (need keypair access for signing)
+# TODO: Implement proper buyer keypair management or use wallet SDK
+BUYER_ADDRESS=$FACILITATOR_ADDRESS  # Temporary: same as facilitator for signing
+echo -e "${BLUE}Buyer Address:${NC} $BUYER_ADDRESS ${YELLOW}(TEMP: using facilitator for signing)${NC}"
 
-MERCHANT_ADDRESS=$(sui client active-address)
+MERCHANT_ADDRESS=$(sui client active-address)  # sb-1-ed25519
 echo -e "${BLUE}Merchant Address:${NC} $MERCHANT_ADDRESS"
+
+echo
+echo -e "${YELLOW}NOTE: Proper role separation requires:${NC}"
+echo -e "  1. Buyer keypair accessible for signing (not just address)"
+echo -e "  2. Separate funding per role (use scripts/fund-test-accounts.sh)"
+echo -e "  3. Gas sponsorship testing (facilitator pays for unfunded buyer)"
 
 echo
 echo -e "${YELLOW}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"

@@ -7,19 +7,34 @@
 - Present findings in chat, not files
 - DELETE temporary docs after user reads them
 
-## Testing Levels
+## Testing Standards
 
-**Move:** payment*tests.move → `sui move test` in move/payment/
-**TS Facilitator:** src/**tests**/*.test.ts → `npm test` (vitest, Node.js)
-**TS Widget:** src/lib/\_.test.ts → `npm test` (vitest + jsdom for browser)
-**Integration:** scripts/smoke-test.sh (all services)
+**ALWAYS USE VITEST** - No Jest, no other test frameworks
+
+**Test Locations:**
+- Move: `move/payment/tests/payment_tests.move` → `sui move test`
+- Facilitator: `src/__tests__/*.test.ts` → `npm test` (vitest, Node.js env)
+- Widget: `src/__tests__/*.test.ts` → `npm test` (vitest, jsdom env)
+- Integration: `scripts/test-*.sh` (end-to-end with all services)
+
+**Test Commands:**
+- `npm test` - Run all tests once
+- `npm run test:watch` - Watch mode (TDD)
+- `npm run test:ui` - Visual UI for debugging
+- `npm run test:coverage` - Coverage report (70% minimum)
+
+**Test Structure:**
+- Unit tests: Test individual functions/components
+- Integration tests: Test API endpoints and flows
+- E2E tests: Test complete user journeys with browser automation
 
 ## Tech Stack (verify in package.json first!)
 
-**Facilitator:** @mysten/sui (gRPC), Express, TypeScript
+**Facilitator:** @mysten/sui (gRPC), Express, TypeScript, **Vitest**
 **Merchant:** jose (Ed25519 JWT), Express, JavaScript
-**Widget:** React, Vite, custom PTB verifier
-❌ NO Bull queue, NO @x402/fetch package
+**Widget:** React, Vite, custom PTB verifier, **Vitest**
+**Testing:** Vitest ONLY (never Jest, Mocha, or others)
+❌ NO Bull queue, NO @x402/fetch package, ❌ NO Jest
 
 ## Directory Structure
 
@@ -40,13 +55,15 @@
 
 ## Common Traps We Hit
 
-- Widget tests need jsdom (browser env), not plain Node.js
+- **ALWAYS use Vitest** (never Jest) - check imports: `from 'vitest'` not `from '@jest/globals'`
+- Widget tests need jsdom (browser env), facilitator tests use Node env
 - localnet_proxy: NO gRPC support (use direct :9000)
 - PTB fixtures: Expire in 5min, regenerate via scripts/generate-test-ptbs.js
 - Mock PTBs: Unreliable, always use real fixtures from live services
 - Check package.json before claiming dependencies exist
 - Active address must be funded: `sui client active-address`
 - Don't create analysis docs when analyzing (ironic bloat!)
+- Test coverage minimum: 70% (lines, functions, branches, statements)
 
 ## Per-Component Docs
 

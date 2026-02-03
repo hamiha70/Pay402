@@ -20,12 +20,11 @@ module payment::payment_tests {
     #[test]
     fun test_buyer_pays_amount_plus_fee_merchant_receives_full_amount() {
         // Setup: Create test addresses
-        let _buyer = @0xBABE;
+        let buyer = @0xBABE;
         let merchant = @0xCAFE;
-        let facilitator = @0xFACE;
         
-        // Start test scenario as facilitator (who will call settle_payment)
-        let mut scenario = test_scenario::begin(facilitator);
+        // Start test scenario as BUYER (must match ctx.sender())
+        let mut scenario = test_scenario::begin(buyer);
         
         // Create a clock for timestamps
         let clock = clock::create_for_testing(scenario.ctx());
@@ -38,8 +37,9 @@ module payment::payment_tests {
             // - Amount: 100 (to merchant - FULL amount)
             // - Fee: 10 (to facilitator - ADDED ON TOP)
             // - Total deducted from buyer: 110 (100 + 10)
-            let _receipt = payment::settle_payment(
+            payment::settle_payment(
                 &mut buyer_coin,
+                buyer,      // buyer address (for audit trail)
                 100,        // amount (merchant gets this)
                 merchant,
                 10,         // facilitator_fee (added on top)
@@ -66,8 +66,8 @@ module payment::payment_tests {
             scenario.return_to_sender(merchant_coin);
         };
         
-        // Check facilitator received fee
-        scenario.next_tx(facilitator);
+        // Check facilitator received fee (in tests, facilitator = buyer = sender)
+        scenario.next_tx(buyer);
         {
             let facilitator_coin = scenario.take_from_sender<Coin<SUI>>();
             let fee_amount = coin::value(&facilitator_coin);
@@ -84,9 +84,9 @@ module payment::payment_tests {
     #[test]
     #[expected_failure(abort_code = 2, location = sui::balance)]  // balance::ENotEnough
     fun test_insufficient_balance_fails() {
+        let buyer = @0xBABE;
         let merchant = @0xCAFE;
-        let facilitator = @0xFACE;
-        let mut scenario = test_scenario::begin(facilitator);
+        let mut scenario = test_scenario::begin(buyer);
         let clock = clock::create_for_testing(scenario.ctx());
         
         {
@@ -95,8 +95,9 @@ module payment::payment_tests {
             
             // Try to pay 110 total (100 + 10), but only have 50
             // This SHOULD fail with coin::ENotEnough (code 2)
-            let _receipt = payment::settle_payment(
+            payment::settle_payment(
                 &mut buyer_coin,
+                buyer,    // buyer address
                 100,
                 merchant,
                 10,
@@ -116,9 +117,9 @@ module payment::payment_tests {
     #[test]
     #[expected_failure(abort_code = 2, location = sui::balance)]  // balance::ENotEnough
     fun test_insufficient_balance_due_to_fee() {
+        let buyer = @0xBABE;
         let merchant = @0xCAFE;
-        let facilitator = @0xFACE;
-        let mut scenario = test_scenario::begin(facilitator);
+        let mut scenario = test_scenario::begin(buyer);
         let clock = clock::create_for_testing(scenario.ctx());
         
         {
@@ -127,8 +128,9 @@ module payment::payment_tests {
             
             // Enough for amount (100), but not for fee (10)
             // Total needed: 110, but only have 100
-            let _receipt = payment::settle_payment(
+            payment::settle_payment(
                 &mut buyer_coin,
+                buyer,    // buyer address
                 100,
                 merchant,
                 10,
@@ -146,17 +148,18 @@ module payment::payment_tests {
     
     #[test]
     fun test_zero_amount_payment_only_fee() {
+        let buyer = @0xBABE;
         let merchant = @0xCAFE;
-        let facilitator = @0xFACE;
-        let mut scenario = test_scenario::begin(facilitator);
+        let mut scenario = test_scenario::begin(buyer);
         let clock = clock::create_for_testing(scenario.ctx());
         
         {
             let mut buyer_coin = coin::mint_for_testing<SUI>(1000, scenario.ctx());
             
             // Amount = 0, Fee = 10
-            let _receipt = payment::settle_payment(
+            payment::settle_payment(
                 &mut buyer_coin,
+                buyer,    // buyer address
                 0,          // zero amount to merchant
                 merchant,
                 10,         // still charge fee
@@ -179,8 +182,8 @@ module payment::payment_tests {
             scenario.return_to_sender(merchant_coin);
         };
         
-        // Facilitator should get 10
-        scenario.next_tx(facilitator);
+        // Facilitator should get 10 (in tests, facilitator = buyer)
+        scenario.next_tx(buyer);
         {
             let facilitator_coin = scenario.take_from_sender<Coin<SUI>>();
             assert!(coin::value(&facilitator_coin) == 10, 2);
@@ -193,17 +196,18 @@ module payment::payment_tests {
     
     #[test]
     fun test_zero_fee_full_amount_to_merchant() {
+        let buyer = @0xBABE;
         let merchant = @0xCAFE;
-        let facilitator = @0xFACE;
-        let mut scenario = test_scenario::begin(facilitator);
+        let mut scenario = test_scenario::begin(buyer);
         let clock = clock::create_for_testing(scenario.ctx());
         
         {
             let mut buyer_coin = coin::mint_for_testing<SUI>(1000, scenario.ctx());
             
             // Amount = 100, Fee = 0 (free facilitator)
-            let _receipt = payment::settle_payment(
+            payment::settle_payment(
                 &mut buyer_coin,
+                buyer,    // buyer address
                 100,        // amount to merchant
                 merchant,
                 0,          // zero fee
@@ -226,8 +230,8 @@ module payment::payment_tests {
             scenario.return_to_sender(merchant_coin);
         };
         
-        // Facilitator should get 0
-        scenario.next_tx(facilitator);
+        // Facilitator should get 0 (in tests, facilitator = buyer)
+        scenario.next_tx(buyer);
         {
             let facilitator_coin = scenario.take_from_sender<Coin<SUI>>();
             assert!(coin::value(&facilitator_coin) == 0, 2);
@@ -240,17 +244,18 @@ module payment::payment_tests {
     
     #[test]
     fun test_receipt_returns_without_error() {
+        let buyer = @0xBABE;
         let merchant = @0xCAFE;
-        let facilitator = @0xFACE;
-        let mut scenario = test_scenario::begin(facilitator);
+        let mut scenario = test_scenario::begin(buyer);
         let clock = clock::create_for_testing(scenario.ctx());
         
         {
             let mut buyer_coin = coin::mint_for_testing<SUI>(1000, scenario.ctx());
             
             // Call and receive receipt
-            let _receipt = payment::settle_payment(
+            payment::settle_payment(
                 &mut buyer_coin,
+                buyer,    // buyer address
                 100,
                 merchant,
                 10,
@@ -272,9 +277,9 @@ module payment::payment_tests {
     
     #[test]
     fun test_large_amounts_no_overflow() {
+        let buyer = @0xBABE;
         let merchant = @0xCAFE;
-        let facilitator = @0xFACE;
-        let mut scenario = test_scenario::begin(facilitator);
+        let mut scenario = test_scenario::begin(buyer);
         let clock = clock::create_for_testing(scenario.ctx());
         
         {
@@ -284,8 +289,9 @@ module payment::payment_tests {
             
             let mut buyer_coin = coin::mint_for_testing<SUI>(total_balance, scenario.ctx());
             
-            let _receipt = payment::settle_payment(
+            payment::settle_payment(
                 &mut buyer_coin,
+                buyer,    // buyer address
                 large_amount,
                 merchant,
                 1000,
@@ -307,7 +313,7 @@ module payment::payment_tests {
             scenario.return_to_sender(merchant_coin);
         };
         
-        scenario.next_tx(facilitator);
+        scenario.next_tx(buyer);
         {
             let facilitator_coin = scenario.take_from_sender<Coin<SUI>>();
             assert!(coin::value(&facilitator_coin) == 1000, 2);
@@ -324,9 +330,9 @@ module payment::payment_tests {
     
     #[test]
     fun test_mock_usdc_happy_path() {
+        let buyer = @0xBABE;
         let merchant = @0xCAFE;
-        let facilitator = @0xFACE;
-        let mut scenario = test_scenario::begin(facilitator);
+        let mut scenario = test_scenario::begin(buyer);
         let clock = clock::create_for_testing(scenario.ctx());
         
         {
@@ -334,8 +340,9 @@ module payment::payment_tests {
             let mut buyer_coin = coin::mint_for_testing<MOCK_USDC>(1000_000000, scenario.ctx()); // 1000 USDC
             
             // Pay 100 USDC + 10 USDC fee
-            let _receipt = payment::settle_payment(
+            payment::settle_payment(
                 &mut buyer_coin,
+                buyer,    // buyer address
                 100_000000,  // 100 USDC
                 merchant,
                 10_000000,   // 10 USDC fee
@@ -358,7 +365,7 @@ module payment::payment_tests {
         };
         
         // Facilitator gets 10 USDC
-        scenario.next_tx(facilitator);
+        scenario.next_tx(buyer);
         {
             let facilitator_coin = scenario.take_from_sender<Coin<MOCK_USDC>>();
             assert!(coin::value(&facilitator_coin) == 10_000000, 2);
@@ -372,17 +379,18 @@ module payment::payment_tests {
     #[test]
     #[expected_failure(abort_code = 2, location = sui::balance)]
     fun test_mock_usdc_insufficient_balance() {
+        let buyer = @0xBABE;
         let merchant = @0xCAFE;
-        let facilitator = @0xFACE;
-        let mut scenario = test_scenario::begin(facilitator);
+        let mut scenario = test_scenario::begin(buyer);
         let clock = clock::create_for_testing(scenario.ctx());
         
         {
             // Only 50 USDC, need 110
             let mut buyer_coin = coin::mint_for_testing<MOCK_USDC>(50_000000, scenario.ctx());
             
-            let _receipt = payment::settle_payment(
+            payment::settle_payment(
                 &mut buyer_coin,
+                buyer,    // buyer address
                 100_000000,
                 merchant,
                 10_000000,
@@ -401,17 +409,18 @@ module payment::payment_tests {
     #[test]
     #[expected_failure(abort_code = 2, location = sui::balance)]
     fun test_mock_usdc_insufficient_for_fee() {
+        let buyer = @0xBABE;
         let merchant = @0xCAFE;
-        let facilitator = @0xFACE;
-        let mut scenario = test_scenario::begin(facilitator);
+        let mut scenario = test_scenario::begin(buyer);
         let clock = clock::create_for_testing(scenario.ctx());
         
         {
             // Exactly 100 USDC, need 110 (100 + 10 fee)
             let mut buyer_coin = coin::mint_for_testing<MOCK_USDC>(100_000000, scenario.ctx());
             
-            let _receipt = payment::settle_payment(
+            payment::settle_payment(
                 &mut buyer_coin,
+                buyer,    // buyer address
                 100_000000,
                 merchant,
                 10_000000,
@@ -429,17 +438,18 @@ module payment::payment_tests {
     
     #[test]
     fun test_mock_usdc_zero_amount() {
+        let buyer = @0xBABE;
         let merchant = @0xCAFE;
-        let facilitator = @0xFACE;
-        let mut scenario = test_scenario::begin(facilitator);
+        let mut scenario = test_scenario::begin(buyer);
         let clock = clock::create_for_testing(scenario.ctx());
         
         {
             let mut buyer_coin = coin::mint_for_testing<MOCK_USDC>(1000_000000, scenario.ctx());
             
             // Amount = 0, Fee = 10 USDC
-            let _receipt = payment::settle_payment(
+            payment::settle_payment(
                 &mut buyer_coin,
+                buyer,    // buyer address
                 0,
                 merchant,
                 10_000000,
@@ -461,7 +471,7 @@ module payment::payment_tests {
         };
         
         // Facilitator gets 10 USDC
-        scenario.next_tx(facilitator);
+        scenario.next_tx(buyer);
         {
             let facilitator_coin = scenario.take_from_sender<Coin<MOCK_USDC>>();
             assert!(coin::value(&facilitator_coin) == 10_000000, 2);
@@ -474,17 +484,18 @@ module payment::payment_tests {
     
     #[test]
     fun test_mock_usdc_zero_fee() {
+        let buyer = @0xBABE;
         let merchant = @0xCAFE;
-        let facilitator = @0xFACE;
-        let mut scenario = test_scenario::begin(facilitator);
+        let mut scenario = test_scenario::begin(buyer);
         let clock = clock::create_for_testing(scenario.ctx());
         
         {
             let mut buyer_coin = coin::mint_for_testing<MOCK_USDC>(1000_000000, scenario.ctx());
             
             // Amount = 100 USDC, Fee = 0
-            let _receipt = payment::settle_payment(
+            payment::settle_payment(
                 &mut buyer_coin,
+                buyer,    // buyer address
                 100_000000,
                 merchant,
                 0,
@@ -506,7 +517,7 @@ module payment::payment_tests {
         };
         
         // Facilitator gets 0
-        scenario.next_tx(facilitator);
+        scenario.next_tx(buyer);
         {
             let facilitator_coin = scenario.take_from_sender<Coin<MOCK_USDC>>();
             assert!(coin::value(&facilitator_coin) == 0, 2);
@@ -519,9 +530,9 @@ module payment::payment_tests {
     
     #[test]
     fun test_mock_usdc_large_amounts() {
+        let buyer = @0xBABE;
         let merchant = @0xCAFE;
-        let facilitator = @0xFACE;
-        let mut scenario = test_scenario::begin(facilitator);
+        let mut scenario = test_scenario::begin(buyer);
         let clock = clock::create_for_testing(scenario.ctx());
         
         {
@@ -531,8 +542,9 @@ module payment::payment_tests {
             
             let mut buyer_coin = coin::mint_for_testing<MOCK_USDC>(total, scenario.ctx());
             
-            let _receipt = payment::settle_payment(
+            payment::settle_payment(
                 &mut buyer_coin,
+                buyer,    // buyer address
                 large_amount,
                 merchant,
                 1000_000000,
@@ -552,11 +564,273 @@ module payment::payment_tests {
             scenario.return_to_sender(merchant_coin);
         };
         
-        scenario.next_tx(facilitator);
+        scenario.next_tx(buyer);
         {
             let facilitator_coin = scenario.take_from_sender<Coin<MOCK_USDC>>();
             assert!(coin::value(&facilitator_coin) == 1000_000000, 2);
             scenario.return_to_sender(facilitator_coin);
+        };
+        
+        clock.destroy_for_testing();
+        scenario.end();
+    }
+    
+    // ============================================================================
+    // Validation Tests - Basic Input Validation
+    // ============================================================================
+    
+    #[test]
+    #[expected_failure(abort_code = 1)]  // E_EMPTY_PAYMENT_ID
+    fun test_empty_payment_id_fails_validation() {
+        let buyer = @0xBABE;
+        let merchant = @0xCAFE;
+        let mut scenario = test_scenario::begin(buyer);
+        let clock = clock::create_for_testing(scenario.ctx());
+        
+        {
+            let mut buyer_coin = coin::mint_for_testing<SUI>(1000, scenario.ctx());
+            
+            // Empty payment_id should fail validation
+            payment::settle_payment(
+                &mut buyer_coin,
+                buyer,
+                100,
+                merchant,
+                10,
+                b"",        // ← Empty payment ID (INVALID)
+                &clock,
+                scenario.ctx()
+            );
+            
+            coin::burn_for_testing(buyer_coin);
+        };
+        
+        clock.destroy_for_testing();
+        scenario.end();
+    }
+    
+    // ============================================================================
+    // Validation Tests - Sponsored Transaction Security
+    // ============================================================================
+    
+    #[test]
+    #[expected_failure(abort_code = 2)]  // E_BUYER_MISMATCH
+    fun test_buyer_mismatch_fails() {
+        let buyer = @0xBABE;
+        let wrong_buyer = @0xDEAD;  // Wrong address!
+        let merchant = @0xCAFE;
+        // Start scenario as BUYER (the actual signer)
+        let mut scenario = test_scenario::begin(buyer);
+        let clock = clock::create_for_testing(scenario.ctx());
+        
+        {
+            let mut buyer_coin = coin::mint_for_testing<SUI>(1000, scenario.ctx());
+            
+            // Try to pass wrong_buyer as parameter
+            // But ctx.sender() = buyer (the actual signer)
+            // This MUST fail with E_BUYER_MISMATCH
+            payment::settle_payment(
+                &mut buyer_coin,
+                wrong_buyer,  // ← WRONG! Doesn't match ctx.sender()
+                100,
+                merchant,
+                10,
+                b"test_mismatch",
+                &clock,
+                scenario.ctx()
+            );
+            
+            coin::burn_for_testing(buyer_coin);
+        };
+        
+        clock.destroy_for_testing();
+        scenario.end();
+    }
+    
+    #[test]
+    fun test_buyer_match_succeeds() {
+        let buyer = @0xBABE;
+        let merchant = @0xCAFE;
+        
+        // Start scenario as BUYER (the actual signer)
+        let mut scenario = test_scenario::begin(buyer);
+        let clock = clock::create_for_testing(scenario.ctx());
+        
+        {
+            let mut buyer_coin = coin::mint_for_testing<SUI>(1000, scenario.ctx());
+            
+            // Pass correct buyer address matching ctx.sender()
+            // This SHOULD succeed
+            payment::settle_payment(
+                &mut buyer_coin,
+                buyer,  // ← CORRECT! Matches ctx.sender()
+                100,
+                merchant,
+                10,
+                b"test_correct_buyer",
+                &clock,
+                scenario.ctx()
+            );
+            
+            // Verify payment went through
+            assert!(coin::value(&buyer_coin) == 890, 0);
+            coin::burn_for_testing(buyer_coin);
+        };
+        
+        clock.destroy_for_testing();
+        scenario.end();
+    }
+    
+    #[test]
+    fun test_non_sponsored_transaction_succeeds() {
+        // NOTE: In test_scenario, transactions are NOT sponsored by default
+        // ctx.sponsor() returns None
+        // This test verifies non-sponsored transactions work (for testing)
+        
+        let buyer = @0xBABE;
+        let merchant = @0xCAFE;
+        
+        // Start scenario as buyer (non-sponsored transaction)
+        let mut scenario = test_scenario::begin(buyer);
+        let clock = clock::create_for_testing(scenario.ctx());
+        
+        {
+            let mut buyer_coin = coin::mint_for_testing<SUI>(1000, scenario.ctx());
+            
+            // Call settle_payment without sponsorship
+            // ctx.sponsor() = None, facilitator will be ctx.sender()
+            payment::settle_payment(
+                &mut buyer_coin,
+                buyer,  // Matches ctx.sender()
+                100,
+                merchant,
+                10,
+                b"test_no_sponsor",
+                &clock,
+                scenario.ctx()
+            );
+            
+            // Verify payment went through
+            assert!(coin::value(&buyer_coin) == 890, 0);
+            coin::burn_for_testing(buyer_coin);
+        };
+        
+        clock.destroy_for_testing();
+        scenario.end();
+    }
+    
+    // ============================================================================
+    // Security Edge Cases
+    // ============================================================================
+    
+    #[test]
+    #[expected_failure(abort_code = 2)]  // E_BUYER_MISMATCH
+    fun test_facilitator_cannot_lie_about_buyer() {
+        let real_buyer = @0xBABE;
+        let fake_buyer = @0xFADE;  // Changed from FAKE (invalid hex)
+        let merchant = @0xCAFE;
+        
+        // Scenario: Malicious facilitator tries to claim payment from fake_buyer
+        // But real_buyer is the actual signer
+        let mut scenario = test_scenario::begin(real_buyer);
+        let clock = clock::create_for_testing(scenario.ctx());
+        
+        {
+            let mut buyer_coin = coin::mint_for_testing<SUI>(1000, scenario.ctx());
+            
+            // Malicious facilitator passes fake_buyer
+            // But ctx.sender() = real_buyer
+            // Validation MUST catch this
+            payment::settle_payment(
+                &mut buyer_coin,
+                fake_buyer,  // ← LIE! Doesn't match ctx.sender()
+                100,
+                merchant,
+                10,
+                b"test_fake",
+                &clock,
+                scenario.ctx()
+            );
+            
+            coin::burn_for_testing(buyer_coin);
+        };
+        
+        clock.destroy_for_testing();
+        scenario.end();
+    }
+    
+    #[test]
+    #[expected_failure(abort_code = 2)]  // E_BUYER_MISMATCH
+    fun test_merchant_address_as_buyer_fails_if_not_signer() {
+        let real_buyer = @0xBABE;
+        let merchant = @0xCAFE;
+        
+        // Scenario: Try to set merchant as buyer (not the signer)
+        let mut scenario = test_scenario::begin(real_buyer);
+        let clock = clock::create_for_testing(scenario.ctx());
+        
+        {
+            let mut buyer_coin = coin::mint_for_testing<SUI>(1000, scenario.ctx());
+            
+            // Pass merchant as buyer, but real_buyer is signer
+            payment::settle_payment(
+                &mut buyer_coin,
+                merchant,  // ← Doesn't match ctx.sender()
+                100,
+                merchant,
+                10,
+                b"test_self_pay",
+                &clock,
+                scenario.ctx()
+            );
+            
+            coin::burn_for_testing(buyer_coin);
+        };
+        
+        clock.destroy_for_testing();
+        scenario.end();
+    }
+    
+    #[test]
+    fun test_self_payment_succeeds_if_buyer_is_signer() {
+        // Scenario: User pays themselves (buyer = merchant = signer)
+        let user = @0xBABE;
+        
+        let mut scenario = test_scenario::begin(user);
+        let clock = clock::create_for_testing(scenario.ctx());
+        
+        {
+            let mut buyer_coin = coin::mint_for_testing<SUI>(1000, scenario.ctx());
+            
+            // Self-payment: buyer = merchant = ctx.sender()
+            // Non-sponsored: facilitator will also be ctx.sender()
+            payment::settle_payment(
+                &mut buyer_coin,
+                user,   // buyer = signer ✅
+                100,
+                user,   // merchant = buyer (self-pay)
+                10,
+                b"test_self",
+                &clock,
+                scenario.ctx()
+            );
+            
+            assert!(coin::value(&buyer_coin) == 890, 0);
+            coin::burn_for_testing(buyer_coin);
+        };
+        
+        // User receives both merchant payment + fee (facilitator = sender in tests)
+        scenario.next_tx(user);
+        {
+            let payment_coin = scenario.take_from_sender<Coin<SUI>>();
+            let fee_coin = scenario.take_from_sender<Coin<SUI>>();
+            
+            // Should receive 100 + 10 = 110 back (in 2 separate coins)
+            let total = coin::value(&payment_coin) + coin::value(&fee_coin);
+            assert!(total == 110, 1);
+            
+            scenario.return_to_sender(payment_coin);
+            scenario.return_to_sender(fee_coin);
         };
         
         clock.destroy_for_testing();

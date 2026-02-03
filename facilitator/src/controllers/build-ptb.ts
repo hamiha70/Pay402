@@ -4,6 +4,7 @@ import { getSuiClient } from '../sui.js';
 import { config, CLOCK_OBJECT_ID } from '../config.js';
 import { logger } from '../utils/logger.js';
 import { jwtVerify } from 'jose';
+import { extractSuiValues, parseCAIP2, parseCAIP19, parseCAIP10 } from '../utils/caip.js';
 
 interface BuildPTBRequest {
   buyerAddress: string;
@@ -11,6 +12,14 @@ interface BuildPTBRequest {
 }
 
 interface InvoicePayload {
+  // X-402 V2 CAIP fields
+  network: string;            // CAIP-2: "sui:mainnet" | "sui:testnet" | "sui:devnet"
+  assetType: string;          // CAIP-19: "sui:mainnet/coin:0x2::usdc::USDC"
+  payTo: string;              // CAIP-10: "sui:mainnet:0xMerchant..."
+  paymentId: string;          // Unique payment identifier
+  description: string;        // Human-readable description
+  
+  // Existing fields (backward compatible)
   resource: string;
   amount: string;
   merchantRecipient: string;
@@ -54,6 +63,32 @@ export async function buildPTBController(req: Request, res: Response): Promise<v
       );
       invoice = decoded as InvoicePayload;
       logger.info('JWT decoded successfully', { invoice });
+      
+      // Parse CAIP fields if present (X-402 V2)
+      if (invoice.network && invoice.assetType && invoice.payTo) {
+        logger.debug('Parsing X-402 V2 CAIP fields...');
+        try {
+          const suiValues = extractSuiValues({
+            network: invoice.network,
+            assetType: invoice.assetType,
+            payTo: invoice.payTo,
+          });
+          logger.info('CAIP fields parsed', { suiValues });
+          
+          // Use CAIP-extracted values (overrides legacy fields if both present)
+          invoice.coinType = suiValues.coinType;
+          invoice.merchantRecipient = suiValues.merchantAddress;
+        } catch (caipErr) {
+          logger.error('CAIP parsing failed', caipErr);
+          res.status(400).json({
+            error: 'Invalid CAIP fields in invoice',
+            details: caipErr instanceof Error ? caipErr.message : String(caipErr),
+          });
+          return;
+        }
+      } else {
+        logger.debug('No CAIP fields found, using legacy fields');
+      }
     } catch (err) {
       logger.error('JWT decode failed', err);
       res.status(400).json({
@@ -166,32 +201,31 @@ export async function buildPTBController(req: Request, res: Response): Promise<v
     }
     
     // Convert payment ID (nonce) to bytes
-    const paymentIdBytes = Array.from(Buffer.from(invoice.nonce, 'utf-8'));
+    const paymentIdBytes = Array.from(Buffer.from(invoice.nonce || invoice.paymentId, 'utf-8'));
     
-    // CRITICAL: Split off ONLY the exact amount needed for payment
-    // This leaves the rest of the buyer's coin available for gas (or other purposes)
-    logger.info('Splitting payment coin', {
-      totalRequired: totalRequired.toString(),
-      sourceCoinin: suitableCoin.objectId
+    // Call settle_payment<T> Move function with buyer's coin
+    // The Move function will:
+    // 1. Split merchant amount from buyer_coin → merchant
+    // 2. Split facilitator fee from buyer_coin → facilitator
+    // 3. Transfer both amounts atomically
+    // 4. Emit PaymentSettled event
+    // 5. Leave remainder in buyer_coin (available for gas or future payments)
+    //
+    // CRITICAL: We pass the buyer's coin directly (not a split coin!)
+    // The Move function uses &mut Coin<T> to prevent front-running
+    logger.info('Building PTB with settle_payment Move call', {
+      amount: amountBigInt.toString(),
+      fee: feeBigInt.toString(),
+      total: totalRequired.toString(),
+      buyerCoin: suitableCoin.objectId,
     });
     
-    const [paymentCoin] = tx.splitCoins(
-      tx.object(suitableCoin.objectId),
-      [totalRequired]  // Split off EXACTLY amount + fee
-    );
-    
-    // Call settle_payment<T> Move function with the SPLIT coin
-    // This will:
-    // 1. Split merchant amount from payment coin
-    // 2. Split facilitator fee from payment coin  
-    // 3. Transfer both amounts atomically
-    // 4. Emit ReceiptEmitted event
-    // 5. Merge any remainder back to buyer
     tx.moveCall({
       target: `${config.packageId}::payment::settle_payment`,
       typeArguments: [invoice.coinType],
       arguments: [
-        paymentCoin,                               // Coin<T> (SPLIT coin with exact amount)
+        tx.object(suitableCoin.objectId),          // &mut Coin<T> (buyer's original coin)
+        tx.pure.address(buyerAddress),             // buyer: address (for audit trail)
         tx.pure.u64(amountBigInt),                 // amount: u64
         tx.pure.address(invoice.merchantRecipient), // merchant: address
         tx.pure.u64(feeBigInt),                    // facilitator_fee: u64

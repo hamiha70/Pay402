@@ -41,6 +41,7 @@ Ensure Move contracts are always deployed and tested before running TypeScript t
 ### 1. Deployment Script
 
 **`scripts/deploy-move-contracts.sh`:**
+
 ```bash
 #!/bin/bash
 set -e
@@ -90,47 +91,50 @@ echo "✅ Move contracts deployed and ready!"
 ### 2. Vitest Global Setup
 
 **`facilitator/src/__tests__/global-setup.ts`:**
+
 ```typescript
-import { execSync } from 'child_process';
-import * as fs from 'fs';
-import * as path from 'path';
+import { execSync } from "child_process";
+import * as fs from "fs";
+import * as path from "path";
 
 export async function setup() {
-  console.log('🔧 Validating Move contracts...');
-  
-  const projectRoot = path.resolve(__dirname, '../../..');
-  const envFile = path.join(projectRoot, 'facilitator/.env');
-  
+  console.log("🔧 Validating Move contracts...");
+
+  const projectRoot = path.resolve(__dirname, "../../..");
+  const envFile = path.join(projectRoot, "facilitator/.env");
+
   // Check if .env exists
   if (!fs.existsSync(envFile)) {
-    throw new Error('.env file not found. Run: npm run deploy:contracts');
+    throw new Error(".env file not found. Run: npm run deploy:contracts");
   }
-  
+
   // Check if Package ID is set
-  const envContent = fs.readFileSync(envFile, 'utf-8');
+  const envContent = fs.readFileSync(envFile, "utf-8");
   const packageIdMatch = envContent.match(/PACKAGE_ID=(.+)/);
-  
-  if (!packageIdMatch || 
-      packageIdMatch[1] === 'YOUR_PACKAGE_ID_HERE' ||
-      packageIdMatch[1].trim() === '') {
+
+  if (
+    !packageIdMatch ||
+    packageIdMatch[1] === "YOUR_PACKAGE_ID_HERE" ||
+    packageIdMatch[1].trim() === ""
+  ) {
     throw new Error(
-      'Move contracts not deployed. Run: npm run deploy:contracts'
+      "Move contracts not deployed. Run: npm run deploy:contracts"
     );
   }
-  
+
   const packageId = packageIdMatch[1].trim();
   console.log(`✅ Package ID found: ${packageId}`);
-  
+
   // Verify Move tests pass
-  console.log('🧪 Running Move tests...');
+  console.log("🧪 Running Move tests...");
   try {
-    execSync('cd ../move/payment && sui move test', { 
-      stdio: 'inherit',
-      cwd: projectRoot 
+    execSync("cd ../move/payment && sui move test", {
+      stdio: "inherit",
+      cwd: projectRoot,
     });
-    console.log('✅ Move tests passed');
+    console.log("✅ Move tests passed");
   } catch (error) {
-    console.error('❌ Move tests failed');
+    console.error("❌ Move tests failed");
     throw error;
   }
 }
@@ -141,18 +145,19 @@ export async function teardown() {
 ```
 
 **`facilitator/vitest.config.ts`:**
+
 ```typescript
-import { defineConfig } from 'vitest/config';
+import { defineConfig } from "vitest/config";
 
 export default defineConfig({
   test: {
     globals: true,
-    environment: 'node',
-    setupFiles: ['./src/__tests__/setup.ts'],
-    globalSetup: './src/__tests__/global-setup.ts', // ← Add this
+    environment: "node",
+    setupFiles: ["./src/__tests__/setup.ts"],
+    globalSetup: "./src/__tests__/global-setup.ts", // ← Add this
     coverage: {
-      provider: 'v8',
-      reporter: ['text', 'json', 'html'],
+      provider: "v8",
+      reporter: ["text", "json", "html"],
       thresholds: {
         lines: 70,
         functions: 70,
@@ -167,6 +172,7 @@ export default defineConfig({
 ### 3. NPM Scripts
 
 **`facilitator/package.json`:**
+
 ```json
 {
   "scripts": {
@@ -183,6 +189,7 @@ export default defineConfig({
 ```
 
 **`package.json` (root):**
+
 ```json
 {
   "scripts": {
@@ -195,6 +202,7 @@ export default defineConfig({
 ## Usage
 
 ### First Time Setup
+
 ```bash
 # From project root
 npm run deploy
@@ -205,6 +213,7 @@ npm run deploy:contracts
 ```
 
 ### Regular Development
+
 ```bash
 # Contracts are checked automatically
 npm test
@@ -214,6 +223,7 @@ npm run test:with-deploy
 ```
 
 ### CI/CD
+
 ```bash
 # In GitHub Actions / CI
 npm run deploy
@@ -231,17 +241,20 @@ npm run test:all
 ## Troubleshooting
 
 ### "PACKAGE_ID not set"
+
 ```bash
 npm run deploy:contracts
 ```
 
 ### "Move tests failed"
+
 ```bash
 cd move/payment
 sui move test  # See specific error
 ```
 
 ### "sui CLI environment error"
+
 ```bash
 sui client active-env  # Should show: localnet
 sui client switch --env local  # Try switching

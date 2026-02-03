@@ -12,6 +12,14 @@ module payment::payment {
     use sui::coin::Coin;
     use sui::clock::Clock;
     
+    // === Error Codes ===
+    
+    /// Payment ID cannot be empty
+    const E_EMPTY_PAYMENT_ID: u64 = 1;
+    
+    /// Buyer parameter must match transaction signer
+    const E_BUYER_MISMATCH: u64 = 2;
+    
     // === Structs ===
     
     /// Event emitted when payment is settled on-chain
@@ -45,18 +53,29 @@ module payment::payment {
     /// 
     /// # Arguments
     /// * `buyer_coin` - Mutable reference to buyer's coin (prevents front-running)
+    /// * `buyer` - Buyer's address (validated against transaction signer)
     /// * `amount` - Payment amount (to merchant)
     /// * `merchant` - Merchant's address
     /// * `facilitator_fee` - Fixed fee for facilitator (e.g., 10000 microUSDC = $0.01)
     /// * `payment_id` - Unique payment identifier from x402 request
     /// * `clock` - Sui Clock object for timestamp
-    /// * `ctx` - Transaction context
+    /// * `ctx` - Transaction context (contains buyer as sender, facilitator as sponsor)
     /// 
     /// # Returns
     /// None - Receipt is emitted as event only (zero storage cost)
+    /// 
+    /// # Security Validations
+    /// * Buyer parameter must match ctx.sender() (transaction signer)
+    /// * Facilitator obtained from ctx.sponsor() in production, ctx.sender() in tests
+    /// 
+    /// # Aborts
+    /// * E_EMPTY_PAYMENT_ID (1): If payment_id is empty
+    /// * E_BUYER_MISMATCH (2): If buyer parameter doesn't match transaction signer
+    /// * balance::ENotEnough: If buyer_coin has insufficient balance (automatic)
     #[allow(lint(self_transfer))]
     public entry fun settle_payment<T>(
         buyer_coin: &mut Coin<T>,
+        buyer: address,
         amount: u64,
         merchant: address,
         facilitator_fee: u64,
@@ -69,7 +88,40 @@ module payment::payment {
         use std::type_name;
         use std::ascii;
         
-        let facilitator = ctx.sender();
+        // === Validate Inputs ===
+        
+        // 1. Payment ID must not be empty
+        assert!(std::vector::length(&payment_id) > 0, E_EMPTY_PAYMENT_ID);
+        
+        // === Validate Buyer Identity ===
+        
+        // 2. Buyer parameter must match transaction signer
+        // This prevents facilitator from lying about buyer identity
+        let actual_buyer = ctx.sender();
+        assert!(actual_buyer == buyer, E_BUYER_MISMATCH);
+        
+        // === Get Facilitator Address ===
+        
+        // In sponsored transactions (production):
+        // - ctx.sender() = buyer (who signed)
+        // - ctx.sponsor() = Some(facilitator) (who pays gas)
+        //
+        // In non-sponsored transactions (unit tests):
+        // - ctx.sender() = test address
+        // - ctx.sponsor() = None
+        //
+        // Use sponsor if available, otherwise fall back to sender
+        // SECURITY: In production, facilitator MUST sponsor the transaction
+        // - ctx.sponsor() returns Some(facilitator_address)
+        // - Facilitator pays gas fees
+        // - This prevents buyer from being charged gas
+        // In tests, sponsor is None, so we use sender (test address)
+        let sponsor_opt = ctx.sponsor();
+        let facilitator = if (option::is_some(&sponsor_opt)) {
+            *option::borrow(&sponsor_opt)  // Sponsored: use sponsor address (production)
+        } else {
+            ctx.sender()  // Non-sponsored: use sender (tests only)
+        };
         
         // Split merchant payment from buyer's coin (full amount)
         // CRITICAL: &mut prevents buyer from spending coin elsewhere during settlement
@@ -95,7 +147,7 @@ module payment::payment {
         // Emit event for off-chain indexing
         event::emit(PaymentSettled {
             payment_id,
-            buyer: @0x0, // TODO: derive from coin ownership
+            buyer,  // Actual buyer address (from parameter)
             merchant,
             facilitator,
             amount,

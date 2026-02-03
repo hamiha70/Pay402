@@ -11,6 +11,7 @@
  */
 
 import { Transaction } from '@mysten/sui/transactions';
+import { extractSuiValues, parseCAIP2, parseCAIP19, parseCAIP10 } from './caip.js';
 
 /**
  * Browser-compatible base64 to hex conversion
@@ -56,14 +57,22 @@ function readU64LE(bytes: Uint8Array): bigint {
  * Invoice JWT structure (signed by merchant)
  */
 export interface InvoiceJWT {
+  // ===== X-402 V2 REQUIRED FIELDS (CAIP Standards) =====
+  network: string;            // CAIP-2: "sui:mainnet" | "sui:testnet" | "sui:devnet"
+  assetType: string;          // CAIP-19: "sui:mainnet/coin:0x2::usdc::USDC"
+  payTo: string;              // CAIP-10: "sui:mainnet:0xMerchant..."
+  paymentId: string;          // Unique payment identifier (same as nonce)
+  description: string;        // Human-readable description
+  
+  // ===== EXISTING FIELDS (Backward Compatible) =====
   resource: string;           // e.g., "/api/premium-data"
   amount: string;             // In smallest unit (e.g., "100000" = 0.1 USDC)
-  merchantRecipient: string;  // Merchant's SUI address
+  merchantRecipient: string;  // Merchant's SUI address (extracted from payTo)
   facilitatorFee: string;     // Facilitator's fee in smallest unit
   facilitatorRecipient: string; // Facilitator's address
-  coinType: string;           // e.g., "0x2::sui::SUI" for now
+  coinType: string;           // e.g., "0x2::usdc::USDC" (extracted from assetType)
   expiry: number;             // Unix timestamp
-  nonce: string;              // Unique per invoice
+  nonce: string;              // Unique per invoice (same as paymentId)
   redirectUrl?: string;       // Optional: Where to redirect after payment
 }
 
@@ -129,6 +138,55 @@ export async function verifyPaymentPTB(
   invoiceJwt: string
 ): Promise<VerificationResult> {
   try {
+    // Parse and validate CAIP fields if present (X-402 V2)
+    let effectiveCoinType = invoice.coinType;
+    let effectiveMerchant = invoice.merchantRecipient;
+    
+    if (invoice.network && invoice.assetType && invoice.payTo) {
+      try {
+        const suiValues = extractSuiValues({
+          network: invoice.network,
+          assetType: invoice.assetType,
+          payTo: invoice.payTo,
+        });
+        
+        // Use CAIP-extracted values (overrides legacy fields)
+        effectiveCoinType = suiValues.coinType;
+        effectiveMerchant = suiValues.merchantAddress;
+        
+        // Validate consistency with legacy fields if both present
+        if (invoice.coinType && invoice.coinType !== effectiveCoinType) {
+          return {
+            pass: false,
+            reason: 'CAIP assetType conflicts with legacy coinType',
+            details: {
+              expectedAmount: effectiveCoinType,
+              foundAmount: invoice.coinType,
+            },
+          };
+        }
+        
+        if (invoice.merchantRecipient && invoice.merchantRecipient !== effectiveMerchant) {
+          return {
+            pass: false,
+            reason: 'CAIP payTo conflicts with legacy merchantRecipient',
+            details: {
+              expectedRecipient: effectiveMerchant,
+              foundRecipient: invoice.merchantRecipient,
+            },
+          };
+        }
+      } catch (caipErr) {
+        return {
+          pass: false,
+          reason: 'Invalid CAIP fields in invoice',
+          details: {
+            expectedAmount: caipErr instanceof Error ? caipErr.message : String(caipErr),
+          },
+        };
+      }
+    }
+    
     // Parse PTB
     const tx = Transaction.from(ptbBytes);
     const data = tx.getData();
@@ -204,63 +262,187 @@ export async function verifyPaymentPTB(
       }
     }
 
-    // Find TransferObjects commands
+    // Extract MoveCall commands early (needed for multiple checks)
+    const moveCalls = commands.filter((cmd: any) => cmd.$kind === 'MoveCall');
+    
+    // Verify coin type matches invoice (check MoveCall typeArguments)
+    if (moveCalls.length > 0) {
+      // Check if any MoveCall has typeArguments (should be settle_payment)
+      for (const call of moveCalls) {
+        const typeArgs = call.MoveCall?.typeArguments || [];
+        if (typeArgs.length > 0) {
+          // First type argument should match invoice coin type
+          const ptbCoinType = typeArgs[0];
+          if (ptbCoinType !== effectiveCoinType) {
+            return {
+              pass: false,
+              reason: 'Coin type mismatch - PTB uses different token than invoice',
+              details: {
+                expectedAmount: effectiveCoinType,
+                foundAmount: ptbCoinType,
+              },
+            };
+          }
+        }
+      }
+    }
+
+    // Check if PTB uses settle_payment Move call (which handles transfers internally)
+    const hasSettlePaymentCall = moveCalls.some((call: any) => {
+      const moveCall = call.MoveCall;
+      if (!moveCall) return false;
+      
+      // Check if it's calling settle_payment function in payment module
+      return moveCall.module === 'payment' && moveCall.function === 'settle_payment';
+    });
+
+    // Find TransferObjects commands (only needed if NOT using settle_payment)
     const transfers = commands.filter(
       (cmd: any) => cmd.$kind === 'TransferObjects'
     );
 
-    if (transfers.length === 0) {
+    // If using settle_payment, skip transfer validation (Move function handles it)
+    // Otherwise, require explicit transfers
+    if (!hasSettlePaymentCall && transfers.length === 0) {
       return {
         pass: false,
-        reason: 'No transfers found - PTB must transfer payment',
+        reason: 'No transfers found - PTB must transfer payment (or use settle_payment)',
       };
     }
 
-    // Resolve all transfer recipients
+    // If using settle_payment, validate MoveCall arguments instead of transfers
+    if (hasSettlePaymentCall) {
+      // Find the settle_payment call
+      const settleCall = moveCalls.find((call: any) => {
+        const moveCall = call.MoveCall;
+        return moveCall && moveCall.module === 'payment' && moveCall.function === 'settle_payment';
+      });
+
+      if (settleCall) {
+        // Validate settle_payment arguments match invoice
+        // Arguments: [buyer_coin, buyer, amount, merchant, facilitator_fee, payment_id, clock]
+        //
+        // SECURITY MODEL:
+        // - Verifier validates: amount, merchant, fee match invoice
+        // - Move contract validates: ctx.sender() == buyer (prevents facilitator lying)
+        // - Wallet validates: buyer must sign the PTB
+        // 
+        // We do NOT validate the buyer argument here because:
+        // 1. Invoice doesn't contain buyer address (buyer unknown at invoice creation)
+        // 2. Buyer address is provided by facilitator when building PTB
+        // 3. Move contract will abort if ctx.sender() != buyer (line 100-101)
+        // 4. Buyer must sign PTB, so ctx.sender() will be buyer's address
+        //
+        // This is SECURE because the Move contract enforces buyer == signer.
+        const args = settleCall.MoveCall?.arguments || [];
+        
+        // Argument 1: buyer_coin (&mut Coin<T>)
+        // Argument 2: buyer address (validated by Move: ctx.sender() == buyer)
+        const buyerArg = args[1];
+        // Argument 3: amount (validated by verifier)
+        const amountArg = args[2];
+        // Argument 4: merchant address (validated by verifier)
+        const merchantArg = args[3];
+        // Argument 5: facilitator fee (validated by verifier)
+        const feeArg = args[4];
+        // Argument 6: payment_id (not validated by verifier)
+        // Argument 7: clock (system object)
+        
+        // Validate merchant address (argument 4)
+        const merchantAddr = resolveAddress(merchantArg);
+        if (merchantAddr && merchantAddr !== effectiveMerchant) {
+          return {
+            pass: false,
+            reason: 'Merchant address mismatch in settle_payment call',
+            details: {
+              expectedRecipient: effectiveMerchant,
+              foundRecipient: merchantAddr,
+            },
+          };
+        }
+        
+        // Validate amount (argument 3)
+        const amount = resolveAmount(amountArg);
+        if (amount !== null && amount !== BigInt(invoice.amount)) {
+          return {
+            pass: false,
+            reason: 'Amount mismatch in settle_payment call',
+            details: {
+              expectedAmount: invoice.amount,
+              foundAmount: amount.toString(),
+            },
+          };
+        }
+        
+        // Validate facilitator fee (argument 5)
+        const fee = resolveAmount(feeArg);
+        if (fee !== null && fee !== BigInt(invoice.facilitatorFee)) {
+          return {
+            pass: false,
+            reason: 'Facilitator fee mismatch in settle_payment call',
+            details: {
+              expectedAmount: invoice.facilitatorFee,
+              foundAmount: fee.toString(),
+            },
+          };
+        }
+      }
+      
+      // settle_payment handles payment transfers internally
+      // Continue to check for EXTRA unauthorized transfers below
+    }
+
+    // Check for unauthorized transfers (applies to BOTH settle_payment and legacy paths)
     const transferRecipients = transfers.map((t: any) => {
       const addr = resolveAddress(t.TransferObjects?.address);
       return addr;
     }).filter(Boolean);
 
-    // Verify merchant payment transfer exists
-    const hasMerchantTransfer = transferRecipients.some(
-      addr => addr === invoice.merchantRecipient
-    );
-
-    if (!hasMerchantTransfer) {
-      return {
-        pass: false,
-        reason: 'Merchant payment transfer not found',
-        details: {
-          expectedRecipient: invoice.merchantRecipient,
-          foundRecipient: transferRecipients.join(', '),
-        },
-      };
-    }
-
-    // Verify facilitator fee transfer (if fee > 0)
-    if (parseInt(invoice.facilitatorFee) > 0) {
-      const hasFeeTransfer = transferRecipients.some(
-        addr => addr === invoice.facilitatorRecipient
+    if (!hasSettlePaymentCall) {
+      // Legacy path: Validate explicit TransferObjects commands
+      // Verify merchant payment transfer exists
+      const hasMerchantTransfer = transferRecipients.some(
+        addr => addr === effectiveMerchant
       );
 
-      if (!hasFeeTransfer) {
+      if (!hasMerchantTransfer) {
         return {
           pass: false,
-          reason: 'Facilitator fee transfer not found',
+          reason: 'Merchant payment transfer not found',
           details: {
-            expectedRecipient: invoice.facilitatorRecipient,
+            expectedRecipient: effectiveMerchant,
             foundRecipient: transferRecipients.join(', '),
           },
         };
       }
+
+      // Verify facilitator fee transfer (if fee > 0)
+      if (parseInt(invoice.facilitatorFee) > 0) {
+        const hasFeeTransfer = transferRecipients.some(
+          addr => addr === invoice.facilitatorRecipient
+        );
+
+        if (!hasFeeTransfer) {
+          return {
+            pass: false,
+            reason: 'Facilitator fee transfer not found',
+            details: {
+              expectedRecipient: invoice.facilitatorRecipient,
+              foundRecipient: transferRecipients.join(', '),
+            },
+          };
+        }
+      }
     }
 
-    // Verify no unauthorized transfers
+    // Verify no unauthorized transfers (applies to BOTH paths)
+    // When using settle_payment: only check for EXTRA transfers (not payment-related)
+    // When not using settle_payment: check all transfers are authorized
+    
     const authorizedRecipients = [
-      invoice.merchantRecipient,
+      effectiveMerchant,
       invoice.facilitatorRecipient,
-    ];
+    ].filter(Boolean);
 
     const unauthorizedRecipients = transferRecipients.filter(
       addr => addr && !authorizedRecipients.includes(addr)
@@ -276,73 +458,75 @@ export async function verifyPaymentPTB(
       };
     }
 
-    // Verify SplitCoins amounts
+    // Verify SplitCoins amounts (only for legacy path, not settle_payment)
     const splits = commands.filter(
       (cmd: any) => cmd.$kind === 'SplitCoins'
     );
 
-    if (splits.length === 0) {
+    if (!hasSettlePaymentCall && splits.length === 0) {
       return {
         pass: false,
-        reason: 'No coin splits found - PTB must split payment amount',
+        reason: 'No coin splits found - PTB must split payment amount (or use settle_payment)',
       };
     }
 
-    // Parse and verify split amounts
-    // Extract all amounts from all SplitCoins commands
-    const splitAmounts: bigint[] = [];
-    for (const split of splits) {
-      const amounts = split.SplitCoins?.amounts || [];
-      for (const amountRef of amounts) {
-        const amount = resolveAmount(amountRef);
-        if (amount !== null) {
-          splitAmounts.push(amount);
+    // Parse and verify split amounts (only for legacy path, not settle_payment)
+    if (!hasSettlePaymentCall) {
+      // Extract all amounts from all SplitCoins commands
+      const splitAmounts: bigint[] = [];
+      for (const split of splits) {
+        const amounts = split.SplitCoins?.amounts || [];
+        for (const amountRef of amounts) {
+          const amount = resolveAmount(amountRef);
+          if (amount !== null) {
+            splitAmounts.push(amount);
+          }
         }
       }
-    }
 
-    // Expected amounts
-    const expectedMerchantAmount = BigInt(invoice.amount);
-    const expectedFeeAmount = BigInt(invoice.facilitatorFee);
-    const totalExpected = expectedMerchantAmount + expectedFeeAmount;
+      // Expected amounts
+      const expectedMerchantAmount = BigInt(invoice.amount);
+      const expectedFeeAmount = BigInt(invoice.facilitatorFee);
+      const totalExpected = expectedMerchantAmount + expectedFeeAmount;
 
-    // Verify merchant amount exists
-    if (!splitAmounts.some(amt => amt === expectedMerchantAmount)) {
-      return {
-        pass: false,
-        reason: 'Merchant payment amount mismatch',
-        details: {
-          expectedAmount: invoice.amount,
-          foundAmount: splitAmounts.map(a => a.toString()).join(', '),
-        },
-      };
-    }
-
-    // Verify fee amount (if > 0)
-    if (expectedFeeAmount > 0n) {
-      if (!splitAmounts.some(amt => amt === expectedFeeAmount)) {
+      // Verify merchant amount exists
+      if (!splitAmounts.some(amt => amt === expectedMerchantAmount)) {
         return {
           pass: false,
-          reason: 'Facilitator fee amount mismatch',
+          reason: 'Merchant payment amount mismatch',
           details: {
-            expectedAmount: invoice.facilitatorFee,
+            expectedAmount: invoice.amount,
             foundAmount: splitAmounts.map(a => a.toString()).join(', '),
           },
         };
       }
-    }
 
-    // Verify no extra splits (sum should equal total expected)
-    const totalSplit = splitAmounts.reduce((sum, amt) => sum + amt, 0n);
-    if (totalSplit !== totalExpected) {
-      return {
-        pass: false,
-        reason: 'Total split amount does not match invoice total',
-        details: {
-          expectedAmount: totalExpected.toString(),
-          foundAmount: totalSplit.toString(),
-        },
-      };
+      // Verify fee amount (if > 0)
+      if (expectedFeeAmount > 0n) {
+        if (!splitAmounts.some(amt => amt === expectedFeeAmount)) {
+          return {
+            pass: false,
+            reason: 'Facilitator fee amount mismatch',
+            details: {
+              expectedAmount: invoice.facilitatorFee,
+              foundAmount: splitAmounts.map(a => a.toString()).join(', '),
+            },
+          };
+        }
+
+        // Verify no extra splits (sum should equal total expected)
+        const totalSplit = splitAmounts.reduce((sum, amt) => sum + amt, 0n);
+        if (totalSplit !== totalExpected) {
+          return {
+            pass: false,
+            reason: 'Total split amount does not match invoice total',
+            details: {
+              expectedAmount: totalExpected.toString(),
+              foundAmount: totalSplit.toString(),
+            },
+          };
+        }
+      }
     }
 
     // Compute invoice hash for receipt verification

@@ -3,6 +3,7 @@
 ## Problem
 
 The e2e tests fail with:
+
 ```
 Error: UnusedValueWithoutDrop { result_idx: 0, secondary_idx: 0 }
 ```
@@ -14,6 +15,7 @@ Error: UnusedValueWithoutDrop { result_idx: 0, secondary_idx: 0 }
 Changed `settle_payment` from returning a value to being an `entry` function:
 
 **Before:**
+
 ```move
 public fun settle_payment<T>(...): EphemeralReceipt {
     // ... logic ...
@@ -22,6 +24,7 @@ public fun settle_payment<T>(...): EphemeralReceipt {
 ```
 
 **After:**
+
 ```move
 public entry fun settle_payment<T>(...) {
     // ... logic ...
@@ -30,6 +33,7 @@ public entry fun settle_payment<T>(...) {
 ```
 
 **Changes:**
+
 1. Added `entry` keyword
 2. Removed return type `: EphemeralReceipt`
 3. Removed `EphemeralReceipt` struct (no longer needed)
@@ -45,6 +49,7 @@ public entry fun settle_payment<T>(...) {
 ## Deployment
 
 **Manual Deploy (Current Method):**
+
 ```bash
 cd move/payment
 sui client publish --gas-budget 100000000
@@ -53,6 +58,7 @@ sui client publish --gas-budget 100000000
 ```
 
 **Automated Deploy (TODO - see MOVE_CI_CD.md):**
+
 ```bash
 npm run deploy:contracts  # Builds, tests, deploys, updates .env
 ```
@@ -60,12 +66,14 @@ npm run deploy:contracts  # Builds, tests, deploys, updates .env
 ## Testing
 
 **Move Tests:**
+
 ```bash
 cd move/payment
 sui move test
 ```
 
 **TypeScript Tests (after deploy):**
+
 ```bash
 cd facilitator
 npm test  # E2E tests should now pass

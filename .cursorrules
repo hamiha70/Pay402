@@ -15,10 +15,16 @@
 
 **Test Locations:**
 
-- Move: `move/payment/tests/payment_tests.move` → `sui move test`
+- Move: `move/payment/tests/payment_tests.move` → `lsui move test` (IMPORTANT: Kill all Sui network processes first!)
 - Facilitator: `src/__tests__/*.test.ts` → `npm test` (vitest, Node.js env)
 - Widget: `src/__tests__/*.test.ts` → `npm test` (vitest, jsdom env)
 - Integration: `scripts/test-*.sh` (end-to-end with all services)
+
+**Move Test Requirements:**
+
+- STOP localnet before running `lsui move test` (otherwise sui config conflict occurs)
+- Use `lsui` (not `sui`) for localnet-specific operations
+- Restart localnet after tests: `localnet start`
 
 **Test Commands:**
 

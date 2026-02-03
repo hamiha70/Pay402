@@ -50,7 +50,7 @@ app.get('/', (req, res) => {
       'POST /check-balance': 'Check buyer USDC balance',
       'POST /build-ptb': 'Build unsigned PTB from invoice JWT',
       'POST /sign-ptb': '[DEV] Sign PTB with facilitator key (testing only)',
-      'POST /submit-payment': 'Submit signed PTB (optimistic or wait mode)',
+      'POST /submit-payment': 'Submit signed PTB (optimistic or pessimistic mode)',
       'POST /settle-payment': '[LEGACY] Direct settlement (bypasses buyer signature)',
       'POST /fund': 'Fund wallet with test USDC (dev only)',
     },

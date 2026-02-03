@@ -1,6 +1,19 @@
 import { Request, Response } from 'express';
 import { getSuiClient } from '../sui.js';
 import { logger } from '../utils/logger.js';
+import { toBase58 } from '@mysten/bcs';
+import { createHash } from 'crypto';
+
+// Calculate transaction digest from bytes
+// Digest = base58(blake2b("TransactionData::" + transactionBytes))
+function getDigestFromBytes(bytes: Uint8Array): string {
+  const typeTag = new TextEncoder().encode('TransactionData::');
+  const data = new Uint8Array(typeTag.length + bytes.length);
+  data.set(typeTag);
+  data.set(bytes, typeTag.length);
+  const hash = createHash('blake2b512').update(data).digest().slice(0, 32);
+  return toBase58(hash);
+}
 
 interface SubmitPaymentRequest {
   invoiceJWT: string;
@@ -28,7 +41,7 @@ interface ReceiptEvent {
  * 
  * Two settlement modes:
  * 1. Optimistic: Return digest immediately (~500ms UX)
- * 2. Wait-for-finality: Poll until confirmed (~1-3s UX)
+ * 2. Pessimistic: Block until confirmed (~500-700ms UX)
  */
 export async function submitPaymentController(req: Request, res: Response): Promise<void> {
   const startTime = Date.now();
@@ -96,7 +109,7 @@ export async function submitPaymentController(req: Request, res: Response): Prom
       // Both modes do SAME validation + submit
       // ONLY difference: When to trigger "safe to deliver"
       //   - Optimistic: AFTER submit (before finality)
-      //   - Wait: AFTER finality
+      //   - Pessimistic: AFTER finality
       //
       // Facilitator's ONLY risk in optimistic:
       //   Buyer front-runs (spends coins elsewhere before our tx settles)
@@ -114,19 +127,20 @@ export async function submitPaymentController(req: Request, res: Response): Prom
       
       const validateLatency = Date.now() - validateStart;
       
-      // Step 2: Submit to blockchain and return IMMEDIATELY (don't wait!)
-      // This is THE critical step - submit before buyer can front-run
-      const submitStart = Date.now();
+      // Step 2: Calculate digest IMMEDIATELY (deterministic hash)
+      // Digest = hash(transactionBytes) - no blockchain needed!
+      const digest = getDigestFromBytes(txBytes);
       
-      // Return "safe to deliver" IMMEDIATELY after validation
+      // Step 3: Return "safe to deliver" IMMEDIATELY after validation
       // Submit happens in background (non-blocking)
+      const submitStart = Date.now();
       const httpLatency = Date.now() - startTime;
       
       res.json({
         success: true,
         mode: 'optimistic',
         safeToDeliver: true,
-        digest: null,  // Will be available in background
+        digest,  // ✅ Available immediately (pre-calculated!)
         receipt: null,  // Not available yet (transaction not finalized)
         validateLatency: `${validateLatency}ms`,
         submitLatency: 'pending',
@@ -186,7 +200,7 @@ export async function submitPaymentController(req: Request, res: Response): Prom
       
       const submitStart = Date.now();
       
-      // PESSIMISTIC: Submit and wait for finality with full effects
+      // PESSIMISTIC: Submit and block until finality with full effects
       // This is the INTENDED behavior - block until confirmed
       const result = await client.executeTransaction({
         transaction: txBytes,

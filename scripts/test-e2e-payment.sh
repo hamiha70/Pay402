@@ -31,7 +31,7 @@ echo "========================================="
 echo
 
 echo -e "${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
-echo -e "${BLUE}  Pay402 End-to-End Payment Flow Test (v2)${NC}"
+echo -e "${BLUE}  Pay402 End-to-End Payment Flow Test${NC}"
 echo -e "${BLUE}  Two isolated runs: Optimistic + Pessimistic modes${NC}"
 echo -e "${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
 echo
@@ -155,8 +155,8 @@ run_payment_flow() {
         
         if [ "$MODE" == "optimistic" ] && [ "$SAFE_TO_DELIVER" == "true" ]; then
             echo -e "  ${GREEN}✓ SAFE TO DELIVER${NC} ${GRAY}(facilitator guarantee)${NC}"
-            echo -e "  Digest: ${YELLOW}pending (background settlement)${NC}"
-            echo -e "  ${GRAY}Merchant can deliver immediately!${NC}"
+            echo -e "  Digest: ${DIGEST} ${GRAY}(pre-calculated hash)${NC}"
+            echo -e "  ${GRAY}Merchant can deliver immediately! Settlement in background.${NC}"
         else
             echo -e "  Digest: ${DIGEST}"
         fi
@@ -225,11 +225,20 @@ echo -e "    Total flow: ${PESS_TOTAL}ms"
 echo -e "    HTTP submit: ${PESS_HTTP}ms"
 echo -e "    Digest: ${PESS_DIGEST}"
 echo
-echo -e "${YELLOW}NOTE: Localnet vs Testnet${NC}"
-echo -e "  - Localnet: Both modes ~200-300ms (instant finality)"
-echo -e "  - Testnet: Optimistic ~200ms, Wait ~900ms (real consensus)"
-echo -e "  - See logs: /tmp/test-e2e-payment.log"
-echo -e "  - See server: /tmp/facilitator.log"
+echo -e "${YELLOW}KEY DIFFERENCE:${NC}"
+DIFF=$((PESS_HTTP - OPT_HTTP))
+echo -e "  - Optimistic: ${OPT_HTTP}ms (validate + hash + return)"
+echo -e "  - Pessimistic: ${PESS_HTTP}ms (validate + submit + WAIT + return)"
+echo -e "  - Speedup: ${DIFF}ms faster (~${DIFF}ms saved by not waiting)"
+echo
+echo -e "${YELLOW}TESTNET EXPECTATIONS:${NC}"
+echo -e "  - Optimistic: ~50-100ms (same - just validation + hash)"
+echo -e "  - Pessimistic: ~600-800ms (waits for consensus)"
+echo -e "  - Difference will be ~500-700ms (much more dramatic!)"
+echo
+echo -e "${YELLOW}LOGS:${NC}"
+echo -e "  - Test output: /tmp/test-e2e-payment.log"
+echo -e "  - Facilitator: /tmp/facilitator.log"
 echo
 echo "========================================="
 echo "TEST RUN ENDED: $(date -Iseconds)"

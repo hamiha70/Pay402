@@ -148,6 +148,21 @@ describe('End-to-End Payment Flow', () => {
       expect(submitData.digest).toBeDefined();
       expect(submitData.latency).toBeDefined();
       
+      // CRITICAL TEST: Verify digest is pre-computed correctly
+      // This ensures our digest calculation matches what blockchain will confirm
+      const { createHash } = await import('crypto');
+      const typeTag = new TextEncoder().encode('TransactionData::');
+      const data = new Uint8Array(typeTag.length + ptbBytes.length);
+      data.set(typeTag);
+      data.set(ptbBytes, typeTag.length);
+      const hash = createHash('blake2b512').update(data).digest().slice(0, 32);
+      const { toBase58 } = await import('@mysten/bcs');
+      const expectedDigest = toBase58(hash);
+      
+      // Digest MUST match our pre-computed digest
+      expect(submitData.digest).toBe(expectedDigest);
+      console.log(`✅ Digest validation: pre-computed matches response`);
+      
       // Optimistic should be fast (<1s)
       expect(clientLatency).toBeLessThan(1000);
       
@@ -157,7 +172,7 @@ describe('End-to-End Payment Flow', () => {
   });
 
   describe('Step 3: Submit Payment (Pessimistic Mode)', () => {
-    it('should submit payment and wait for finality', async () => {
+    it('should submit payment and block until finality', async () => {
       const startTime = Date.now();
       
       // Build PTB
@@ -198,7 +213,7 @@ describe('End-to-End Payment Flow', () => {
       expect(submitData.digest).toBeDefined();
       expect(submitData.safeToDeliver).toBe(true);
       
-      // Wait mode includes receipt
+      // Pessimistic mode includes receipt
       expect(submitData.receipt).toBeDefined();
       if (submitData.receipt) {
         expect(submitData.receipt.paymentId).toBeDefined();
@@ -206,7 +221,22 @@ describe('End-to-End Payment Flow', () => {
         expect(submitData.receipt.amount).toBeDefined();
       }
       
-      // Pessimistic mode should take longer (includes finality wait)
+      // CRITICAL TEST: Verify digest calculation matches blockchain
+      // Pre-compute digest from transaction bytes
+      const { createHash } = await import('crypto');
+      const typeTag = new TextEncoder().encode('TransactionData::');
+      const data = new Uint8Array(typeTag.length + ptbBytes.length);
+      data.set(typeTag);
+      data.set(ptbBytes, typeTag.length);
+      const hash = createHash('blake2b512').update(data).digest().slice(0, 32);
+      const { toBase58 } = await import('@mysten/bcs');
+      const expectedDigest = toBase58(hash);
+      
+      // Digest from blockchain MUST match our pre-computed digest
+      expect(submitData.digest).toBe(expectedDigest);
+      console.log(`✅ Digest validation: pre-computed matches blockchain`);
+      
+      // Pessimistic mode should take longer (blocks until finality)
       expect(clientLatency).toBeGreaterThan(500); // At least 500ms
       
       console.log(`Pessimistic mode latency: ${clientLatency}ms`);

@@ -558,11 +558,11 @@ return {
 
 ### Settlement Modes: Optimistic vs Pessimistic
 
-**CRITICAL ARCHITECTURAL DECISION:** How long does the user wait after signing?
+**CRITICAL ARCHITECTURAL DECISION:** How fast does the user receive content after signing?
 
 **CORE BUSINESS MODEL:** Facilitator acts as **GUARANTOR/INSURER**, not just transaction processor.
 
-> **⚠️ Localnet Testing Note:** Both modes appear similar on localnet (~20-150ms) due to instant finality. The true difference (optimistic: ~50ms, wait: ~700ms) only shows on testnet/mainnet where checkpoint consensus takes ~400-800ms.
+> **⚠️ Localnet Testing Note:** Both modes appear similar on localnet (~20-150ms) due to instant finality. The true difference (optimistic: ~50ms, pessimistic: ~700ms) only shows on testnet/mainnet where checkpoint consensus takes ~400-800ms.
 
 ---
 
@@ -590,7 +590,7 @@ Facilitator takes settlement risk → Merchant trusts facilitator → Instant UX
 6. Background: Transaction finalizes (~+500ms, merchant already served content)
 7. If settlement **FAILS** (rare - front-running): **FACILITATOR PAYS MERCHANT** (liability)
 
-**Critical Difference from "Wait Mode":**
+**Critical Difference from "Pessimistic Mode":**
 
 ```typescript
 // BOTH modes do these steps:
@@ -611,9 +611,9 @@ if (mode === 'optimistic') {
   // Buyer front-runs (spends coins elsewhere before finality)
   // Mitigated by: Submitting IMMEDIATELY after validation
 
-} else if (mode === 'wait') {
+} else if (mode === 'pessimistic') {
   // Return AFTER finality
-  await waitForFinality(result.digest);       // +500ms BLOCKING
+  const result = await client.executeTransaction(...);  // BLOCKS until finality (~500ms)
   res.json({
     safeToDeliver: true,
     digest: result.digest,
@@ -651,9 +651,9 @@ OPTIMISTIC MODE TIMELINE:
 [70ms]   → Redirect to merchant
 [80ms]   ← Content delivered ✅ USER HAPPY
 
-BACKGROUND (merchant + user don't wait):
+BACKGROUND (merchant + user already have content):
 [550ms]  ← Transaction finalized on-chain
-[560ms]  → Merchant notified via webhook (optional)
+[560ms]  → Facilitator logs confirmation (merchant doesn't need notification)
 
 FACILITATOR'S ONLY RISK WINDOW:
 [50ms-550ms]: Buyer could theoretically front-run
@@ -751,7 +751,7 @@ async function submitPaymentOptimistic(req, res) {
 **Business Model:**
 
 ```
-ZERO RISK: Wait for on-chain confirmation before merchant delivers
+ZERO RISK: Confirm on-chain settlement before merchant delivers
 ```
 
 **Flow:**
@@ -795,7 +795,7 @@ CLIENT TIMELINE:
 ```json
 {
   "success": true,
-  "mode": "wait",
+  "mode": "pessimistic",
   "digest": "AbCd1234...",
   "receipt": {
     "paymentId": "pmt_abc123",
@@ -813,9 +813,9 @@ CLIENT TIMELINE:
 **Implementation:**
 
 ```typescript
-// facilitator/src/controllers/submit-payment.ts (wait mode)
-async function submitPaymentWait(req, res) {
-  // Submit and WAIT for finality (blocking)
+// facilitator/src/controllers/submit-payment.ts (pessimistic mode)
+async function submitPaymentPessimistic(req, res) {
+  // Submit and BLOCK until finality
   const result = await client.executeTransaction({
     transaction: txBytes,
     signatures: [signature],
@@ -832,10 +832,10 @@ async function submitPaymentWait(req, res) {
     e.type.includes("PaymentSettled")
   );
 
-  // Return confirmed receipt to merchant (no async waiting needed)
+  // Return confirmed receipt to merchant (no async operations needed)
   res.json({
     success: true,
-    mode: "wait",
+    mode: "pessimistic",
     digest,
     receipt: receiptEvent?.parsedJson,
     status: "confirmed",
@@ -855,7 +855,7 @@ async function submitPaymentWait(req, res) {
 | **Capital Requirements**  | Small reserve pool ⚠️            | None ✅                                 |
 | **Pre-validation**        | Critical (balance, sig, PTB) ✅  | Critical (same) ✅                      |
 | **Submit Timing**         | Before response ✅               | Before response ✅                      |
-| **Finality Wait**         | No (return after submit) ✅      | Yes (blocks ~500ms) ⚠️                  |
+| **Blocks for Finality**   | No (return after submit) ✅      | Yes (blocks ~500ms) ⚠️                  |
 | **Response Format**       | `{ safeToDeliver, digest }` ✅   | `{ safeToDeliver, digest, receipt }` ✅ |
 | **Merchant Blockchain**   | NEVER (facilitator abstracts) ✅ | NEVER (facilitator abstracts) ✅        |
 | **Merchant Complexity**   | Trust facilitator signal ✅      | Trust facilitator signal ✅             |
@@ -994,7 +994,7 @@ function selectSettlementMode(amount: number, buyerReputation: number) {
   if (amount < 10_00000 && buyerReputation > 0.8) {
     return "optimistic"; // <$10, trusted buyer
   } else if (amount < 100_000000) {
-    return "wait"; // <$100, wait for safety
+    return "pessimistic"; // <$100, confirm before delivery
   } else {
     return "escrow"; // >$100, multi-sig escrow
   }

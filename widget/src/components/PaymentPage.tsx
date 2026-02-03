@@ -125,11 +125,13 @@ export default function PaymentPage({ invoiceJWT: propInvoiceJWT }: PaymentPageP
   };
 
   // Sign and submit payment
-  const submitPayment = async () => {
+  const submitPayment = async (mode: 'optimistic' | 'wait' = 'optimistic') => {
     if (!ptbBytes || !invoice || !address) return;
 
     setStep('submit');
     setError('');
+
+    const startTime = Date.now();
 
     try {
       // Sign PTB
@@ -138,8 +140,8 @@ export default function PaymentPage({ invoiceJWT: propInvoiceJWT }: PaymentPageP
         { serialize: () => ptbBytes }
       );
 
-      // Submit to facilitator
-      const response = await fetch('http://localhost:3001/settle-payment', {
+      // Submit to facilitator (NEW ENDPOINT)
+      const response = await fetch('http://localhost:3001/submit-payment', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -151,6 +153,7 @@ export default function PaymentPage({ invoiceJWT: propInvoiceJWT }: PaymentPageP
               : Array.from(transactionBytes),
             signature,
           },
+          settlementMode: mode,  // 'optimistic' or 'wait'
         }),
       });
 
@@ -160,7 +163,18 @@ export default function PaymentPage({ invoiceJWT: propInvoiceJWT }: PaymentPageP
       }
 
       const data = await response.json();
-      setPaymentId(data.txDigest);
+      const clientLatency = Date.now() - startTime;
+      
+      console.log(`💳 Payment submitted (${mode} mode)`);
+      console.log('Client latency:', `${clientLatency}ms`);
+      console.log('Server latency:', data.latency);
+      console.log('Digest:', data.digest);
+      
+      if (data.receipt) {
+        console.log('Receipt:', data.receipt);
+      }
+
+      setPaymentId(data.digest);
       setStep('success');
     } catch (err) {
       setError(`Payment failed: ${err instanceof Error ? err.message : String(err)}`);

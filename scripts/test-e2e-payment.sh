@@ -210,9 +210,11 @@ SUBMIT_RESPONSE=$(curl -s -X POST http://localhost:3001/submit-payment \
 if echo "$SUBMIT_RESPONSE" | jq -e '.success' > /dev/null 2>&1; then
     echo -e "${GREEN}✓ Payment submitted (optimistic)${NC}"
     TX_DIGEST=$(echo "$SUBMIT_RESPONSE" | jq -r '.digest')
-    LATENCY=$(echo "$SUBMIT_RESPONSE" | jq -r '.latency')
+    SUBMIT_LAT=$(echo "$SUBMIT_RESPONSE" | jq -r '.submitLatency // .latency')
+    HTTP_LAT=$(echo "$SUBMIT_RESPONSE" | jq -r '.httpLatency // .latency')
     echo -e "  Digest: $TX_DIGEST"
-    echo -e "  Latency: $LATENCY"
+    echo -e "  Submit latency: $SUBMIT_LAT (to finality)"
+    echo -e "  HTTP latency: $HTTP_LAT (total round-trip)"
 else
     echo -e "${RED}✗ Submission failed${NC}"
     echo "$SUBMIT_RESPONSE" | jq '.'
@@ -291,8 +293,10 @@ echo -e "${GREEN}  ✓ END-TO-END TEST PASSED${NC}"
 echo -e "${GREEN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
 echo
 echo -e "${BLUE}Summary:${NC}"
-echo -e "  Optimistic Mode Latency: $LATENCY"
-echo -e "  Wait Mode Latency: $LATENCY2"
+echo -e "  Optimistic Mode:"
+echo -e "    Submit: $SUBMIT_LAT | HTTP: $HTTP_LAT"
+echo -e "  Wait Mode:"
+echo -e "    Submit: $SUBMIT_LAT2 | HTTP: $HTTP_LAT2"
 echo -e "  Transaction Digest: $TX_DIGEST2"
 echo
 echo -e "${YELLOW}NOTE: Localnet Behavior${NC}"

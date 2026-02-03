@@ -92,17 +92,21 @@ export async function submitPaymentController(req: Request, res: Response): Prom
     if (settlementMode === 'optimistic') {
       logger.info('Using OPTIMISTIC settlement mode');
       
+      const submitStart = Date.now();
+      
       // OPTIMISTIC: Submit transaction WITHOUT waiting for finality
-      // On testnet/mainnet, this should be ~50-100ms (just broadcast)
-      // On localnet, finality is instant so both modes are similar
+      // PROBLEM: SDK executeTransaction() ALWAYS waits for finality
+      // We're measuring TOTAL time (submit + finality), not just submit
       let result;
       try {
         result = await client.executeTransaction({
           transaction: txBytes,
           signatures: signatures,
-          // NOTE: executeTransaction ALWAYS waits for finality in gRPC SDK
-          // For true async on testnet/mainnet, we'd need to use raw gRPC submit
-          // or poll with waitForTransaction after getting digest
+          // NOTE: This blocks until finality (~20ms localnet, ~500ms testnet)
+          // For true optimistic, we'd need to:
+          // 1. Use raw gRPC submitTransaction (returns digest immediately)
+          // 2. Return HTTP response with digest
+          // 3. Settlement happens in background
         });
       } catch (execError) {
         logger.error('executeTransaction failed', {
@@ -112,28 +116,37 @@ export async function submitPaymentController(req: Request, res: Response): Prom
         throw execError;
       }
       
+      const submitLatency = Date.now() - submitStart;
+      
       // Extract digest from result (discriminated union format)
       const digest = result.$kind === 'Transaction' ? result.Transaction.digest : null;
       
-      const latency = Date.now() - startTime;
+      const httpLatency = Date.now() - startTime;
+      
       logger.info('Transaction submitted (optimistic)', { 
         digest,
-        latency: `${latency}ms`,
-        note: 'On testnet/mainnet, expect ~50-100ms; localnet is instant',
+        submitLatency: `${submitLatency}ms`,
+        httpLatency: `${httpLatency}ms`,
+        note: 'SDK blocks until finality - not true optimistic yet',
       });
       
-      // Return immediately with digest
-      // Merchant will poll for receipt using waitForTransaction(digest)
+      // Return digest to merchant
+      // In true optimistic, this would be ~50ms on testnet
+      // Currently: ~500ms because SDK waits for finality
       res.json({
         success: true,
         mode: 'optimistic',
         digest,
-        latency: `${latency}ms`,
-        note: 'Transaction submitted - settlement pending (~400-800ms on testnet)',
+        submitLatency: `${submitLatency}ms`,  // Time to finality
+        httpLatency: `${httpLatency}ms`,      // Total HTTP time
+        note: 'SDK limitation: waits for finality even in optimistic mode',
         timestamp: Date.now(),
       });
       
-      logger.info('=== SUBMIT PAYMENT SUCCESS (OPTIMISTIC) ===', { latency: `${latency}ms` });
+      logger.info('=== SUBMIT PAYMENT SUCCESS (OPTIMISTIC) ===', { 
+        submitLatency: `${submitLatency}ms`,
+        httpLatency: `${httpLatency}ms`,
+      });
       return;
     }
     
@@ -141,9 +154,10 @@ export async function submitPaymentController(req: Request, res: Response): Prom
     if (settlementMode === 'wait') {
       logger.info('Using WAIT-FOR-FINALITY settlement mode');
       
+      const submitStart = Date.now();
+      
       // WAIT: Submit and wait for finality with full effects
-      // On testnet/mainnet, this should be ~500-1000ms (submit + checkpoint)
-      // On localnet, finality is instant (~20-50ms)
+      // This is the INTENDED behavior - block until confirmed
       const result = await client.executeTransaction({
         transaction: txBytes,
         signatures: signatures,
@@ -154,14 +168,18 @@ export async function submitPaymentController(req: Request, res: Response): Prom
         },
       });
       
+      const submitLatency = Date.now() - submitStart;
+      
       // Extract digest from result
       const digest = result.$kind === 'Transaction' ? result.Transaction.digest : null;
       
-      const latency = Date.now() - startTime;
+      const httpLatency = Date.now() - startTime;
+      
       logger.info('Transaction finalized', { 
         digest,
-        latency: `${latency}ms`,
-        note: 'On testnet/mainnet, expect ~500-1000ms; localnet is instant',
+        submitLatency: `${submitLatency}ms`,
+        httpLatency: `${httpLatency}ms`,
+        note: 'Localnet: ~20-50ms | Testnet: ~500-1000ms',
       });
       
       // Check if transaction succeeded
@@ -193,7 +211,8 @@ export async function submitPaymentController(req: Request, res: Response): Prom
         success: true,
         mode: 'wait',
         digest,
-        latency: `${latency}ms`,
+        submitLatency: `${submitLatency}ms`,  // Time to finality + extract receipt
+        httpLatency: `${httpLatency}ms`,      // Total HTTP round-trip
         receipt: receipt ? {
           paymentId: receipt.payment_id,
           buyer: receipt.buyer,
@@ -205,9 +224,10 @@ export async function submitPaymentController(req: Request, res: Response): Prom
         timestamp: Date.now(),
       });
       
-      logger.info('=== SUBMIT PAYMENT SUCCESS (WAIT) ===', { 
-        latency: `${latency}ms`,
-        hasReceipt: !!receipt 
+      logger.info('=== SUBMIT PAYMENT SUCCESS (WAIT) ===', {
+        submitLatency: `${submitLatency}ms`,
+        httpLatency: `${httpLatency}ms`,
+        hasReceipt: !!receipt
       });
       return;
     }

@@ -1,172 +1,57 @@
-# Pay402 - Cursor AI Rules
+# Pay402 Project Rules
 
-## 🗂️ Source of Truth Hierarchy
+## Anti-Bloat: DO NOT CREATE ANALYSIS DOCUMENTS
 
-**When in doubt, trust this order:**
-1. **Code in `Pay402/`** - What actually works (ultimate truth)
-2. **Docs in `Pay402/docs/`** - Architecture, dev guide (authoritative)
-3. **`HackMoney_Research/`** - Exploration notes (STALE after Jan 31)
+**CRITICAL RULE:** When the user asks for analysis or cleanup:
+1. ✅ DO the work directly
+2. ✅ Commit with detailed message
+3. ❌ DO NOT create analysis documents (ANTI_BLOAT_ANALYSIS.md, etc.)
+4. ❌ DO NOT create audit documents (DOCUMENTATION_AUDIT.md, etc.)
+5. ❌ DO NOT create plan documents (CLEANUP_PLAN.md, etc.)
 
-**Rule:** If research docs conflict with Pay402 code/docs, Pay402 wins.
+**Why:** Analysis documents ARE bloat. Git commit messages preserve reasoning.
 
-**Temporary Files Rule:**
-- Handoff docs (e.g., `HANDOFF_*.md`) are temporary
-- DELETE when phase is complete and content is documented in permanent docs
-- If unsure: "Can I recreate this info from code + docs?" → YES = delete
-
----
-
-## 🚨 Rule #0: FIGHT BLOAT
-
-### Documentation
-- ONE topic = ONE file (single source of truth)
-- Update IN PLACE (no v2, no summaries, no "updated" versions)
-- Delete redundant files IMMEDIATELY
-- Use git log for change history (not separate docs)
-
-### Code
-- Write MINIMAL code that works
-- Delete unused code IMMEDIATELY (functions, imports, commented code)
-- No "just in case" features (YAGNI)
-- No premature abstraction (wait until needed 3 times)
-
-### Testing
-- Test EACH function BEFORE moving to next
-- Add test BEFORE committing
-- No "I'll test it later"
-- **NO SKIPPED TESTS** - Either test is relevant (keep it) or not (delete it)
-- Use `it.skip()` ONLY temporarily during active development
-- Before committing: All tests must pass or be removed
-- If test needs external service, make it fail fast with clear error (not skip)
-
----
-
-## 🚨 Rule #1: Hackathon Commits
-
-**Commit every 30-60 minutes** - Judges verify work was done during event
-
-**Commit when:**
-- Complete a logical unit of work
-- Before breaks
-- After fixing bugs
-- Switching components
-
-**Commit format:**
+**Example - WRONG:**
 ```
-<type>(<scope>): <subject>
-
-Types: feat, fix, test, docs, chore, refactor
-Examples:
-  feat(move): add settle_payment function
-  test(move): add coin split test
-  fix(facilitator): handle missing coins
+User: "Check docs for bloat"
+AI: Creates ANTI_BLOAT_ANALYSIS.md (10 KB) ← THIS IS BLOAT!
 ```
 
-**Never:**
-- Bulk commit 500 lines
-- Commit untested code
-- Commit "WIP" without working state
-
----
-
-## 💻 Tech Stack Rules
-
-### TypeScript
-- Strict mode enabled
-- No `any` types (use `unknown`)
-- async/await (not .then chains)
-
-### Move
-- Generic `Coin<T>` (not USDC-only)
-- Use `&mut` for coins (prevent front-running)
-- Emit events for state changes
-- Ephemeral receipts (zero storage)
-- **Testing:** Use `expected_failure(abort_code=X, location=module)` for framework errors
-
-### Token Usage (CRITICAL)
-- **SUI is ONLY for gas** - Never use as payment token on testnet
-- **USDC is for payments** - Default token for all payment flows
-- **Localnet:** Test freely with unlimited faucet
-- **Testnet:** Very limited SUI supply (need to preserve for gas sponsorship)
-- **Testnet USDC supply:** ~20 USDC available - use small amounts for testing (0.01-0.10 USDC)
-- **Testing strategy:** Develop on localnet, verify on testnet sparingly
-- All examples, tests, and docs should use USDC as payment token
-- Coin type: `0xa1ec7fc00a6f40db9693ad1415d0c193ad3906494428cf252621037bd7117e29::usdc::USDC`
-- Test amounts: 10000-100000 micro-USDC (0.01-0.10 USDC) per transaction
-
-### Security
-- Never log private keys
-- Validate all inputs
-- Use nonces (prevent replay)
-- Token expiration (5 min)
-
----
-
-## 📁 File Structure
-
+**Example - CORRECT:**
 ```
-move/payment/              - Move contract
-facilitator/src/           - Backend API (TypeScript)
-widget/src/                - Frontend (React + TypeScript)
-demo/                      - Demo page
-docs/                      - Architecture, dev guide only
+User: "Check docs for bloat"
+AI: Deletes bloated files, commits with message explaining what and why
 ```
 
----
+## Commit Messages Are Documentation
 
-## 🧪 Development Workflow
+Use detailed commit messages instead of creating markdown files:
+- Explain WHAT changed
+- Explain WHY it changed
+- List specific files/impacts
+- Include metrics (KB saved, files deleted)
 
-1. **Local first** - Test on local SUI network
-2. **Incremental** - Build one function at a time
-3. **Test immediately** - Write test, run test, then commit
-4. **Testnet last** - Only when local works
+**Good commit message > Markdown analysis document**
 
-Example:
-```bash
-# Write function
-vim payment.move
+## When Analysis IS Needed
 
-# Write test
-vim payment_tests.move
+If deep analysis is truly required:
+1. Present findings in chat response (user sees immediately)
+2. Execute changes based on findings
+3. DO NOT save analysis to file unless explicitly requested
+4. If saved, DELETE after user confirms they've read it
 
-# Run test
-sui move test
+## File Creation Rules
 
-# Commit (only if test passes!)
-git commit -m "feat(move): add settle_payment with test"
-```
+**Only create files that:**
+- ✅ Are code/configuration
+- ✅ Are permanent documentation (README, guides)
+- ✅ User explicitly requested
 
----
+**Never create files that:**
+- ❌ Analyze other files (audit docs)
+- ❌ Plan work (planning docs)
+- ❌ Track progress (status docs)
+- ❌ Summarize work done (summary docs)
 
-## ✅ Pre-Commit Checklist
-
-- [ ] Code compiles/runs
-- [ ] Tests pass
-- [ ] No console errors
-- [ ] No TODOs (fix or remove)
-- [ ] No commented code (delete it)
-- [ ] No secrets (keys, .env)
-- [ ] Descriptive commit message
-
----
-
-## 🎯 Priorities
-
-**Must Have:**
-- Move contract with Coin<T>
-- Facilitator balance + payment endpoints
-- zkLogin integration
-- Basic widget UI
-- Demo with x402 Echo
-
-**Defer:**
-- Payment channels
-- CCTP integration (show diagram only)
-- AI agent mode (mention only)
-- Analytics, dashboards
-
----
-
-**Target: 50-100+ commits in 2-day hackathon**
-
-See `docs/DEVELOPMENT_GUIDE.md` for detailed workflow.
+Use git log for history. Use commit messages for reasoning.

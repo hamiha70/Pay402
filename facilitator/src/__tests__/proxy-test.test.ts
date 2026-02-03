@@ -10,7 +10,7 @@
  */
 
 import { describe, it, expect, beforeAll } from 'vitest';
-import { SuiClient } from '@mysten/sui/client';
+import { SuiGrpcClient } from '@mysten/sui/grpc';
 import { Transaction } from '@mysten/sui/transactions';
 import { Ed25519Keypair } from '@mysten/sui/keypairs/ed25519';
 
@@ -37,7 +37,7 @@ function getRpcUrl(): string {
 }
 
 describe('Proxy Cache Consistency Test', () => {
-  let client: SuiClient;
+  let client: SuiGrpcClient;
   let testKeypair: Ed25519Keypair;
   let testAddress: string;
   let hasGas = false;
@@ -45,7 +45,7 @@ describe('Proxy Cache Consistency Test', () => {
   beforeAll(async () => {
     // Get current network URL (will detect proxy or direct)
     const url = getRpcUrl();
-    client = new SuiClient({ url });
+    client = new SuiGrpcClient({ url });
     
     // Get active address from sui client
     try {

@@ -161,15 +161,59 @@ Settle payment on-chain via PTB.
 
 ## Testing
 
-Run tests with Vitest:
+Run all tests:
 
 ```bash
 npm test
 ```
 
-## Production Build
+Test suites:
+- `src/__tests__/build-ptb.test.ts` - PTB construction
+- `src/__tests__/api-integration.test.ts` - HTTP endpoints
+- `src/__tests__/ptb-codec.test.ts` - PTB encoding/decoding
+- `src/__tests__/state-consistency.test.ts` - Blockchain state
 
-Build for production:
+## Troubleshooting
+
+### Connection Refused
+
+Check if localnet is running:
+```bash
+localnet status
+localnet start  # if not running
+```
+
+### "No coins found for buyer"
+
+Buyer address needs USDC:
+```bash
+# Localnet (unlimited):
+curl -X POST http://localhost:3001/fund \
+  -H "Content-Type: application/json" \
+  -d '{"address": "0xBUYER_ADDRESS", "amount": "20000000"}'
+
+# Testnet (limited):
+# Use Circle faucet for USDC
+```
+
+### Package ID Not Found
+
+Redeploy contract:
+```bash
+cd ../move/payment
+sui client publish --gas-budget 100000000
+# Update PACKAGE_ID in .env
+```
+
+### Tests Failing
+
+Ensure active address is funded:
+```bash
+sui client active-address  # Check current address
+localnet start             # Ensure network running
+```
+
+## Production Build
 
 ```bash
 npm run build
@@ -182,24 +226,22 @@ npm start
 facilitator/
 ├── src/
 │   ├── index.ts           # Express app + routes
-│   ├── config.ts          # Environment configuration
-│   ├── sui.ts             # SUI client initialization
-│   └── controllers/
-│       ├── health.ts      # Health check endpoint
-│       ├── balance.ts     # Balance check endpoint
-│       └── payment.ts     # Payment settlement endpoint
-└── tests/
-    └── payment.test.ts    # Integration tests
+│   ├── config.ts          # Environment config
+│   ├── sui.ts             # SuiGrpcClient (gRPC, not JSON-RPC)
+│   ├── controllers/
+│   │   ├── health.ts      # GET /health
+│   │   ├── balance.ts     # POST /check-balance (coin discovery)
+│   │   └── payment.ts     # POST /settle-payment (PTB construction)
+│   └── __tests__/         # Test suites (vitest)
+├── package.json
+└── .env                   # (create from .env.example)
 ```
 
-## Tech Stack
-
-- **Runtime:** Node.js
-- **Framework:** Express
-- **Language:** TypeScript (strict mode)
-- **SDK:** @mysten/sui.js
-- **Dev Tool:** tsx (TypeScript execution)
-- **Testing:** Vitest
+**Key Details:**
+- Uses gRPC client (@mysten/sui) for better performance
+- Generic `Coin<T>` support (SUI, USDC, any token)
+- Facilitator sponsors gas for all transactions
+- Client-side PTB construction (not in Move contract)
 
 ## License
 

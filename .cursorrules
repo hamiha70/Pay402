@@ -1,57 +1,44 @@
-# Pay402 Project Rules
+# Pay402 Cursor Rules
 
-## Anti-Bloat: DO NOT CREATE ANALYSIS DOCUMENTS
+## Anti-Bloat
+- Do work directly, commit with detailed message
+- NO analysis/audit/plan/status markdown files
+- Present findings in chat, not files
+- DELETE temporary docs after user reads them
 
-**CRITICAL RULE:** When the user asks for analysis or cleanup:
-1. ✅ DO the work directly
-2. ✅ Commit with detailed message
-3. ❌ DO NOT create analysis documents (ANTI_BLOAT_ANALYSIS.md, etc.)
-4. ❌ DO NOT create audit documents (DOCUMENTATION_AUDIT.md, etc.)
-5. ❌ DO NOT create plan documents (CLEANUP_PLAN.md, etc.)
+## Testing Levels
+**Move:** payment_tests.move → `sui move test` in move/payment/
+**TS Facilitator:** src/__tests__/*.test.ts → `npm test` (vitest, Node.js)
+**TS Widget:** src/lib/*.test.ts → `npm test` (vitest + jsdom for browser)
+**Integration:** scripts/smoke-test.sh (all services)
 
-**Why:** Analysis documents ARE bloat. Git commit messages preserve reasoning.
+## Tech Stack (verify in package.json first!)
+**Facilitator:** @mysten/sui (gRPC), Express, TypeScript
+**Merchant:** jose (Ed25519 JWT), Express, JavaScript
+**Widget:** React, Vite, custom PTB verifier
+❌ NO Bull queue, NO @x402/fetch package
 
-**Example - WRONG:**
-```
-User: "Check docs for bloat"
-AI: Creates ANTI_BLOAT_ANALYSIS.md (10 KB) ← THIS IS BLOAT!
-```
+## Directory Structure
+**Move:** move/payment/ (NOT contracts/)
+**Controllers:** src/controllers/ (NOT src/api/)
+**Tests:** src/__tests__/ and scripts/
 
-**Example - CORRECT:**
-```
-User: "Check docs for bloat"
-AI: Deletes bloated files, commits with message explaining what and why
-```
+## Common Traps We Hit
+- Widget tests need jsdom (browser env), not plain Node.js
+- localnet_proxy: NO gRPC support (use direct :9000)
+- PTB fixtures: Expire in 5min, regenerate via scripts/generate-test-ptbs.js
+- Mock PTBs: Unreliable, always use real fixtures from live services
+- Check package.json before claiming dependencies exist
+- Active address must be funded: `sui client active-address`
+- Don't create analysis docs when analyzing (ironic bloat!)
 
-## Commit Messages Are Documentation
+## Per-Component Docs
+Each component (facilitator/, merchant/, widget/):
+- ONE README.md only (setup + API + troubleshooting)
+- NO status docs, NO implementation-complete docs
+- Testing covered in root docs/development/TESTING.md
 
-Use detailed commit messages instead of creating markdown files:
-- Explain WHAT changed
-- Explain WHY it changed
-- List specific files/impacts
-- Include metrics (KB saved, files deleted)
-
-**Good commit message > Markdown analysis document**
-
-## When Analysis IS Needed
-
-If deep analysis is truly required:
-1. Present findings in chat response (user sees immediately)
-2. Execute changes based on findings
-3. DO NOT save analysis to file unless explicitly requested
-4. If saved, DELETE after user confirms they've read it
-
-## File Creation Rules
-
-**Only create files that:**
-- ✅ Are code/configuration
-- ✅ Are permanent documentation (README, guides)
-- ✅ User explicitly requested
-
-**Never create files that:**
-- ❌ Analyze other files (audit docs)
-- ❌ Plan work (planning docs)
-- ❌ Track progress (status docs)
-- ❌ Summarize work done (summary docs)
-
-Use git log for history. Use commit messages for reasoning.
+## Commit Discipline
+- Batch related changes, run `git status` first
+- Clear messages with metrics (files changed, KB saved, impact)
+- Commits are documentation (explain what + why)

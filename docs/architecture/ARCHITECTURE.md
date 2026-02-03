@@ -524,6 +524,126 @@ return {
 };
 ```
 
+---
+
+### Settlement Modes: Optimistic vs Wait-for-Finality
+
+**CRITICAL ARCHITECTURAL DECISION:** How long does the user wait after signing?
+
+#### Mode 1: Optimistic Settlement (Recommended for UX)
+
+**Flow:**
+1. User signs PTB → immediate "Payment Processing..."
+2. Facilitator submits to SUI network → returns tx digest
+3. **Redirect user IMMEDIATELY** to merchant (with tx digest)
+4. Settlement happens in background (1-3 seconds)
+5. Merchant verifies on-chain receipt asynchronously
+
+**Pros:**
+- ✅ **Fast UX:** User sees success in <500ms after signing
+- ✅ **No waiting:** Merchant delivers content immediately
+- ✅ **SUI is fast:** Sub-second finality = low risk
+
+**Cons:**
+- ⚠️ **Race condition:** Merchant might query before finality
+- ⚠️ **Requires retry:** Merchant must poll if not found immediately
+
+**Latency:**
+- User experience: ~500ms (sign → redirect)
+- Actual finality: 1-3 seconds (user doesn't wait)
+
+**Implementation:**
+```typescript
+// Step 9: Facilitator submits (non-blocking)
+const { digest } = await suiClient.dryRunTransaction(ptbBytes, signature);
+// Redirect immediately with digest (don't wait for finality)
+return { digest, status: 'pending' };
+
+// Step 12: Merchant polls for receipt
+async function verifyPayment(txDigest: string) {
+  for (let i = 0; i < 5; i++) {
+    const receipt = await checkReceipt(txDigest);
+    if (receipt) return receipt;
+    await sleep(1000); // Poll every second
+  }
+  throw new Error('Settlement timeout');
+}
+```
+
+---
+
+#### Mode 2: Wait-for-Finality (Recommended for Security)
+
+**Flow:**
+1. User signs PTB → "Payment Processing..."
+2. Facilitator submits to SUI network
+3. **POLL until tx finalized** (1-3 seconds)
+4. Extract receipt event from confirmed transaction
+5. Redirect user with confirmed receipt
+
+**Pros:**
+- ✅ **Guaranteed:** Receipt exists before merchant query
+- ✅ **No race conditions:** Merchant gets immediate confirmation
+- ✅ **Simpler merchant:** No polling/retry logic needed
+
+**Cons:**
+- ⚠️ **Slower UX:** User waits 1-3 seconds on payment page
+- ⚠️ **Perceived latency:** Feels slower (even if total time same)
+
+**Latency:**
+- User experience: 1-3 seconds (sign → wait → redirect)
+- Actual finality: 1-3 seconds (user waits for it)
+
+**Implementation:**
+```typescript
+// Step 9: Facilitator submits (blocking)
+const tx = await suiClient.executeTransaction({
+  transactionBlock: ptbBytes,
+  signature,
+  options: { showEffects: true, showEvents: true }
+});
+
+// Wait for success confirmation
+if (tx.effects.status.status !== 'success') {
+  throw new Error('Transaction failed');
+}
+
+// Extract receipt (guaranteed to exist)
+const receipt = tx.events.find(e => 
+  e.type.includes('ReceiptEmitted')
+);
+
+return { digest: tx.digest, receipt, status: 'confirmed' };
+```
+
+---
+
+#### Comparison Table
+
+| Aspect | Optimistic | Wait-for-Finality |
+|--------|------------|-------------------|
+| **User Latency** | ~500ms ✅ | 1-3s ⚠️ |
+| **Merchant Complexity** | Polling required ⚠️ | Simple query ✅ |
+| **Race Conditions** | Possible ⚠️ | None ✅ |
+| **Error Handling** | Async (harder) ⚠️ | Sync (easier) ✅ |
+| **SUI Advantage** | Maximized ✅ | Underutilized ⚠️ |
+
+---
+
+#### Recommendation: **Hybrid Approach**
+
+**For Hackathon Demo:**
+1. **Implement BOTH modes** (toggle in UI)
+2. **Show latency comparison** (optimistic vs wait)
+3. **Default to Optimistic** (best UX showcase)
+4. **Document trade-offs** (judges see we thought it through)
+
+**Post-Hackathon:**
+- Production: Optimistic (with robust merchant polling)
+- High-value: Wait-for-finality (for amounts >$100)
+
+---
+
 #### Step 10: Receipt Event Emitted
 
 **On-chain event structure:**

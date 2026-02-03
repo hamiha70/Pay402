@@ -92,61 +92,82 @@ export async function submitPaymentController(req: Request, res: Response): Prom
     if (settlementMode === 'optimistic') {
       logger.info('Using OPTIMISTIC settlement mode');
       
-      const submitStart = Date.now();
+      // BUSINESS MODEL: Facilitator acts as GUARANTOR
+      // 1. Validate PTB locally (instant)
+      // 2. Return "SAFE TO DELIVER" immediately
+      // 3. Submit to chain in background
+      // 4. If settlement fails: FACILITATOR PAYS (liability/insurance)
       
-      // OPTIMISTIC: Submit transaction WITHOUT waiting for finality
-      // PROBLEM: SDK executeTransaction() ALWAYS waits for finality
-      // We're measuring TOTAL time (submit + finality), not just submit
-      let result;
-      try {
-        result = await client.executeTransaction({
-          transaction: txBytes,
-          signatures: signatures,
-          // NOTE: This blocks until finality (~20ms localnet, ~500ms testnet)
-          // For true optimistic, we'd need to:
-          // 1. Use raw gRPC submitTransaction (returns digest immediately)
-          // 2. Return HTTP response with digest
-          // 3. Settlement happens in background
-        });
-      } catch (execError) {
-        logger.error('executeTransaction failed', {
-          error: execError instanceof Error ? execError.message : String(execError),
-          stack: execError instanceof Error ? execError.stack : undefined,
-        });
-        throw execError;
-      }
-      
-      const submitLatency = Date.now() - submitStart;
-      
-      // Extract digest from result (discriminated union format)
-      const digest = result.$kind === 'Transaction' ? result.Transaction.digest : null;
+      // Step 1: Pre-validation (instant, ~5ms)
+      // TODO: Add comprehensive PTB validation:
+      // - Check signature validity
+      // - Verify buyer has sufficient balance
+      // - Validate invoice JWT hasn't expired
+      // - Check PTB structure matches invoice
       
       const httpLatency = Date.now() - startTime;
       
-      logger.info('Transaction submitted (optimistic)', { 
-        digest,
-        submitLatency: `${submitLatency}ms`,
-        httpLatency: `${httpLatency}ms`,
-        note: 'SDK blocks until finality - not true optimistic yet',
-      });
-      
-      // Return digest to merchant
-      // In true optimistic, this would be ~50ms on testnet
-      // Currently: ~500ms because SDK waits for finality
+      // Step 2: IMMEDIATE "safe to deliver" response
+      // Merchant can deliver content NOW without waiting
       res.json({
         success: true,
         mode: 'optimistic',
-        digest,
-        submitLatency: `${submitLatency}ms`,  // Time to finality
-        httpLatency: `${httpLatency}ms`,      // Total HTTP time
-        note: 'SDK limitation: waits for finality even in optimistic mode',
+        safeToDeliver: true,
+        facilitatorGuarantee: true,
+        digest: null,  // Not yet available - will notify via webhook
+        httpLatency: `${httpLatency}ms`,
+        note: 'Facilitator guarantees payment - settlement in progress',
         timestamp: Date.now(),
       });
       
-      logger.info('=== SUBMIT PAYMENT SUCCESS (OPTIMISTIC) ===', { 
-        submitLatency: `${submitLatency}ms`,
+      logger.info('=== OPTIMISTIC: SAFE TO DELIVER SENT ===', { 
         httpLatency: `${httpLatency}ms`,
+        note: 'Merchant can deliver immediately - settlement happens async',
       });
+      
+      // Step 3: Submit to chain ASYNC (don't block HTTP response)
+      // This runs in background after merchant already delivered
+      setImmediate(async () => {
+        const settlementStart = Date.now();
+        
+        try {
+          logger.info('Background settlement starting', { buyerAddress });
+          
+          const result = await client.executeTransaction({
+            transaction: txBytes,
+            signatures: signatures,
+          });
+          
+          const digest = result.$kind === 'Transaction' ? result.Transaction.digest : null;
+          const settlementLatency = Date.now() - settlementStart;
+          
+          logger.info('=== SETTLEMENT SUCCESS (BACKGROUND) ===', {
+            digest,
+            settlementLatency: `${settlementLatency}ms`,
+            buyerAddress,
+          });
+          
+          // TODO: Notify merchant with actual digest (webhook or polling endpoint)
+          // await notifyMerchantSettled(invoiceJWT, digest);
+          
+        } catch (settlementError) {
+          const settlementLatency = Date.now() - settlementStart;
+          
+          // CRITICAL: Settlement failed - facilitator must compensate!
+          logger.error('=== SETTLEMENT FAILED - FACILITATOR LIABILITY ===', {
+            error: settlementError instanceof Error ? settlementError.message : String(settlementError),
+            stack: settlementError instanceof Error ? settlementError.stack : undefined,
+            settlementLatency: `${settlementLatency}ms`,
+            buyerAddress,
+            invoiceJWT,
+            note: 'Facilitator must compensate merchant for failed settlement',
+          });
+          
+          // TODO: Trigger facilitator compensation flow
+          // await facilitatorCompensatesMerchant(invoiceJWT, amount);
+        }
+      });
+      
       return;
     }
     

@@ -145,15 +145,28 @@ run_payment_flow() {
     HTTP_LAT=$(($(date +%s%3N) - STEP_START))
     
     if echo "$SUBMIT_RESPONSE" | jq -e '.success' > /dev/null 2>&1; then
-        DIGEST=$(echo "$SUBMIT_RESPONSE" | jq -r '.digest')
+        DIGEST=$(echo "$SUBMIT_RESPONSE" | jq -r '.digest // "pending"')
+        SAFE_TO_DELIVER=$(echo "$SUBMIT_RESPONSE" | jq -r '.safeToDeliver // false')
+        FACILITATOR_GUARANTEE=$(echo "$SUBMIT_RESPONSE" | jq -r '.facilitatorGuarantee // false')
         SUBMIT_LAT=$(echo "$SUBMIT_RESPONSE" | jq -r '.submitLatency // "N/A"')
         SERVER_HTTP_LAT=$(echo "$SUBMIT_RESPONSE" | jq -r '.httpLatency // "N/A"')
         
         echo -e "${GREEN}✓ Payment submitted${NC}"
-        echo -e "  Digest: ${DIGEST}"
+        
+        if [ "$MODE" == "optimistic" ] && [ "$SAFE_TO_DELIVER" == "true" ]; then
+            echo -e "  ${GREEN}✓ SAFE TO DELIVER${NC} ${GRAY}(facilitator guarantee)${NC}"
+            echo -e "  Digest: ${YELLOW}pending (background settlement)${NC}"
+            echo -e "  ${GRAY}Merchant can deliver immediately!${NC}"
+        else
+            echo -e "  Digest: ${DIGEST}"
+        fi
+        
         echo -e "  ${GRAY}Client-side HTTP: ${HTTP_LAT}ms${NC}"
-        echo -e "  ${GRAY}Server-side submit: ${SUBMIT_LAT}${NC}"
         echo -e "  ${GRAY}Server-side HTTP: ${SERVER_HTTP_LAT}${NC}"
+        
+        if [ "$SUBMIT_LAT" != "N/A" ]; then
+            echo -e "  ${GRAY}Server-side submit: ${SUBMIT_LAT}${NC}"
+        fi
     else
         echo -e "${RED}✗ Submission failed${NC}"
         echo "$SUBMIT_RESPONSE" | jq '.'

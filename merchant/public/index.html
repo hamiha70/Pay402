@@ -249,7 +249,11 @@
           <p>
             Open Pay402 payment page with this invoice JWT to complete payment.
           </p>
-          <a href="#" onclick="openPaymentPage(); return false;" class="payment-link">
+          <a
+            href="#"
+            onclick="openPaymentPage(); return false;"
+            class="payment-link"
+          >
             → Open Payment Page (Auto-fills Invoice)
           </a>
         </div>
@@ -342,8 +346,10 @@
 
       function openPaymentPage() {
         // Redirect to payment widget with invoice JWT in URL
-        const widgetUrl = `http://localhost:5173?invoice=${encodeURIComponent(currentInvoiceJWT)}`;
-        window.open(widgetUrl, '_blank');
+        const widgetUrl = `http://localhost:5173?invoice=${encodeURIComponent(
+          currentInvoiceJWT
+        )}`;
+        window.open(widgetUrl, "_blank");
       }
 
       // Don't auto-request - user must click button

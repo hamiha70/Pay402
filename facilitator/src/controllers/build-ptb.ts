@@ -96,10 +96,12 @@ export async function buildPTBController(req: Request, res: Response): Promise<v
     });
     
     if (!coins.objects || coins.objects.length === 0) {
+      logger.error('No coins found', { buyerAddress, coinType: invoice.coinType });
       res.status(400).json({
         error: 'No coins found for buyer',
         buyerAddress,
         coinType: invoice.coinType,
+        hint: 'Please fund this address first. For testing, use the /fund endpoint.',
       });
       return;
     }
@@ -108,13 +110,33 @@ export async function buildPTBController(req: Request, res: Response): Promise<v
     const totalBalance = coins.objects.reduce((sum, coin) => sum + BigInt(coin.balance), 0n);
     
     if (totalBalance < totalRequired) {
+      logger.error('Insufficient balance', { 
+        required: totalRequired.toString(),
+        available: totalBalance.toString(),
+        buyerAddress
+      });
       res.status(400).json({
         error: 'Insufficient balance',
         required: totalRequired.toString(),
         available: totalBalance.toString(),
         buyerAddress,
+        hint: `Need ${totalRequired.toString()} but only have ${totalBalance.toString()}`,
       });
       return;
+    }
+    
+    // Check for gas coin availability (critical check)
+    const MIN_GAS_BUDGET = 10000000n; // 0.01 SUI
+    const hasMultipleCoins = coins.objects.length > 1;
+    const hasSufficientGas = hasMultipleCoins || totalBalance > (totalRequired + MIN_GAS_BUDGET);
+    
+    if (!hasSufficientGas) {
+      logger.warn('Potential gas selection issue', {
+        coinCount: coins.objects.length,
+        totalBalance: totalBalance.toString(),
+        totalRequired: totalRequired.toString(),
+        message: 'Single coin may cause gas selection failure'
+      });
     }
     
     // Build PTB
@@ -128,11 +150,17 @@ export async function buildPTBController(req: Request, res: Response): Promise<v
     const suitableCoin = coins.objects.find(coin => BigInt(coin.balance) >= totalRequired);
     
     if (!suitableCoin) {
+      logger.error('No single coin with sufficient balance', {
+        required: totalRequired.toString(),
+        available: totalBalance.toString(),
+        coinCount: coins.objects.length
+      });
       res.status(400).json({
         error: 'No single coin with sufficient balance',
         required: totalRequired.toString(),
         available: totalBalance.toString(),
-        note: 'Coin merging not yet implemented - need single USDC coin object',
+        coinCount: coins.objects.length,
+        hint: 'Coin merging not yet implemented. Need a single coin with enough balance for payment + gas.',
       });
       return;
     }
@@ -159,8 +187,9 @@ export async function buildPTBController(req: Request, res: Response): Promise<v
       ],
     });
     
-    // Set gas budget (facilitator will sponsor)
-    tx.setGasBudget(100000000);
+    // Set gas budget (buyer pays for now, TODO: implement gas sponsorship)
+    // Using modest budget since buyer needs separate coin for gas
+    tx.setGasBudget(10000000); // 0.01 SUI (plenty for simple PTB)
     
     // Serialize PTB to bytes
     const ptbBytes = await tx.build({ client });
@@ -182,12 +211,31 @@ export async function buildPTBController(req: Request, res: Response): Promise<v
     });
     
   } catch (err) {
+    const errorMessage = err instanceof Error ? err.message : String(err);
+    
     logger.error('=== BUILD PTB REQUEST FAILED ===', err, { 
       body: req.body 
     });
+    
+    // Provide helpful error messages for common issues
+    let userFriendlyError = 'Failed to build PTB';
+    let hint = undefined;
+    
+    if (errorMessage.includes('insufficient SUI balance') || 
+        errorMessage.includes('gas selection')) {
+      userFriendlyError = 'Gas coin selection failed';
+      hint = 'KNOWN ISSUE: The buyer\'s coin is locked for payment, leaving no coins for gas. ' +
+             'Gas sponsorship (facilitator pays gas) is the solution - coming soon! ' +
+             'See docs/testing/GAS_COIN_ISSUE.md for details.';
+    } else if (errorMessage.includes('Invalid coin type')) {
+      userFriendlyError = 'Invalid coin type in invoice';
+      hint = 'The coin type specified in the invoice may not exist on this network.';
+    }
+    
     res.status(500).json({
-      error: 'Failed to build PTB',
-      details: err instanceof Error ? err.message : String(err),
+      error: userFriendlyError,
+      details: errorMessage,
+      hint,
     });
   }
 }

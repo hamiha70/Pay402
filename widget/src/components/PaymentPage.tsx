@@ -100,7 +100,20 @@ export default function PaymentPage({ invoiceJWT: propInvoiceJWT }: PaymentPageP
 
       if (!response.ok) {
         const error = await response.json();
-        throw new Error(error.error || 'Failed to build PTB');
+        
+        // Provide helpful error messages for common issues
+        let errorMessage = error.error || 'Failed to build PTB';
+        
+        if (error.details?.includes('insufficient SUI balance') || 
+            error.details?.includes('gas selection')) {
+          errorMessage = 'Insufficient SUI for gas. This is a known issue - gas sponsorship coming soon!';
+        } else if (error.details?.includes('No coins found')) {
+          errorMessage = 'No coins found for your address. Please fund your wallet first.';
+        } else if (error.error === 'No single coin with sufficient balance') {
+          errorMessage = 'Need to merge coins (not yet implemented). Use an address with a single large coin.';
+        }
+        
+        throw new Error(errorMessage);
       }
 
       const data = await response.json();

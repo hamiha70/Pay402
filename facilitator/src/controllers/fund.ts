@@ -48,7 +48,7 @@ export async function fundController(req: Request, res: Response) {
       coinType: '0x2::sui::SUI', // Using SUI for testing
     });
 
-    const currentBalance = parseInt(balance.totalBalance);
+    const currentBalance = balance.totalBalance ? parseInt(balance.totalBalance) : 0;
 
     // If already funded, return early
     if (currentBalance > 0) {
@@ -61,14 +61,14 @@ export async function fundController(req: Request, res: Response) {
       return;
     }
 
-    // Fund the wallet
-    const FUND_AMOUNT = 2_000_000_000; // 2 SUI for testing (in nanoSUI)
+    // Fund the wallet with enough for payment + gas
+    const FUND_AMOUNT = 10_000_000_000; // 10 SUI (plenty for payment + gas)
 
     const keypair = Ed25519Keypair.fromSecretKey(config.facilitatorPrivateKey!);
 
     const tx = new Transaction();
     
-    // Split coins from gas payment
+    // Split coin from facilitator's gas
     const [coin] = tx.splitCoins(tx.gas, [FUND_AMOUNT]);
     
     // Transfer to recipient
@@ -78,9 +78,6 @@ export async function fundController(req: Request, res: Response) {
     const result = await client.signAndExecuteTransaction({
       transaction: tx,
       signer: keypair,
-      options: {
-        showEffects: true,
-      },
     });
 
     // Mark session as funded
@@ -93,11 +90,13 @@ export async function fundController(req: Request, res: Response) {
       coinType: '0x2::sui::SUI',
     });
 
+    const digest = result.$kind === 'Transaction' ? result.Transaction.digest : null;
+    
     res.json({
       funded: true,
       amount: FUND_AMOUNT / 1_000_000_000, // Convert to SUI
-      txDigest: result.digest,
-      balance: parseInt(newBalance.totalBalance) / 1_000_000_000,
+      txDigest: digest,
+      balance: (newBalance.totalBalance ? parseInt(newBalance.totalBalance) : 0) / 1_000_000_000,
       message: 'Wallet funded successfully',
     });
 

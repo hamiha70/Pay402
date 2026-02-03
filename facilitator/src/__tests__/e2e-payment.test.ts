@@ -113,10 +113,8 @@ describe('End-to-End Payment Flow', () => {
   });
 
   describe('Step 2: Submit Payment (Optimistic Mode)', () => {
-    // BLOCKED: Move contract returns unused value (UnusedValueWithoutDrop)
-    // The settle_payment function returns a value that must be consumed or dropped
-    // This needs to be fixed in the Move contract before e2e tests can pass
-    it.skip('should submit payment and return digest immediately', async () => {
+    // Move contract issue fixed - settle_payment is now an entry function
+    it('should submit payment and return digest immediately', async () => {
       const startTime = Date.now();
       
       // Build PTB (returns transaction kind bytes)
@@ -177,10 +175,8 @@ describe('End-to-End Payment Flow', () => {
   });
 
   describe('Step 3: Submit Payment (Pessimistic Mode)', () => {
-    // BLOCKED: Move contract returns unused value (UnusedValueWithoutDrop)
-    // The settle_payment function returns a value that must be consumed or dropped
-    // This needs to be fixed in the Move contract before e2e tests can pass
-    it.skip('should submit payment and block until finality', async () => {
+    // Move contract issue fixed - settle_payment is now an entry function
+    it('should submit payment and block until finality', async () => {
       const startTime = Date.now();
       
       // Build PTB (returns transaction kind bytes)
@@ -242,10 +238,8 @@ describe('End-to-End Payment Flow', () => {
   });
 
   describe('Latency Comparison', () => {
-    // BLOCKED: Move contract returns unused value (UnusedValueWithoutDrop)
-    // The settle_payment function returns a value that must be consumed or dropped
-    // This needs to be fixed in the Move contract before e2e tests can pass
-    it.skip('should show optimistic is faster than pessimistic mode', async () => {
+    // Move contract issue fixed - settle_payment is now an entry function
+    it('should show optimistic is faster than pessimistic mode', async () => {
       const results: { mode: string; latency: number }[] = [];
       
       const { Transaction } = await import('@mysten/sui/transactions');

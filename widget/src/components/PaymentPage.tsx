@@ -118,13 +118,14 @@ export default function PaymentPage({ invoiceJWT: propInvoiceJWT }: PaymentPageP
 
       const data = await response.json();
       
-      // Convert ptbBytes array to Uint8Array
-      const ptbBytesArray = new Uint8Array(data.ptbBytes);
+      // Facilitator returns transaction KIND bytes (no gas data)
+      // This is the sponsored transaction pattern
+      const kindBytesArray = new Uint8Array(data.transactionKindBytes);
       
-      setPtbBytes(ptbBytesArray);
+      setPtbBytes(kindBytesArray);
 
       // Verify PTB client-side
-      const result = await verifyPaymentPTB(ptbBytesArray, invoice, invoiceJWT);
+      const result = await verifyPaymentPTB(kindBytesArray, invoice, invoiceJWT);
       setVerificationResult(result);
 
       if (!result.pass) {
@@ -148,26 +149,28 @@ export default function PaymentPage({ invoiceJWT: propInvoiceJWT }: PaymentPageP
     const startTime = Date.now();
 
     try {
-      // Sign PTB
-      const { signature, transactionBytes } = await signTransaction(
-        // @ts-ignore - Transaction from bytes
-        { serialize: () => ptbBytes }
-      );
+      // Reconstruct transaction from kind bytes (sponsored transaction pattern)
+      const { Transaction } = await import('@mysten/sui/transactions');
+      const tx = Transaction.fromKind(ptbBytes);
+      tx.setSender(address);
+      
+      // Sign transaction (buyer signature)
+      const { signature, bytes: transactionBytes } = await signTransaction(tx);
+      
+      console.log('✍️ Buyer signed transaction');
+      console.log('  Sender:', address);
+      console.log('  Signature length:', signature.length);
 
-      // Submit to facilitator (NEW ENDPOINT)
+      // Submit to facilitator (facilitator will add gas sponsorship & submit)
       const response = await fetch('http://localhost:3001/submit-payment', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           invoiceJWT,
           buyerAddress: address,
-          signedTransaction: {
-            transactionBytes: typeof transactionBytes === 'string' 
-              ? transactionBytes 
-              : Array.from(transactionBytes),
-            signature,
-          },
-          settlementMode: mode,  // 'optimistic' or 'pessimistic'
+          transactionKindBytes: Array.from(ptbBytes), // Original kind bytes
+          buyerSignature: signature,                   // Buyer's signature
+          settlementMode: mode,                        // 'optimistic' or 'pessimistic'
         }),
       });
 

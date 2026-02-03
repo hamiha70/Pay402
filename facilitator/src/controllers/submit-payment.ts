@@ -18,11 +18,9 @@ function getDigestFromBytes(bytes: Uint8Array): string {
 interface SubmitPaymentRequest {
   invoiceJWT: string;
   buyerAddress: string;
-  signedTransaction: {
-    transactionBytes: string | number[] | Uint8Array;  // base64 string, array, or Uint8Array
-    signature: string;                                  // base64 encoded signature
-  };
-  settlementMode?: 'optimistic' | 'pessimistic';  // Default: optimistic
+  transactionKindBytes: number[] | Uint8Array;  // Transaction kind (no gas data)
+  buyerSignature: string;                        // Buyer's signature
+  settlementMode?: 'optimistic' | 'pessimistic'; // Default: optimistic
 }
 
 interface ReceiptEvent {
@@ -37,7 +35,13 @@ interface ReceiptEvent {
 
 /**
  * POST /submit-payment
- * Submit buyer-signed PTB to blockchain
+ * Sponsor gas and submit buyer-signed transaction
+ * 
+ * Sponsored Transaction Flow:
+ * 1. Receive transaction kind + buyer signature
+ * 2. Reconstruct transaction with gas sponsorship
+ * 3. Facilitator signs (dual signature)
+ * 4. Submit with both signatures
  * 
  * Two settlement modes:
  * 1. Optimistic: Return digest immediately (~10-50ms UX, facilitator guarantees)
@@ -46,51 +50,87 @@ interface ReceiptEvent {
 export async function submitPaymentController(req: Request, res: Response): Promise<void> {
   const startTime = Date.now();
   
-  console.log('[SUBMIT] Request received');
-  console.log('[SUBMIT] Has body:', !!req.body);
+  console.log('[SUBMIT] Sponsored transaction request received');
   
   try {
     const {
       invoiceJWT,
       buyerAddress,
-      signedTransaction,
+      transactionKindBytes,
+      buyerSignature,
       settlementMode = 'optimistic', // Default to optimistic
     } = req.body as SubmitPaymentRequest;
     
-    console.log('[SUBMIT] Parsed OK');
-    
-    logger.info('Request parsed', { 
+    logger.info('=== SPONSORED TRANSACTION SUBMIT ===', { 
       buyerAddress, 
       mode: settlementMode,
       hasJWT: !!invoiceJWT,
-      hasTxBytes: !!signedTransaction?.transactionBytes,
-      hasSignature: !!signedTransaction?.signature,
+      hasKindBytes: !!transactionKindBytes,
+      hasBuyerSig: !!buyerSignature,
     });
     
     // Validate required fields
-    if (!buyerAddress || !signedTransaction?.transactionBytes || !signedTransaction?.signature) {
+    if (!buyerAddress || !transactionKindBytes || !buyerSignature) {
       res.status(400).json({
         error: 'Missing required fields',
-        required: ['buyerAddress', 'signedTransaction.transactionBytes', 'signedTransaction.signature'],
+        required: ['buyerAddress', 'transactionKindBytes', 'buyerSignature'],
       });
       return;
     }
     
     const client = getSuiClient();
+    const { Ed25519Keypair } = await import('@mysten/sui/keypairs/ed25519');
+    const { Transaction } = await import('@mysten/sui/transactions');
+    const config = await import('../config.js').then(m => m.config);
     
-    // Convert transaction bytes to Uint8Array (BCS-encoded format required by gRPC)
-    let txBytes: Uint8Array;
-    if (Array.isArray(signedTransaction.transactionBytes)) {
-      txBytes = new Uint8Array(signedTransaction.transactionBytes);
-    } else if (typeof signedTransaction.transactionBytes === 'string') {
-      // If base64 string, decode it
-      txBytes = new Uint8Array(Buffer.from(signedTransaction.transactionBytes, 'base64'));
-    } else {
-      txBytes = signedTransaction.transactionBytes as Uint8Array;
+    // Convert kind bytes to Uint8Array
+    const kindBytes = Array.isArray(transactionKindBytes) 
+      ? new Uint8Array(transactionKindBytes) 
+      : transactionKindBytes;
+    
+    logger.info('Reconstructing transaction with gas sponsorship');
+    
+    // Reconstruct transaction from kind bytes
+    const tx = Transaction.fromKind(kindBytes);
+    tx.setSender(buyerAddress);
+    
+    // Add gas sponsorship (facilitator pays gas)
+    const facilitatorKeypair = Ed25519Keypair.fromSecretKey(config.facilitatorPrivateKey);
+    const facilitatorAddress = facilitatorKeypair.getPublicKey().toSuiAddress();
+    
+    // Get facilitator's gas coins
+    const gasCoins = await client.listCoins({
+      owner: facilitatorAddress,
+      coinType: '0x2::sui::SUI',
+    });
+    
+    if (!gasCoins.objects || gasCoins.objects.length === 0) {
+      throw new Error('Facilitator has no SUI for gas sponsorship');
     }
     
-    // Signatures must be an array
-    const signatures = [signedTransaction.signature];
+    // Set gas payment (facilitator sponsors)
+    tx.setGasOwner(facilitatorAddress);
+    tx.setGasPayment([{
+      objectId: gasCoins.objects[0].objectId,
+      version: gasCoins.objects[0].version,
+      digest: gasCoins.objects[0].digest,
+    }]);
+    tx.setGasBudget(10000000); // 0.01 SUI
+    
+    logger.info('Gas sponsorship configured', {
+      facilitator: facilitatorAddress,
+      gasCoin: gasCoins.objects[0].objectId,
+      buyer: buyerAddress,
+    });
+    
+    // Build full transaction bytes
+    const txBytes = await tx.build({ client });
+    
+    // Facilitator signs the transaction
+    const facilitatorSignature = await facilitatorKeypair.signTransaction(txBytes);
+    
+    // Dual signatures: buyer + facilitator
+    const signatures = [buyerSignature, facilitatorSignature.signature];
     
     logger.info('Transaction data BEFORE execute', {
       txBytesLength: txBytes.length,
@@ -237,8 +277,8 @@ export async function submitPaymentController(req: Request, res: Response): Prom
       }
       
       // Extract receipt event
-      const receiptEvent = result.Transaction?.events?.find(e =>
-        e.type?.includes('::payment::ReceiptEmitted')
+      const receiptEvent = result.Transaction?.events?.find((e: any) =>
+        e.$kind === 'MoveEvent' && e.MoveEvent?.type?.includes('::payment::ReceiptEmitted')
       );
       
       if (!receiptEvent) {
@@ -248,7 +288,7 @@ export async function submitPaymentController(req: Request, res: Response): Prom
         });
       }
       
-      const receipt = receiptEvent?.parsedJson as ReceiptEvent | undefined;
+      const receipt = (receiptEvent as any)?.MoveEvent?.parsedJson as ReceiptEvent | undefined;
       
       // Return "SAFE TO DELIVER" with confirmed receipt
       // Merchant trusts facilitator (transaction already finalized)

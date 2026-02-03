@@ -11,7 +11,7 @@ import { execSync } from 'child_process';
  * 1. Get invoice JWT from merchant
  * 2. Build PTB via facilitator
  * 3. Sign PTB with buyer keypair
- * 4. Submit payment (optimistic & wait modes)
+ * 4. Submit payment (optimistic & pessimistic modes)
  * 5. Verify on-chain settlement
  */
 
@@ -156,7 +156,7 @@ describe('End-to-End Payment Flow', () => {
     });
   });
 
-  describe('Step 3: Submit Payment (Wait Mode)', () => {
+  describe('Step 3: Submit Payment (Pessimistic Mode)', () => {
     it('should submit payment and wait for finality', async () => {
       const startTime = Date.now();
       
@@ -173,7 +173,7 @@ describe('End-to-End Payment Flow', () => {
       // Sign PTB
       const signature = await buyerKeypair.signTransaction(ptbBytes);
       
-      // Submit (wait mode)
+      // Submit (pessimistic mode)
       const submitResponse = await fetch(`${FACILITATOR_URL}/submit-payment`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -184,7 +184,7 @@ describe('End-to-End Payment Flow', () => {
             transactionBytes: toBase64(ptbBytes),
             signature: signature.signature,
           },
-          settlementMode: 'wait',
+          settlementMode: 'pessimistic',
         }),
       });
       
@@ -194,9 +194,9 @@ describe('End-to-End Payment Flow', () => {
       
       const submitData = await submitResponse.json();
       expect(submitData.success).toBe(true);
-      expect(submitData.mode).toBe('wait');
+      expect(submitData.mode).toBe('pessimistic');
       expect(submitData.digest).toBeDefined();
-      expect(submitData.status).toBe('confirmed');
+      expect(submitData.safeToDeliver).toBe(true);
       
       // Wait mode includes receipt
       expect(submitData.receipt).toBeDefined();
@@ -206,20 +206,20 @@ describe('End-to-End Payment Flow', () => {
         expect(submitData.receipt.amount).toBeDefined();
       }
       
-      // Wait mode should take longer (includes finality wait)
+      // Pessimistic mode should take longer (includes finality wait)
       expect(clientLatency).toBeGreaterThan(500); // At least 500ms
       
-      console.log(`Wait mode latency: ${clientLatency}ms`);
+      console.log(`Pessimistic mode latency: ${clientLatency}ms`);
       console.log(`Server reported: ${submitData.latency}`);
       console.log(`Receipt included: ${!!submitData.receipt}`);
     });
   });
 
   describe('Latency Comparison', () => {
-    it('should show optimistic is faster than wait mode', async () => {
+    it('should show optimistic is faster than pessimistic mode', async () => {
       const results: { mode: string; latency: number }[] = [];
       
-      // Test optimistic
+      // Test both modes
       for (let i = 0; i < 2; i++) {
         const start = Date.now();
         
@@ -243,27 +243,27 @@ describe('End-to-End Payment Flow', () => {
               transactionBytes: toBase64(ptbBytes),
               signature: signature.signature,
             },
-            settlementMode: i === 0 ? 'optimistic' : 'wait',
+            settlementMode: i === 0 ? 'optimistic' : 'pessimistic',
           }),
         });
         
         const latency = Date.now() - start;
-        const mode = i === 0 ? 'optimistic' : 'wait';
+        const mode = i === 0 ? 'optimistic' : 'pessimistic';
         results.push({ mode, latency });
         
         await submitResp.json();
       }
       
       const optimisticLatency = results[0].latency;
-      const waitLatency = results[1].latency;
+      const pessimisticLatency = results[1].latency;
       
       console.log('\nLatency Comparison:');
-      console.log(`  Optimistic: ${optimisticLatency}ms`);
-      console.log(`  Wait:       ${waitLatency}ms`);
-      console.log(`  Difference: ${waitLatency - optimisticLatency}ms`);
+      console.log(`  Optimistic:  ${optimisticLatency}ms`);
+      console.log(`  Pessimistic: ${pessimisticLatency}ms`);
+      console.log(`  Difference:  ${pessimisticLatency - optimisticLatency}ms`);
       
       // Optimistic should be faster
-      expect(optimisticLatency).toBeLessThan(waitLatency);
+      expect(optimisticLatency).toBeLessThan(pessimisticLatency);
     });
   });
 });

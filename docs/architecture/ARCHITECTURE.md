@@ -602,20 +602,20 @@ const result = await submitToBlockchain(...); // 10ms (SUBMIT, not finalize!)
 // THE ONLY DIFFERENCE:
 if (mode === 'optimistic') {
   // Return AFTER submit (BEFORE finality)
-  res.json({ 
-    safeToDeliver: true, 
-    digest: result.digest 
+  res.json({
+    safeToDeliver: true,
+    digest: result.digest
   });  // ~50-100ms total
-  
+
   // Facilitator's ONLY risk:
   // Buyer front-runs (spends coins elsewhere before finality)
   // Mitigated by: Submitting IMMEDIATELY after validation
-  
+
 } else if (mode === 'wait') {
   // Return AFTER finality
   await waitForFinality(result.digest);       // +500ms BLOCKING
-  res.json({ 
-    safeToDeliver: true, 
+  res.json({
+    safeToDeliver: true,
     digest: result.digest,
     receipt: getReceipt()
   });  // ~550-600ms total
@@ -662,13 +662,13 @@ FACILITATOR'S ONLY RISK WINDOW:
 
 **Facilitator Liability Scenarios:**
 
-| Failure Cause         | Frequency | When Can Occur | Mitigation                         |
-| --------------------- | --------- | -------------- | ---------------------------------- |
+| Failure Cause         | Frequency | When Can Occur            | Mitigation                          |
+| --------------------- | --------- | ------------------------- | ----------------------------------- |
 | Buyer front-runs      | Very Low  | Between submit & finality | Submit IMMEDIATELY after validation |
-| Invalid signature     | Zero      | Caught in validation | Validate signature before submit |
-| Insufficient balance  | Zero      | Caught in validation | Check balance before submit |
-| Invalid PTB structure | Zero      | Caught in validation | Validate PTB before submit |
-| Network failure       | Low       | During submit | Retry logic, multiple RPC nodes |
+| Invalid signature     | Zero      | Caught in validation      | Validate signature before submit    |
+| Insufficient balance  | Zero      | Caught in validation      | Check balance before submit         |
+| Invalid PTB structure | Zero      | Caught in validation      | Validate PTB before submit          |
+| Network failure       | Low       | During submit             | Retry logic, multiple RPC nodes     |
 
 **Key Insight:** Comprehensive validation BEFORE submit eliminates most risks.
 **Remaining risk:** Buyer double-spends between facilitator's submit and finality (~500ms window)
@@ -681,7 +681,7 @@ FACILITATOR'S ONLY RISK WINDOW:
   "mode": "optimistic",
   "safeToDeliver": true,
   "facilitatorGuarantee": true,
-  "digest": "AbCd1234...",  // Available immediately after submit
+  "digest": "AbCd1234...", // Available immediately after submit
   "validateLatency": "35ms",
   "submitLatency": "10ms",
   "httpLatency": "60ms",
@@ -695,48 +695,49 @@ FACILITATOR'S ONLY RISK WINDOW:
 // facilitator/src/controllers/submit-payment.ts (optimistic mode)
 async function submitPaymentOptimistic(req, res) {
   const startTime = Date.now();
-  
+
   // Step 1: Comprehensive validation (SAME in both modes)
   const validateStart = Date.now();
-  
-  validateSignature(txBytes, signature);           // ~5ms
-  await checkBuyerBalance(buyerAddress, amount);   // ~20ms (RPC call)
-  validatePTBStructure(txBytes, invoiceJWT);       // ~5ms
-  validateInvoiceJWT(invoiceJWT);                  // ~5ms
-  
+
+  validateSignature(txBytes, signature); // ~5ms
+  await checkBuyerBalance(buyerAddress, amount); // ~20ms (RPC call)
+  validatePTBStructure(txBytes, invoiceJWT); // ~5ms
+  validateInvoiceJWT(invoiceJWT); // ~5ms
+
   const validateLatency = Date.now() - validateStart;
-  
+
   // Step 2: Submit to blockchain IMMEDIATELY (lock buyer's coins)
   const submitStart = Date.now();
-  
+
   const result = await client.executeTransaction({
     transaction: txBytes,
     signatures: [signature],
   });
-  
-  const digest = result.$kind === 'Transaction' ? result.Transaction.digest : null;
+
+  const digest =
+    result.$kind === "Transaction" ? result.Transaction.digest : null;
   const submitLatency = Date.now() - submitStart;
-  
+
   // Step 3: Return "safe to deliver" AFTER submit (BEFORE finality)
   const httpLatency = Date.now() - startTime;
-  
+
   res.json({
     success: true,
-    mode: 'optimistic',
+    mode: "optimistic",
     safeToDeliver: true,
-    digest,  // Available now!
+    digest, // Available now!
     validateLatency: `${validateLatency}ms`,
     submitLatency: `${submitLatency}ms`,
     httpLatency: `${httpLatency}ms`,
-    note: 'Submitted to blockchain - finality in background'
+    note: "Submitted to blockchain - finality in background",
   });
-  
+
   // Step 4: Monitor finality in background (optional)
   setImmediate(async () => {
     // Transaction already submitted, merchant already delivering
     // This is just for logging/webhook notification
-    logger.info('Finality monitoring', { digest });
-    
+    logger.info("Finality monitoring", { digest });
+
     // In production: Poll for finality status or use websocket
     // await notifyMerchantFinality(invoiceId, digest);
   });
@@ -846,20 +847,20 @@ async function submitPaymentWait(req, res) {
 
 #### Comparison Table
 
-| Aspect                     | Optimistic                        | Pessimistic              |
-| -------------------------- | --------------------------------- | ------------------------ |
-| **User Latency**           | ~50-100ms ✅✅                    | ~550-600ms ⚠️            |
-| **Merchant Delivery**      | Immediate (before finality) ✅    | After confirmation ⚠️    |
-| **Facilitator Risk**       | LOW (front-running only) ⚠️       | ZERO (already settled) ✅ |
-| **Capital Requirements**   | Small reserve pool ⚠️             | None ✅                  |
-| **Pre-validation**         | Critical (balance, sig, PTB) ✅   | Critical (same) ✅       |
-| **Submit Timing**          | Before response ✅                | Before response ✅       |
-| **Finality Wait**          | No (return after submit) ✅       | Yes (blocks ~500ms) ⚠️   |
-| **Response Format**        | `{ safeToDeliver, digest }` ✅    | `{ safeToDeliver, digest, receipt }` ✅ |
-| **Merchant Blockchain**    | NEVER (facilitator abstracts) ✅  | NEVER (facilitator abstracts) ✅ |
-| **Merchant Complexity**    | Trust facilitator signal ✅       | Trust facilitator signal ✅ |
-| **Competitive Advantage**  | Stripe-like instant UX ✅         | Standard crypto UX ⚠️    |
-| **Best For**               | Low-value, high-volume ✅         | High-value, low-risk ✅  |
+| Aspect                    | Optimistic                       | Pessimistic                             |
+| ------------------------- | -------------------------------- | --------------------------------------- |
+| **User Latency**          | ~50-100ms ✅✅                   | ~550-600ms ⚠️                           |
+| **Merchant Delivery**     | Immediate (before finality) ✅   | After confirmation ⚠️                   |
+| **Facilitator Risk**      | LOW (front-running only) ⚠️      | ZERO (already settled) ✅               |
+| **Capital Requirements**  | Small reserve pool ⚠️            | None ✅                                 |
+| **Pre-validation**        | Critical (balance, sig, PTB) ✅  | Critical (same) ✅                      |
+| **Submit Timing**         | Before response ✅               | Before response ✅                      |
+| **Finality Wait**         | No (return after submit) ✅      | Yes (blocks ~500ms) ⚠️                  |
+| **Response Format**       | `{ safeToDeliver, digest }` ✅   | `{ safeToDeliver, digest, receipt }` ✅ |
+| **Merchant Blockchain**   | NEVER (facilitator abstracts) ✅ | NEVER (facilitator abstracts) ✅        |
+| **Merchant Complexity**   | Trust facilitator signal ✅      | Trust facilitator signal ✅             |
+| **Competitive Advantage** | Stripe-like instant UX ✅        | Standard crypto UX ⚠️                   |
+| **Best For**              | Low-value, high-volume ✅        | High-value, low-risk ✅                 |
 
 ---
 
@@ -868,6 +869,7 @@ async function submitPaymentWait(req, res) {
 **KEY PRINCIPLE: Merchant NEVER interacts with blockchain directly**
 
 ### **Facilitator's Role:**
+
 ```
 Facilitator = Blockchain abstraction layer
 - Validates PTB
@@ -921,25 +923,25 @@ PESSIMISTIC:
 ```typescript
 // Merchant trusts facilitator in BOTH cases
 function verifyPayment(searchParams: URLSearchParams) {
-  const safe = searchParams.get('safe') === 'true';
-  const digest = searchParams.get('digest');
-  const mode = searchParams.get('mode');
-  
+  const safe = searchParams.get("safe") === "true";
+  const digest = searchParams.get("digest");
+  const mode = searchParams.get("mode");
+
   if (!safe || !digest) {
-    throw new Error('Invalid payment proof');
+    throw new Error("Invalid payment proof");
   }
-  
+
   // Merchant trusts facilitator's "safe to deliver" signal
   // NO blockchain query needed for delivery decision!
-  
-  if (mode === 'pessimistic') {
+
+  if (mode === "pessimistic") {
     // Bonus: Receipt already in URL (for logging/accounting)
-    const receipt = JSON.parse(atob(searchParams.get('receipt')));
+    const receipt = JSON.parse(atob(searchParams.get("receipt")));
     logPayment({ digest, receipt, verified: true });
     return { verified: true, receipt };
   } else {
     // Optimistic: Log digest for audit trail
-    logPayment({ digest, mode: 'optimistic', trusted: true });
+    logPayment({ digest, mode: "optimistic", trusted: true });
     return { verified: true, digest };
   }
 }
@@ -959,12 +961,13 @@ const proof = await fetch(`/payment-status/${savedDigest}`);
 
 // Option 2: Query blockchain directly (trustless)
 const tx = await suiClient.getTransactionBlock({ digest: savedDigest });
-const receipt = tx.events.find(e => e.type.includes('ReceiptEmitted'));
+const receipt = tx.events.find((e) => e.type.includes("ReceiptEmitted"));
 
 // Proof: Receipt exists on-chain = customer paid ✅
 ```
 
 **Key Benefits:**
+
 - ✅ Merchant can be static HTML (no backend needed)
 - ✅ No blockchain SDK required
 - ✅ No RPC endpoints to manage

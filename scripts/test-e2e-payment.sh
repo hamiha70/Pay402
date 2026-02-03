@@ -223,7 +223,7 @@ fi
 
 echo
 echo -e "${YELLOW}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
-echo -e "${YELLOW}  Step 5B: Submit Payment (WAIT mode)${NC}"
+echo -e "${YELLOW}  Step 5B: Submit Payment (PESSIMISTIC mode)${NC}"
 echo -e "${YELLOW}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
 
 # Need to rebuild PTB for second test
@@ -253,11 +253,11 @@ SUBMIT_RESPONSE2=$(curl -s -X POST http://localhost:3001/submit-payment \
     \"invoiceJWT\":\"$INVOICE_JWT\",
     \"buyerAddress\":\"$BUYER_ADDRESS\",
     \"signedTransaction\":$SIGNED_TX2,
-    \"settlementMode\":\"wait\"
+    \"settlementMode\":\"pessimistic\"
   }")
 
 if echo "$SUBMIT_RESPONSE2" | jq -e '.success' > /dev/null 2>&1; then
-    echo -e "${GREEN}✓ Payment submitted (wait mode)${NC}"
+    echo -e "${GREEN}✓ Payment submitted (pessimistic mode)${NC}"
     TX_DIGEST2=$(echo "$SUBMIT_RESPONSE2" | jq -r '.digest')
     LATENCY2=$(echo "$SUBMIT_RESPONSE2" | jq -r '.latency')
     HAS_RECEIPT=$(echo "$SUBMIT_RESPONSE2" | jq -e '.receipt' > /dev/null 2>&1 && echo "yes" || echo "no")

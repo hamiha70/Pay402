@@ -125,7 +125,7 @@ export default function PaymentPage({ invoiceJWT: propInvoiceJWT }: PaymentPageP
   };
 
   // Sign and submit payment
-  const submitPayment = async (mode: 'optimistic' | 'wait' = 'optimistic') => {
+  const submitPayment = async (mode: 'optimistic' | 'pessimistic' = 'optimistic') => {
     if (!ptbBytes || !invoice || !address) return;
 
     setStep('submit');
@@ -153,7 +153,7 @@ export default function PaymentPage({ invoiceJWT: propInvoiceJWT }: PaymentPageP
               : Array.from(transactionBytes),
             signature,
           },
-          settlementMode: mode,  // 'optimistic' or 'wait'
+          settlementMode: mode,  // 'optimistic' or 'pessimistic'
         }),
       });
 

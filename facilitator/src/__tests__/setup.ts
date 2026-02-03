@@ -1,5 +1,9 @@
 // Test setup file for Vitest (Facilitator)
 import { expect, afterEach, beforeAll } from 'vitest';
+import dotenv from 'dotenv';
+
+// Load environment variables from .env
+dotenv.config();
 
 // Global test setup
 beforeAll(() => {

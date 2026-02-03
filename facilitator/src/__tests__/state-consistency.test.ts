@@ -47,8 +47,8 @@ describe('Blockchain State Consistency', () => {
     const initialRecipient = await client.getBalance({ owner: recipientAddress });
     
     console.log(`\nInitial balances:`);
-    console.log(`  Sender: ${initialSender.totalBalance} MIST`);
-    console.log(`  Recipient: ${initialRecipient.totalBalance} MIST`);
+    console.log(`  Sender: ${initialSender.balance.balance} MIST`);
+    console.log(`  Recipient: ${initialRecipient.balance.balance} MIST`);
 
     // Build and execute first transaction (transfer 1000 MIST)
     const tx1 = new Transaction();
@@ -65,12 +65,12 @@ describe('Blockchain State Consistency', () => {
     const afterTx1Recipient = await client.getBalance({ owner: recipientAddress });
     
     console.log(`Balances after TX1 build (not executed yet):`);
-    console.log(`  Sender: ${afterTx1Sender.totalBalance} MIST`);
-    console.log(`  Recipient: ${afterTx1Recipient.totalBalance} MIST`);
+    console.log(`  Sender: ${afterTx1Sender.balance.balance} MIST`);
+    console.log(`  Recipient: ${afterTx1Recipient.balance.balance} MIST`);
     
     // Balances should be UNCHANGED (we only built, not executed)
-    expect(afterTx1Sender.totalBalance).toBe(initialSender.totalBalance);
-    expect(afterTx1Recipient.totalBalance).toBe(initialRecipient.totalBalance);
+    expect(afterTx1Sender.balance.balance).toBe(initialSender.balance.balance);
+    expect(afterTx1Recipient.balance.balance).toBe(initialRecipient.balance.balance);
 
     // Build second transaction immediately (transfer 2000 MIST)
     const tx2 = new Transaction();
@@ -87,12 +87,12 @@ describe('Blockchain State Consistency', () => {
     const afterTx2Recipient = await client.getBalance({ owner: recipientAddress });
     
     console.log(`Balances after TX2 build (neither executed):`);
-    console.log(`  Sender: ${afterTx2Sender.totalBalance} MIST`);
-    console.log(`  Recipient: ${afterTx2Recipient.totalBalance} MIST`);
+    console.log(`  Sender: ${afterTx2Sender.balance.balance} MIST`);
+    console.log(`  Recipient: ${afterTx2Recipient.balance.balance} MIST`);
     
     // Balances should STILL be unchanged
-    expect(afterTx2Sender.totalBalance).toBe(initialSender.totalBalance);
-    expect(afterTx2Recipient.totalBalance).toBe(initialRecipient.totalBalance);
+    expect(afterTx2Sender.balance.balance).toBe(initialSender.balance.balance);
+    expect(afterTx2Recipient.balance.balance).toBe(initialRecipient.balance.balance);
     
     // Both transactions should have been built successfully
     expect(ptb1.length).toBeGreaterThan(0);

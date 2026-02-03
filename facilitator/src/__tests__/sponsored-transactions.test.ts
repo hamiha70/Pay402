@@ -84,70 +84,33 @@ describe('Sponsored Transaction Flow', () => {
 
   describe('Transaction Signing', () => {
     it('should sign transaction with buyer keypair', async () => {
-      // Skip if no funded address available (unit test, not integration)
-      // In real flow, buyer would have coins
-      const tx = new Transaction();
-      tx.transferObjects([tx.gas], buyerKeypair.getPublicKey().toSuiAddress());
-
-      const kindBytes = await tx.build({ 
-        client, 
-        onlyTransactionKind: true 
-      });
-
-      // Reconstruct and set sender
-      const sponsoredTx = Transaction.fromKind(kindBytes);
-      sponsoredTx.setSender(buyerKeypair.getPublicKey().toSuiAddress());
-
-      // Note: Building full tx requires funded address
-      // This is expected to fail in unit tests (no funds)
-      // In integration tests, address would be funded
-      try {
-        const txBytes = await sponsoredTx.build({ client });
-        const { signature } = await buyerKeypair.signTransaction(txBytes);
-        
-        expect(signature).toBeTruthy();
-        expect(typeof signature).toBe('string');
-        expect(signature.length).toBeGreaterThan(0);
-      } catch (error: any) {
-        // Expected: insufficient balance in unit test
-        expect(error.message).toContain('insufficient SUI balance');
-      }
+      // Test signing logic without on-chain validation
+      // Create mock transaction bytes (any valid bytes will do for signature test)
+      const mockTxBytes = new Uint8Array(64).fill(42); // Mock transaction data
+      
+      const { signature } = await buyerKeypair.signTransaction(mockTxBytes);
+      
+      expect(signature).toBeTruthy();
+      expect(typeof signature).toBe('string');
+      expect(signature.length).toBeGreaterThan(0);
+      
+      // Verify it's a valid base64-encoded signature
+      expect(() => Buffer.from(signature, 'base64')).not.toThrow();
     });
 
     it('should produce different signatures for different keypairs', async () => {
-      const tx = new Transaction();
-      tx.transferObjects([tx.gas], buyerKeypair.getPublicKey().toSuiAddress());
+      // Test that different keypairs produce different signatures
+      const mockTxBytes = new Uint8Array(64).fill(42);
+      
+      const sig1 = await buyerKeypair.signTransaction(mockTxBytes);
+      const sig2 = await facilitatorKeypair.signTransaction(mockTxBytes);
 
-      const kindBytes = await tx.build({ 
-        client, 
-        onlyTransactionKind: true 
-      });
-
-      // Note: Building full tx requires funded addresses
-      // This test verifies concept without requiring funds
-      try {
-        const sponsoredTx1 = Transaction.fromKind(kindBytes);
-        sponsoredTx1.setSender(buyerKeypair.getPublicKey().toSuiAddress());
-        const txBytes1 = await sponsoredTx1.build({ client });
-
-        const sponsoredTx2 = Transaction.fromKind(kindBytes);
-        sponsoredTx2.setSender(facilitatorKeypair.getPublicKey().toSuiAddress());
-        const txBytes2 = await sponsoredTx2.build({ client });
-
-        const sig1 = await buyerKeypair.signTransaction(txBytes1);
-        const sig2 = await facilitatorKeypair.signTransaction(txBytes2);
-
-        expect(sig1.signature).not.toBe(sig2.signature);
-      } catch (error: any) {
-        // Expected: insufficient balance in unit test
-        // Different keypairs would produce different signatures (verified conceptually)
-        expect(error.message).toContain('insufficient SUI balance');
-        
-        // Verify keypairs are actually different
-        expect(buyerKeypair.getPublicKey().toSuiAddress()).not.toBe(
-          facilitatorKeypair.getPublicKey().toSuiAddress()
-        );
-      }
+      // Same transaction, different keypairs → different signatures
+      expect(sig1.signature).not.toBe(sig2.signature);
+      
+      // Verify both are valid signatures
+      expect(sig1.signature.length).toBeGreaterThan(0);
+      expect(sig2.signature.length).toBeGreaterThan(0);
     });
   });
 

@@ -11,6 +11,8 @@
 
 **ALWAYS USE VITEST** - No Jest, no other test frameworks
 
+**NO SKIPPING TESTS** - All tests must pass, use mocks/fixtures instead of skip/try-catch
+
 **Test Locations:**
 
 - Move: `move/payment/tests/payment_tests.move` → `sui move test`
@@ -27,9 +29,16 @@
 
 **Test Structure:**
 
-- Unit tests: Test individual functions/components
-- Integration tests: Test API endpoints and flows
-- E2E tests: Test complete user journeys with browser automation
+- Unit tests: Test individual functions/components (use mocks for blockchain)
+- Integration tests: Test API endpoints and flows (use test fixtures)
+- E2E tests: Test complete user journeys with browser automation (funded addresses)
+
+**Test Best Practices:**
+
+- NEVER skip tests with `.skip()` or try-catch expecting failures
+- Mock blockchain calls in unit tests (avoid gas selection failures)
+- Use real funded addresses only in E2E/integration tests
+- All assertions must be meaningful - no "expect error or success"
 
 ## Tech Stack (verify in package.json first!)
 

@@ -48,7 +48,7 @@ export async function fundController(req: Request, res: Response) {
       coinType: '0x2::sui::SUI', // Using SUI for testing
     });
 
-    const currentBalance = balance.totalBalance ? parseInt(balance.totalBalance) : 0;
+    const currentBalance = balance.balance.balance ? parseInt(balance.balance.balance) : 0;
 
     // If already funded, return early
     if (currentBalance > 0) {
@@ -96,7 +96,7 @@ export async function fundController(req: Request, res: Response) {
       funded: true,
       amount: FUND_AMOUNT / 1_000_000_000, // Convert to SUI
       txDigest: digest,
-      balance: (newBalance.totalBalance ? parseInt(newBalance.totalBalance) : 0) / 1_000_000_000,
+      balance: (newBalance.balance.balance ? parseInt(newBalance.balance.balance) : 0) / 1_000_000_000,
       message: 'Wallet funded successfully',
     });
 

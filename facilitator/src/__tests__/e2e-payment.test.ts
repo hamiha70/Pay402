@@ -35,16 +35,24 @@ describe('End-to-End Payment Flow', () => {
     }
     buyerKeypair = Ed25519Keypair.fromSecretKey(privateKey);
     
-    // Fund buyer with USDC
+    // Fund buyer with SUI (for gas)
+    const sessionId = `test-${Date.now()}`;
     const fundResponse = await fetch(`${FACILITATOR_URL}/fund`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         address: buyerAddress,
-        amount: '1000000', // 1 USDC
+        sessionId: sessionId,
       }),
     });
     
+    if (!fundResponse.ok) {
+      const errorText = await fundResponse.text();
+      throw new Error(`Fund failed: ${errorText}`);
+    }
+    const fundData = await fundResponse.json();
+    console.log('Fund response:', fundData);
+    // Fund endpoint may return different success indicators
     expect(fundResponse.ok).toBe(true);
     
     // Get invoice from merchant
@@ -69,9 +77,9 @@ describe('End-to-End Payment Flow', () => {
       expect(response.ok).toBe(true);
       
       const data = await response.json();
-      expect(data.ptbBytes).toBeDefined();
-      expect(Array.isArray(data.ptbBytes)).toBe(true);
-      expect(data.ptbBytes.length).toBeGreaterThan(0);
+      expect(data.transactionKindBytes).toBeDefined();
+      expect(Array.isArray(data.transactionKindBytes)).toBe(true);
+      expect(data.transactionKindBytes.length).toBeGreaterThan(0);
       expect(data.invoice).toBeDefined();
       expect(data.invoice.amount).toBeDefined();
     });

@@ -54,31 +54,60 @@ fi
 echo -e "${GREEN}✓ Services running${NC}"
 echo
 
-# Get buyer address (active address)
-BUYER_ADDRESS=$(sui client active-address)
-echo -e "${BLUE}Buyer Address:${NC} $BUYER_ADDRESS"
+# Get facilitator address from health check (we have its private key)
+FACILITATOR_ADDRESS=$(curl -s http://localhost:3001/health | jq -r '.facilitator')
+echo -e "${BLUE}Facilitator Address:${NC} $FACILITATOR_ADDRESS"
 
-# Get merchant address (for testing, use buyer as merchant)
-MERCHANT_ADDRESS=$BUYER_ADDRESS
+# For E2E testing: Use facilitator address as buyer (we have the key)
+# In production, buyer would use their own wallet
+BUYER_ADDRESS=$FACILITATOR_ADDRESS
+echo -e "${BLUE}Buyer Address (test):${NC} $BUYER_ADDRESS ${YELLOW}(using facilitator key for testing)${NC}"
+
+MERCHANT_ADDRESS=$(sui client active-address)
 echo -e "${BLUE}Merchant Address:${NC} $MERCHANT_ADDRESS"
 
 echo
 echo -e "${YELLOW}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
-echo -e "${YELLOW}  Step 1: Fund Buyer with USDC${NC}"
+echo -e "${YELLOW}  Step 1: Check Gas Balances${NC}"
 echo -e "${YELLOW}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
 
-FUND_RESPONSE=$(curl -s -X POST http://localhost:3001/fund \
-  -H "Content-Type: application/json" \
-  -d "{\"address\":\"$BUYER_ADDRESS\",\"amount\":\"1000000\"}")
+SUI_TYPE="0x2::sui::SUI"
+MIN_BALANCE="1000000000"  # 1 SUI minimum
 
-if echo "$FUND_RESPONSE" | jq -e '.success' > /dev/null 2>&1; then
-    echo -e "${GREEN}✓ Funded buyer with 1 USDC${NC}"
-    BUYER_BALANCE=$(echo "$FUND_RESPONSE" | jq -r '.balance')
-    echo -e "  Balance: $BUYER_BALANCE microUSDC"
+# Check buyer balance
+BUYER_BALANCE=$(curl -s -X POST http://localhost:3001/check-balance \
+  -H "Content-Type: application/json" \
+  -d "{\"address\":\"$BUYER_ADDRESS\",\"coinType\":\"$SUI_TYPE\",\"network\":\"localnet\"}" | jq -r '.balance // "0"')
+
+if [ "$BUYER_BALANCE" = "0" ] || [ "$BUYER_BALANCE" = "null" ] || [ "$BUYER_BALANCE" -lt "$MIN_BALANCE" ]; then
+    echo -e "${RED}✗ Buyer has insufficient SUI${NC}"
+    echo -e "  Current: $(echo "scale=2; $BUYER_BALANCE / 1000000000" | bc 2>/dev/null || echo "0") SUI"
+    echo -e "  Required: 1+ SUI"
+    echo -e "  ${YELLOW}Requesting from faucet...${NC}"
+    sui client faucet
+    sleep 3
+    # Re-check
+    BUYER_BALANCE=$(curl -s -X POST http://localhost:3001/check-balance \
+      -H "Content-Type: application/json" \
+      -d "{\"address\":\"$BUYER_ADDRESS\",\"coinType\":\"$SUI_TYPE\",\"network\":\"localnet\"}" | jq -r '.balance // "0"')
+fi
+
+BALANCE_SUI=$(echo "scale=2; $BUYER_BALANCE / 1000000000" | bc)
+echo -e "${GREEN}✓ Buyer has sufficient SUI${NC}"
+echo -e "  Balance: $BALANCE_SUI SUI ($BUYER_BALANCE nanoSUI)"
+
+# Check facilitator balance (needed for gas sponsorship if applicable)
+FACILITATOR_BALANCE=$(curl -s -X POST http://localhost:3001/check-balance \
+  -H "Content-Type: application/json" \
+  -d "{\"address\":\"$FACILITATOR_ADDRESS\",\"coinType\":\"$SUI_TYPE\",\"network\":\"localnet\"}" | jq -r '.balance // "0"')
+
+if [ "$FACILITATOR_BALANCE" = "0" ] || [ "$FACILITATOR_BALANCE" = "null" ]; then
+    echo -e "${YELLOW}! Facilitator has no SUI (may be OK for buyer-paid gas)${NC}"
+    echo -e "  Balance: 0 SUI"
 else
-    echo -e "${RED}✗ Funding failed${NC}"
-    echo "$FUND_RESPONSE" | jq '.'
-    exit 1
+    FACI_BALANCE_SUI=$(echo "scale=2; $FACILITATOR_BALANCE / 1000000000" | bc)
+    echo -e "${GREEN}✓ Facilitator has SUI${NC}"
+    echo -e "  Balance: $FACI_BALANCE_SUI SUI ($FACILITATOR_BALANCE nanoSUI)"
 fi
 
 echo
@@ -102,8 +131,10 @@ echo -e "  JWT: ${INVOICE_JWT:0:50}..."
 INVOICE_PAYLOAD=$(echo "$INVOICE_JWT" | cut -d'.' -f2 | base64 -d 2>/dev/null || echo "{}")
 AMOUNT=$(echo "$INVOICE_PAYLOAD" | jq -r '.amount')
 FEE=$(echo "$INVOICE_PAYLOAD" | jq -r '.facilitatorFee')
-echo -e "  Amount: $AMOUNT microUSDC"
-echo -e "  Fee: $FEE microUSDC"
+COIN_TYPE=$(echo "$INVOICE_PAYLOAD" | jq -r '.coinType')
+echo -e "  Amount: $AMOUNT"
+echo -e "  Fee: $FEE"
+echo -e "  Coin: ${COIN_TYPE:0:20}..."
 
 echo
 echo -e "${YELLOW}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
@@ -124,64 +155,36 @@ echo -e "${GREEN}✓ PTB built successfully${NC}"
 PTB_BYTES_LENGTH=$(echo "$PTB_RESPONSE" | jq '.ptbBytes | length')
 echo -e "  PTB size: $PTB_BYTES_LENGTH bytes"
 
-# Save PTB bytes to temp file for signing
-echo "$PTB_RESPONSE" | jq -r '.ptbBytes | @json' > /tmp/ptb_bytes.json
+PTB_BYTES=$(echo "$PTB_RESPONSE" | jq -r '.ptbBytes')
 
 echo
 echo -e "${YELLOW}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
-echo -e "${YELLOW}  Step 4: Sign PTB with Buyer Keypair${NC}"
+echo -e "${YELLOW}  Step 4: Sign PTB with Buyer Keypair (sui keytool)${NC}"
 echo -e "${YELLOW}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
 
-# Create Node.js script to sign PTB
-cat > /tmp/sign_ptb.js << 'EOF'
-const { Transaction } = require('@mysten/sui/transactions');
-const { Ed25519Keypair } = require('@mysten/sui/keypairs/ed25519');
-const { toB64 } = require('@mysten/sui/utils');
-const fs = require('fs');
+# Sign PTB with buyer's key (via facilitator endpoint since buyer=facilitator for testing)
+SIGN_RESPONSE=$(curl -s -X POST http://localhost:3001/sign-ptb \
+  -H "Content-Type: application/json" \
+  -d "{\"ptbBytes\":$PTB_BYTES}")
 
-(async () => {
-  try {
-    // Read PTB bytes
-    const ptbBytesArray = JSON.parse(fs.readFileSync('/tmp/ptb_bytes.json', 'utf8'));
-    const ptbBytes = new Uint8Array(ptbBytesArray);
-    
-    // Get keypair from environment
-    const privateKeyBase64 = process.env.FACILITATOR_PRIVATE_KEY;
-    if (!privateKeyBase64) {
-      console.error('FACILITATOR_PRIVATE_KEY not set');
-      process.exit(1);
-    }
-    
-    // For testing, we'll use facilitator key as buyer (hackathon demo)
-    const keypair = Ed25519Keypair.fromSecretKey(privateKeyBase64);
-    
-    // Sign transaction bytes
-    const signature = await keypair.signTransaction(ptbBytes);
-    
-    // Output result
-    console.log(JSON.stringify({
-      transactionBytes: toB64(ptbBytes),
-      signature: signature.signature,
-    }));
-  } catch (err) {
-    console.error('Signing failed:', err.message);
-    process.exit(1);
-  }
-})();
-EOF
-
-cd /home/hamiha70/Projects/ETHGlobal/HackMoney_Jan26/Pay402/facilitator
-
-SIGNED_TX=$(node /tmp/sign_ptb.js 2>/dev/null)
-
-if [ $? -ne 0 ]; then
+if ! echo "$SIGN_RESPONSE" | jq -e '.signature' > /dev/null 2>&1; then
     echo -e "${RED}✗ Signing failed${NC}"
+    echo "$SIGN_RESPONSE" | jq '.'
     exit 1
 fi
 
-echo -e "${GREEN}✓ PTB signed${NC}"
-SIGNATURE=$(echo "$SIGNED_TX" | jq -r '.signature')
+SIGNATURE=$(echo "$SIGN_RESPONSE" | jq -r '.signature')
+echo -e "${GREEN}✓ PTB signed with buyer's key (facilitator key for testing)${NC}"
 echo -e "  Signature: ${SIGNATURE:0:50}..."
+
+# Prepare signed transaction JSON
+SIGNED_TX=$(jq -n \
+  --argjson ptbBytes "$PTB_BYTES" \
+  --arg signature "$SIGNATURE" \
+  '{
+    "transactionBytes": $ptbBytes,
+    "signature": $signature
+  }')
 
 echo
 echo -e "${YELLOW}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
@@ -219,26 +222,21 @@ PTB_RESPONSE2=$(curl -s -X POST http://localhost:3001/build-ptb \
   -H "Content-Type: application/json" \
   -d "{\"buyerAddress\":\"$BUYER_ADDRESS\",\"invoiceJWT\":\"$INVOICE_JWT\"}")
 
-echo "$PTB_RESPONSE2" | jq -r '.ptbBytes | @json' > /tmp/ptb_bytes2.json
+PTB_BYTES2=$(echo "$PTB_RESPONSE2" | jq -r '.ptbBytes')
 
-cat > /tmp/sign_ptb2.js << 'EOF'
-const { Ed25519Keypair } = require('@mysten/sui/keypairs/ed25519');
-const { toB64 } = require('@mysten/sui/utils');
-const fs = require('fs');
+# Sign with buyer's key (via facilitator endpoint)
+SIGN_RESPONSE2=$(curl -s -X POST http://localhost:3001/sign-ptb \
+  -H "Content-Type: application/json" \
+  -d "{\"ptbBytes\":$PTB_BYTES2}")
+SIGNATURE2=$(echo "$SIGN_RESPONSE2" | jq -r '.signature')
 
-(async () => {
-  const ptbBytesArray = JSON.parse(fs.readFileSync('/tmp/ptb_bytes2.json', 'utf8'));
-  const ptbBytes = new Uint8Array(ptbBytesArray);
-  const keypair = Ed25519Keypair.fromSecretKey(process.env.FACILITATOR_PRIVATE_KEY);
-  const signature = await keypair.signTransaction(ptbBytes);
-  console.log(JSON.stringify({
-    transactionBytes: toB64(ptbBytes),
-    signature: signature.signature,
-  }));
-})();
-EOF
-
-SIGNED_TX2=$(node /tmp/sign_ptb2.js 2>/dev/null)
+SIGNED_TX2=$(jq -n \
+  --argjson ptbBytes "$PTB_BYTES2" \
+  --arg signature "$SIGNATURE2" \
+  '{
+    "transactionBytes": $ptbBytes,
+    "signature": $signature
+  }')
 
 SUBMIT_RESPONSE2=$(curl -s -X POST http://localhost:3001/submit-payment \
   -H "Content-Type: application/json" \
@@ -278,8 +276,7 @@ TX_RESULT=$(sui client object $TX_DIGEST2 --json 2>/dev/null || echo "{}")
 echo -e "${GREEN}✓ Transaction on-chain${NC}"
 echo -e "  Explorer: http://localhost:44380/txblock/$TX_DIGEST2"
 
-# Cleanup
-rm -f /tmp/ptb_bytes.json /tmp/ptb_bytes2.json /tmp/sign_ptb.js /tmp/sign_ptb2.js
+# No cleanup needed (using API endpoints)
 
 echo
 echo -e "${GREEN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"

@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeAll } from 'vitest';
 import { Transaction } from '@mysten/sui/transactions';
 import { Ed25519Keypair } from '@mysten/sui/keypairs/ed25519';
-import { toB64 } from '@mysten/sui/utils';
+import { toBase64 } from '@mysten/sui/utils';
 import { execSync } from 'child_process';
 
 /**
@@ -131,7 +131,7 @@ describe('End-to-End Payment Flow', () => {
           invoiceJWT,
           buyerAddress,
           signedTransaction: {
-            transactionBytes: toB64(ptbBytes),
+            transactionBytes: toBase64(ptbBytes),
             signature: signature.signature,
           },
           settlementMode: 'optimistic',
@@ -181,7 +181,7 @@ describe('End-to-End Payment Flow', () => {
           invoiceJWT,
           buyerAddress,
           signedTransaction: {
-            transactionBytes: toB64(ptbBytes),
+            transactionBytes: toBase64(ptbBytes),
             signature: signature.signature,
           },
           settlementMode: 'wait',
@@ -240,7 +240,7 @@ describe('End-to-End Payment Flow', () => {
             invoiceJWT,
             buyerAddress,
             signedTransaction: {
-              transactionBytes: toB64(ptbBytes),
+              transactionBytes: toBase64(ptbBytes),
               signature: signature.signature,
             },
             settlementMode: i === 0 ? 'optimistic' : 'wait',

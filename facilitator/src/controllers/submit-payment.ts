@@ -6,8 +6,8 @@ interface SubmitPaymentRequest {
   invoiceJWT: string;
   buyerAddress: string;
   signedTransaction: {
-    transactionBytes: string;  // base64 encoded PTB bytes
-    signature: string;          // base64 encoded signature
+    transactionBytes: string | number[] | Uint8Array;  // base64 string, array, or Uint8Array
+    signature: string;                                  // base64 encoded signature
   };
   settlementMode?: 'optimistic' | 'wait';  // Default: optimistic
 }
@@ -32,7 +32,9 @@ interface ReceiptEvent {
  */
 export async function submitPaymentController(req: Request, res: Response): Promise<void> {
   const startTime = Date.now();
-  logger.info('=== SUBMIT PAYMENT REQUEST START ===');
+  
+  console.log('[SUBMIT] Request received');
+  console.log('[SUBMIT] Has body:', !!req.body);
   
   try {
     const {
@@ -41,6 +43,8 @@ export async function submitPaymentController(req: Request, res: Response): Prom
       signedTransaction,
       settlementMode = 'optimistic', // Default to optimistic
     } = req.body as SubmitPaymentRequest;
+    
+    console.log('[SUBMIT] Parsed OK');
     
     logger.info('Request parsed', { 
       buyerAddress, 
@@ -61,19 +65,54 @@ export async function submitPaymentController(req: Request, res: Response): Prom
     
     const client = getSuiClient();
     
+    // Convert transaction bytes to Uint8Array (BCS-encoded format required by gRPC)
+    let txBytes: Uint8Array;
+    if (Array.isArray(signedTransaction.transactionBytes)) {
+      txBytes = new Uint8Array(signedTransaction.transactionBytes);
+    } else if (typeof signedTransaction.transactionBytes === 'string') {
+      // If base64 string, decode it
+      txBytes = new Uint8Array(Buffer.from(signedTransaction.transactionBytes, 'base64'));
+    } else {
+      txBytes = signedTransaction.transactionBytes as Uint8Array;
+    }
+    
+    // Signatures must be an array
+    const signatures = [signedTransaction.signature];
+    
+    logger.info('Transaction data BEFORE execute', {
+      txBytesLength: txBytes.length,
+      txBytesType: txBytes.constructor.name,
+      signaturesArray: signatures,
+      signaturesLength: signatures.length,
+      signaturesIsDefined: signatures !== undefined,
+      signaturesIsArray: Array.isArray(signatures),
+    });
+    
     // ===== MODE 1: OPTIMISTIC SETTLEMENT (FAST UX) =====
     if (settlementMode === 'optimistic') {
       logger.info('Using OPTIMISTIC settlement mode');
       
       // Submit transaction (non-blocking - just get digest)
-      const result = await client.executeTransaction({
-        transaction: signedTransaction.transactionBytes,
-        signature: signedTransaction.signature,
-      });
+      let result;
+      try {
+        result = await client.executeTransaction({
+          transaction: txBytes,
+          signatures: signatures,
+        });
+      } catch (execError) {
+        logger.error('executeTransaction failed', {
+          error: execError instanceof Error ? execError.message : String(execError),
+          stack: execError instanceof Error ? execError.stack : undefined,
+        });
+        throw execError;
+      }
+      
+      // Extract digest from result (discriminated union format)
+      const digest = result.$kind === 'Transaction' ? result.Transaction.digest : null;
       
       const latency = Date.now() - startTime;
       logger.info('Transaction submitted (optimistic)', { 
-        digest: result.digest,
+        digest,
         latency: `${latency}ms`,
       });
       
@@ -82,7 +121,7 @@ export async function submitPaymentController(req: Request, res: Response): Prom
       res.json({
         success: true,
         mode: 'optimistic',
-        digest: result.digest,
+        digest,
         latency: `${latency}ms`,
         note: 'Transaction submitted - settlement pending (1-3s)',
         timestamp: Date.now(),
@@ -98,8 +137,8 @@ export async function submitPaymentController(req: Request, res: Response): Prom
       
       // Submit and wait for finality
       const result = await client.executeTransaction({
-        transaction: signedTransaction.transactionBytes,
-        signature: signedTransaction.signature,
+        transaction: txBytes,
+        signatures: signatures,
         include: {
           effects: true,
           events: true,
@@ -107,9 +146,12 @@ export async function submitPaymentController(req: Request, res: Response): Prom
         },
       });
       
+      // Extract digest from result
+      const digest = result.$kind === 'Transaction' ? result.Transaction.digest : null;
+      
       const latency = Date.now() - startTime;
       logger.info('Transaction finalized', { 
-        digest: result.digest,
+        digest,
         latency: `${latency}ms`,
       });
       
@@ -117,7 +159,7 @@ export async function submitPaymentController(req: Request, res: Response): Prom
       if (result.$kind === 'FailedTransaction') {
         res.status(500).json({
           error: 'Transaction failed on-chain',
-          digest: result.digest,
+          digest,
           details: result.FailedTransaction,
         });
         return;
@@ -130,7 +172,7 @@ export async function submitPaymentController(req: Request, res: Response): Prom
       
       if (!receiptEvent) {
         logger.warn('No receipt event found', { 
-          digest: result.digest,
+          digest,
           events: result.Transaction?.events 
         });
       }
@@ -141,7 +183,7 @@ export async function submitPaymentController(req: Request, res: Response): Prom
       res.json({
         success: true,
         mode: 'wait',
-        digest: result.digest,
+        digest,
         latency: `${latency}ms`,
         receipt: receipt ? {
           paymentId: receipt.payment_id,
@@ -170,11 +212,23 @@ export async function submitPaymentController(req: Request, res: Response): Prom
     
   } catch (err) {
     const latency = Date.now() - startTime;
-    logger.error('=== SUBMIT PAYMENT FAILED ===', err, { latency: `${latency}ms` });
+    
+    // Log full error details
+    console.error('[SUBMIT PAYMENT ERROR]');
+    console.error('Message:', err instanceof Error ? err.message : String(err));
+    console.error('Stack:', err instanceof Error ? err.stack : 'No stack trace');
+    console.error('Full error:', err);
+    
+    logger.error('=== SUBMIT PAYMENT FAILED ===', {
+      message: err instanceof Error ? err.message : String(err),
+      stack: err instanceof Error ? err.stack : undefined,
+      latency: `${latency}ms`,
+    });
     
     res.status(500).json({
       error: 'Failed to submit payment',
       details: err instanceof Error ? err.message : String(err),
+      stack: err instanceof Error ? err.stack?.split('\n').slice(0, 3).join('\n') : undefined,
       latency: `${latency}ms`,
     });
   }

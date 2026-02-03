@@ -20,7 +20,7 @@ export function getSuiClient(): SuiGrpcClient {
   if (!client) {
     const network = config.suiNetwork as keyof typeof NETWORK_URLS;
     client = new SuiGrpcClient({
-      network: network === 'localnet' ? 'testnet' : network, // localnet uses testnet network config
+      network: network === 'localnet' ? 'testnet' : network,
       baseUrl: NETWORK_URLS[network],
     });
   }

@@ -560,131 +560,308 @@ return {
 
 **CRITICAL ARCHITECTURAL DECISION:** How long does the user wait after signing?
 
-> **⚠️ Localnet Testing Note:** Both modes appear similar on localnet (~20-150ms) due to instant finality. The true difference (optimistic: ~100ms, wait: ~700ms) only shows on testnet/mainnet where checkpoint consensus takes ~400-800ms.
+**CORE BUSINESS MODEL:** Facilitator acts as **GUARANTOR/INSURER**, not just transaction processor.
 
-#### Mode 1: Optimistic Settlement (Recommended for UX)
+> **⚠️ Localnet Testing Note:** Both modes appear similar on localnet (~20-150ms) due to instant finality. The true difference (optimistic: ~50ms, wait: ~700ms) only shows on testnet/mainnet where checkpoint consensus takes ~400-800ms.
+
+---
+
+#### Mode 1: TRUE Optimistic Settlement (Recommended for UX)
+
+**Business Model Insight:**
+
+```
+"SAFE TO DELIVER" ≠ "TRANSACTION SETTLED"
+
+Facilitator takes settlement risk → Merchant trusts facilitator → Instant UX
+```
 
 **Flow:**
 
-1. User signs PTB → immediate "Payment Processing..."
-2. Facilitator submits to SUI network → returns tx digest
-3. **Redirect user IMMEDIATELY** to merchant (with tx digest)
-4. Settlement happens in background (1-3 seconds)
-5. Merchant verifies on-chain receipt asynchronously
+1. User signs PTB → POST to facilitator
+2. Facilitator validates PTB locally (~5ms)
+3. **IMMEDIATE "SAFE TO DELIVER" response** (~10ms total)
+4. Merchant delivers content **INSTANTLY** (user sees success ~50ms)
+5. Facilitator submits to SUI in background (async, +500ms)
+6. If settlement **SUCCEEDS**: Notify merchant with digest (webhook)
+7. If settlement **FAILS**: **FACILITATOR PAYS MERCHANT** (liability/insurance)
+
+**Critical Difference from "Naive Optimistic":**
+
+```typescript
+// ❌ WRONG (Naive Optimistic - still blocks!)
+const result = await executeTransaction(...);  // Waits 500ms
+res.json({ digest: result.digest });          // Then responds
+
+// ✅ CORRECT (True Optimistic - immediate response!)
+validatePTB(txBytes, signature);              // 5ms pre-check
+res.json({ safeToDeliver: true });            // Return NOW (10ms)
+
+setImmediate(async () => {                    // Background
+  try {
+    await executeTransaction(...);            // +500ms (user doesn't wait)
+    notifyMerchant(digest);                   // Webhook
+  } catch {
+    facilitatorCompensatesMerchant();         // LIABILITY!
+  }
+});
+```
 
 **Pros:**
 
-- ✅ **Fast UX:** User sees success in <500ms after signing
-- ✅ **No waiting:** Merchant delivers content immediately
-- ✅ **SUI is fast:** Sub-second finality = low risk
+- ✅ **Ultra-fast UX:** User sees success in ~50ms (not 700ms!)
+- ✅ **Instant delivery:** Merchant delivers before settlement
+- ✅ **Trust model:** Facilitator's reputation guarantees payment
+- ✅ **Competitive edge:** Stripe-like instant confirmation
 
 **Cons:**
 
-- ⚠️ **Race condition:** Merchant might query before finality
-- ⚠️ **Requires retry:** Merchant must poll if not found immediately
+- ⚠️ **Facilitator risk:** Must pay if settlement fails
+- ⚠️ **Requires validation:** Must pre-check balance, signature, PTB structure
+- ⚠️ **Fraud potential:** Front-running, insufficient gas, invalid PTB
+- ⚠️ **Capital requirements:** Facilitator needs reserve pool
 
-**Latency:**
+**Latency Breakdown:**
 
-- **Testnet/Mainnet**: ~50-100ms (submit + return digest)
-- **Localnet**: ~20-150ms (instant finality, SDK always waits)
-- Actual finality: ~400-800ms checkpoint (happens in background)
+```
+CLIENT TIMELINE (what user experiences):
+[0ms]    → User clicks "Pay"
+[5ms]    → Sign with zkLogin
+[10ms]   → POST to facilitator
+[50ms]   ← "SAFE TO DELIVER" response
+[60ms]   → Redirect to merchant
+[70ms]   ← Content delivered ✅ USER HAPPY
+
+BACKGROUND (user doesn't see):
+[200ms]  → Facilitator submits to SUI
+[700ms]  ← Transaction finalized
+[710ms]  → Merchant notified via webhook (digest available)
+```
+
+**Facilitator Liability Scenarios:**
+
+| Failure Cause          | Frequency | Mitigation                          |
+| ---------------------- | --------- | ----------------------------------- |
+| Insufficient gas       | Low       | Pre-check buyer balance             |
+| Invalid signature      | Medium    | Validate signature before response  |
+| Front-running attack   | Very Low  | Monitor mempool, insurance pool     |
+| Network failure        | Low       | Retry logic, fallback nodes         |
+| Invalid PTB structure  | Medium    | Strict validation before "safe"     |
+
+**Response Format:**
+
+```json
+{
+  "success": true,
+  "mode": "optimistic",
+  "safeToDeliver": true,
+  "facilitatorGuarantee": true,
+  "digest": null,  // Available later via webhook
+  "httpLatency": "10ms",
+  "note": "Facilitator guarantees payment - settlement in progress"
+}
+```
 
 **Implementation:**
 
 ```typescript
-// Step 9: Facilitator submits (non-blocking)
-const { digest } = await suiClient.dryRunTransaction(ptbBytes, signature);
-// Redirect immediately with digest (don't wait for finality)
-return { digest, status: "pending" };
+// facilitator/src/controllers/submit-payment.ts (optimistic mode)
+async function submitPaymentOptimistic(req, res) {
+  // Step 1: Pre-validation (instant, ~5ms)
+  validateSignature(txBytes, signature);
+  validatePTBStructure(txBytes, invoiceJWT);
+  checkBuyerBalance(buyerAddress, amount); // Optional: reduces risk
 
-// Step 12: Merchant polls for receipt
-async function verifyPayment(txDigest: string) {
-  for (let i = 0; i < 5; i++) {
-    const receipt = await checkReceipt(txDigest);
-    if (receipt) return receipt;
-    await sleep(1000); // Poll every second
-  }
-  throw new Error("Settlement timeout");
+  // Step 2: IMMEDIATE "safe to deliver" response (~10ms total)
+  res.json({
+    safeToDeliver: true,
+    facilitatorGuarantee: true,
+    digest: null, // Not yet available
+  });
+
+  // Step 3: Submit to chain ASYNC (don't block HTTP response!)
+  setImmediate(async () => {
+    try {
+      const result = await client.executeTransaction({
+        transaction: txBytes,
+        signatures: [signature],
+      });
+      const digest = result.Transaction.digest;
+
+      // Step 4: Notify merchant (webhook or polling endpoint)
+      await notifyMerchant({
+        invoiceId,
+        status: "settled",
+        digest,
+        timestamp: Date.now(),
+      });
+
+      logger.info("Settlement success", { digest });
+    } catch (error) {
+      // CRITICAL: Settlement failed - facilitator must compensate!
+      logger.error("FACILITATOR LIABILITY", {
+        error,
+        invoiceId,
+        amount,
+      });
+
+      // Trigger compensation flow (pay merchant from reserve pool)
+      await facilitatorCompensatesMerchant({
+        invoiceId,
+        amount,
+        reason: error.message,
+      });
+    }
+  });
 }
 ```
 
 ---
 
-#### Mode 2: Wait-for-Finality (Recommended for Security)
+#### Mode 2: Wait-for-Finality (Recommended for High-Value/Security)
+
+**Business Model:**
+
+```
+ZERO RISK: Wait for on-chain confirmation before merchant delivers
+```
 
 **Flow:**
 
-1. User signs PTB → "Payment Processing..."
+1. User signs PTB → POST to facilitator
 2. Facilitator submits to SUI network
-3. **POLL until tx finalized** (1-3 seconds)
+3. **BLOCK until transaction finalized** (~500ms testnet)
 4. Extract receipt event from confirmed transaction
-5. Redirect user with confirmed receipt
+5. Return digest + receipt to merchant
+6. Merchant delivers content **AFTER confirmation**
 
 **Pros:**
 
-- ✅ **Guaranteed:** Receipt exists before merchant query
-- ✅ **No race conditions:** Merchant gets immediate confirmation
-- ✅ **Simpler merchant:** No polling/retry logic needed
+- ✅ **Zero risk:** Transaction confirmed before delivery
+- ✅ **No facilitator liability:** Settlement already succeeded
+- ✅ **Simpler:** No retry/polling/compensation logic
+- ✅ **Guaranteed receipt:** Merchant gets immediate proof
 
 **Cons:**
 
-- ⚠️ **Slower UX:** User waits 1-3 seconds on payment page
-- ⚠️ **Perceived latency:** Feels slower (even if total time same)
+- ⚠️ **Slower UX:** User waits ~700ms on payment page
+- ⚠️ **Perceived latency:** Feels slower (even if total time similar)
+- ⚠️ **Less competitive:** Loses UX edge vs traditional processors
 
-**Latency:**
+**Latency Breakdown:**
 
-- **Testnet/Mainnet**: ~500-1000ms (submit + wait for checkpoint)
-- **Localnet**: ~20-150ms (instant finality)
-- User waits for full confirmation before redirect
+```
+CLIENT TIMELINE:
+[0ms]    → User clicks "Pay"
+[5ms]    → Sign with zkLogin
+[10ms]   → POST to facilitator
+[50ms]   → Facilitator submits to SUI
+[500ms]  ← Transaction finalized (BLOCKING)
+[700ms]  ← HTTP response with digest + receipt
+[710ms]  → Redirect to merchant
+[720ms]  ← Content delivered ✅ (but user waited 700ms)
+```
+
+**Response Format:**
+
+```json
+{
+  "success": true,
+  "mode": "wait",
+  "digest": "AbCd1234...",
+  "receipt": {
+    "paymentId": "pmt_abc123",
+    "buyer": "0xbuyer...",
+    "merchant": "0xmerch...",
+    "amount": "100000",
+    "timestamp": 1738396800000
+  },
+  "status": "confirmed",
+  "submitLatency": "500ms",
+  "httpLatency": "700ms"
+}
+```
 
 **Implementation:**
 
 ```typescript
-// Step 9: Facilitator submits (blocking)
-const tx = await suiClient.executeTransaction({
-  transactionBlock: ptbBytes,
-  signature,
-  options: { showEffects: true, showEvents: true },
-});
+// facilitator/src/controllers/submit-payment.ts (wait mode)
+async function submitPaymentWait(req, res) {
+  // Submit and WAIT for finality (blocking)
+  const result = await client.executeTransaction({
+    transaction: txBytes,
+    signatures: [signature],
+    options: {
+      showEffects: true,
+      showEvents: true,
+      showObjectChanges: true,
+    },
+  });
 
-// Wait for success confirmation
-if (tx.effects.status.status !== "success") {
-  throw new Error("Transaction failed");
+  // Extract digest and receipt (guaranteed to exist)
+  const digest = result.Transaction.digest;
+  const receiptEvent = result.events.find((e) =>
+    e.type.includes("PaymentSettled")
+  );
+
+  // Return confirmed receipt to merchant (no async waiting needed)
+  res.json({
+    success: true,
+    mode: "wait",
+    digest,
+    receipt: receiptEvent?.parsedJson,
+    status: "confirmed",
+  });
 }
-
-// Extract receipt (guaranteed to exist)
-const receipt = tx.events.find((e) => e.type.includes("ReceiptEmitted"));
-
-return { digest: tx.digest, receipt, status: "confirmed" };
 ```
 
 ---
 
 #### Comparison Table
 
-| Aspect                  | Optimistic          | Wait-for-Finality |
-| ----------------------- | ------------------- | ----------------- |
-| **User Latency**        | ~500ms ✅           | 1-3s ⚠️           |
-| **Merchant Complexity** | Polling required ⚠️ | Simple query ✅   |
-| **Race Conditions**     | Possible ⚠️         | None ✅           |
-| **Error Handling**      | Async (harder) ⚠️   | Sync (easier) ✅  |
-| **SUI Advantage**       | Maximized ✅        | Underutilized ⚠️  |
+| Aspect                     | TRUE Optimistic                   | Wait-for-Finality        |
+| -------------------------- | --------------------------------- | ------------------------ |
+| **User Latency**           | ~50ms ✅✅                         | ~700ms ⚠️                |
+| **Merchant Delivery**      | Immediate (before settlement) ✅  | After confirmation ⚠️    |
+| **Facilitator Risk**       | HIGH (must pay if fails) ⚠️       | ZERO (already settled) ✅ |
+| **Capital Requirements**   | Reserve pool needed ⚠️            | None ✅                  |
+| **Pre-validation**         | Critical (balance, sig, PTB) ⚠️   | Optional ✅              |
+| **Merchant Complexity**    | Webhook for digest notification ⚠️ | Immediate receipt ✅     |
+| **Competitive Advantage**  | Stripe-like instant UX ✅         | Standard crypto UX ⚠️    |
+| **Best For**               | Low-value, high-volume ✅         | High-value, low-risk ✅  |
 
 ---
 
-#### Recommendation: **Hybrid Approach**
+#### Recommendation: **Risk-Based Hybrid**
 
 **For Hackathon Demo:**
 
 1. **Implement BOTH modes** (toggle in UI)
-2. **Show latency comparison** (optimistic vs wait)
-3. **Default to Optimistic** (best UX showcase)
-4. **Document trade-offs** (judges see we thought it through)
+2. **Show latency comparison** (50ms vs 700ms)
+3. **Default to TRUE Optimistic** (best UX showcase)
+4. **Document facilitator guarantee model** (judges see innovation)
 
-**Post-Hackathon:**
+**Post-Hackathon Production:**
 
-- Production: Optimistic (with robust merchant polling)
-- High-value: Wait-for-finality (for amounts >$100)
+```typescript
+// Risk-based settlement mode selection
+function selectSettlementMode(amount: number, buyerReputation: number) {
+  if (amount < 10_00000 && buyerReputation > 0.8) {
+    return 'optimistic';  // <$10, trusted buyer
+  } else if (amount < 100_000000) {
+    return 'wait';  // <$100, wait for safety
+  } else {
+    return 'escrow';  // >$100, multi-sig escrow
+  }
+}
+```
+
+**Facilitator Economics:**
+
+- **Reserve Pool:** 10-20% of daily volume (for failed settlements)
+- **Insurance:** Optional crypto insurance for large merchants
+- **Monitoring:** Real-time settlement success rate tracking
+- **Adjustment:** Dynamic risk thresholds based on network conditions
 
 ---
 

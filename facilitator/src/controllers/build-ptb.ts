@@ -168,17 +168,30 @@ export async function buildPTBController(req: Request, res: Response): Promise<v
     // Convert payment ID (nonce) to bytes
     const paymentIdBytes = Array.from(Buffer.from(invoice.nonce, 'utf-8'));
     
-    // Call settle_payment<T> Move function
+    // CRITICAL: Split off ONLY the exact amount needed for payment
+    // This leaves the rest of the buyer's coin available for gas (or other purposes)
+    logger.info('Splitting payment coin', {
+      totalRequired: totalRequired.toString(),
+      sourceCoinin: suitableCoin.objectId
+    });
+    
+    const [paymentCoin] = tx.splitCoins(
+      tx.object(suitableCoin.objectId),
+      [totalRequired]  // Split off EXACTLY amount + fee
+    );
+    
+    // Call settle_payment<T> Move function with the SPLIT coin
     // This will:
-    // 1. Split merchant amount from buyer's coin
-    // 2. Split facilitator fee from buyer's coin  
+    // 1. Split merchant amount from payment coin
+    // 2. Split facilitator fee from payment coin  
     // 3. Transfer both amounts atomically
     // 4. Emit ReceiptEmitted event
+    // 5. Merge any remainder back to buyer
     tx.moveCall({
       target: `${config.packageId}::payment::settle_payment`,
       typeArguments: [invoice.coinType],
       arguments: [
-        tx.object(suitableCoin.objectId),          // &mut Coin<T> (buyer's USDC)
+        paymentCoin,                               // Coin<T> (SPLIT coin with exact amount)
         tx.pure.u64(amountBigInt),                 // amount: u64
         tx.pure.address(invoice.merchantRecipient), // merchant: address
         tx.pure.u64(feeBigInt),                    // facilitator_fee: u64
@@ -187,19 +200,24 @@ export async function buildPTBController(req: Request, res: Response): Promise<v
       ],
     });
     
-    // Set gas budget (buyer pays for now, TODO: implement gas sponsorship)
-    // Using modest budget since buyer needs separate coin for gas
-    tx.setGasBudget(10000000); // 0.01 SUI (plenty for simple PTB)
+    // Build ONLY the transaction kind (no gas data)
+    // Gas will be added by facilitator during submission (sponsored transaction)
+    // This is the correct pattern for sponsored transactions on SUI
+    logger.info('Building transaction kind for sponsored transaction');
     
-    // Serialize PTB to bytes
-    const ptbBytes = await tx.build({ client });
+    const kindBytes = await tx.build({ 
+      client, 
+      onlyTransactionKind: true  // Critical: excludes gas data
+    });
     
-    // Return unsigned PTB bytes for client-side verification
-    logger.info('PTB built successfully', { ptbBytesLength: ptbBytes.length });
+    // Return transaction kind bytes for buyer to sign
+    // Buyer will reconstruct full transaction with setSender()
+    // Facilitator will add gas sponsorship during submission
+    logger.info('Transaction kind built successfully', { kindBytesLength: kindBytes.length });
     logger.info('=== BUILD PTB REQUEST SUCCESS ===');
     
     res.json({
-      ptbBytes: Array.from(ptbBytes),
+      transactionKindBytes: Array.from(kindBytes),  // Only the tx kind, no gas data
       invoice: {
         resource: invoice.resource,
         amount: invoice.amount,

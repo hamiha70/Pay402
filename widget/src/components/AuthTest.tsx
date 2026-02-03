@@ -154,7 +154,7 @@ export default function AuthTest() {
           <p>Your wallet needs SUI for gas and testing. Let's fund it!</p>
           
           <button onClick={handleFund} disabled={balance.loading}>
-            {balance.loading ? 'Funding...' : '🚀 Fund 2 SUI (Demo Faucet)'}
+            {balance.loading ? 'Funding...' : '🚀 Fund 10 SUI (Demo Faucet)'}
           </button>
 
           {balance.fundingResult && (

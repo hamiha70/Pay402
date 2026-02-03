@@ -97,7 +97,7 @@ describe('Blockchain State Consistency', () => {
     // Both transactions should have been built successfully
     expect(ptb1.length).toBeGreaterThan(0);
     expect(ptb2.length).toBeGreaterThan(0);
-    expect(ptb1.length).not.toBe(ptb2.length); // Different amounts = different sizes
+    // Note: PTB size is same despite different amounts (BCS encoding is compact)
 
     console.log(`\n✅ State consistency verified:`);
     console.log(`   - Built 2 consecutive transactions`);

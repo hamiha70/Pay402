@@ -37,6 +37,7 @@ widget/test-crypto.test.ts          # 32 lines - verified jsdom browser API supp
 **Multiple guides cover overlapping topics:**
 
 - `PROXY_TEST_GUIDE.md` (190 lines) - **Can be simplified or removed**
+
   - We learned proxy doesn't support gRPC
   - Tests use direct connection
   - Guide is obsolete
@@ -45,7 +46,8 @@ widget/test-crypto.test.ts          # 32 lines - verified jsdom browser API supp
 - `HANDOFF_TYPESCRIPT.md` (273 lines) - **Historical, consider archiving**
 - `PORT_STATUS.md` (207 lines) - **Good reference, keep**
 
-**Recommendation:** 
+**Recommendation:**
+
 - Delete `PROXY_TEST_GUIDE.md` (obsolete)
 - Archive `HANDOFF_TYPESCRIPT.md` to `docs/archive/`
 
@@ -53,12 +55,13 @@ widget/test-crypto.test.ts          # 32 lines - verified jsdom browser API supp
 
 ```
 contracts/     4 KB   - Empty placeholder
-demo/          4 KB   - Empty placeholder  
+demo/          4 KB   - Empty placeholder
 temp/         60 KB   - Contains 1 ChatGPT export (can be archived)
 logs/        872 KB   - Only contains .gitignore
 ```
 
 **Recommendation:**
+
 - Keep `logs/` (used at runtime)
 - Move `temp/ChatGPT_SpecificationDetails_2026-02-01.txt` to `docs/archive/`
 - Remove `contracts/` and `demo/` (or add README explaining purpose)
@@ -81,6 +84,7 @@ Pay402/
 ```
 
 **Observations:**
+
 - ✅ Each service is self-contained
 - ✅ Clear separation of concerns
 - ✅ Consistent naming conventions
@@ -93,6 +97,7 @@ Pay402/
 ### **Facilitator (TypeScript)** ⭐️⭐️⭐️⭐️⭐️
 
 **Structure:**
+
 ```
 src/
 ├── controllers/       Well-organized route handlers
@@ -103,6 +108,7 @@ src/
 ```
 
 **Quality Metrics:**
+
 - ✅ Proper error handling
 - ✅ TypeScript strict mode
 - ✅ Modular controllers
@@ -110,11 +116,13 @@ src/
 - ✅ Clean dependency injection
 
 **Minor Issues:**
+
 - None! This is production-quality code.
 
 ### **Merchant (JavaScript)** ⭐️⭐️⭐️⭐️
 
 **Structure:**
+
 ```
 src/
 ├── controllers/       Route handlers
@@ -123,18 +131,21 @@ src/
 ```
 
 **Quality Metrics:**
+
 - ✅ Simple, focused codebase
 - ✅ Proper JWT handling with Ed25519
 - ✅ Environment-based configuration
 - ⚠️ No tests (acceptable for demo, but should add for production)
 
 **Minor Issues:**
+
 - Missing tests - should add basic JWT signing/verification tests
 - Consider migrating to TypeScript for consistency (low priority)
 
 ### **Widget (TypeScript + React)** ⭐️⭐️⭐️⭐️
 
 **Structure:**
+
 ```
 src/
 ├── lib/              Core verifier logic
@@ -144,12 +155,14 @@ src/
 ```
 
 **Quality Metrics:**
+
 - ✅ React best practices
 - ✅ Custom hooks for reusability
 - ✅ Comprehensive verifier tests (3 + 4 = 7 tests)
 - ✅ Real PTB fixture generation
 
 **Minor Issues:**
+
 - 2 temporary test files (flagged above)
 - `dist/` committed to git (should be in .gitignore if not deploying from repo)
 
@@ -182,15 +195,15 @@ src/
 
 ## 🎯 **Repository Consistency Score**
 
-| Aspect | Rating | Notes |
-|--------|--------|-------|
-| **Structure** | 9/10 | Clean separation, logical organization |
-| **Naming** | 10/10 | Consistent, descriptive names |
-| **Documentation** | 8/10 | Comprehensive but some redundancy |
-| **Testing** | 9/10 | Strong coverage (37 tests), merchant needs tests |
-| **Type Safety** | 8/10 | TS in 2/3 services, merchant is JS |
-| **Dependencies** | 9/10 | Well-managed, no unnecessary deps |
-| **Git Hygiene** | 7/10 | Good commits, but some temp files tracked |
+| Aspect            | Rating | Notes                                            |
+| ----------------- | ------ | ------------------------------------------------ |
+| **Structure**     | 9/10   | Clean separation, logical organization           |
+| **Naming**        | 10/10  | Consistent, descriptive names                    |
+| **Documentation** | 8/10   | Comprehensive but some redundancy                |
+| **Testing**       | 9/10   | Strong coverage (37 tests), merchant needs tests |
+| **Type Safety**   | 8/10   | TS in 2/3 services, merchant is JS               |
+| **Dependencies**  | 9/10   | Well-managed, no unnecessary deps                |
+| **Git Hygiene**   | 7/10   | Good commits, but some temp files tracked        |
 
 **Overall: 8.5/10** - Production-ready with minor cleanups recommended
 
@@ -244,6 +257,7 @@ Coverage:          High (all critical paths tested)
 **This is a high-quality, well-structured codebase** with only minor cleanup needed. The architecture is solid, testing is comprehensive, and the code is production-ready after addressing the high-priority cleanup items.
 
 **Key Strengths:**
+
 - Clean separation of concerns
 - Comprehensive testing infrastructure
 - Good documentation

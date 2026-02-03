@@ -1,17 +1,20 @@
 # Browser E2E Test - AI Agent Prompt
 
 ## Purpose
+
 This prompt instructs an AI agent to run a complete browser-based end-to-end test of the Pay402 payment flow, measuring timing at each step.
 
 ## Prerequisites
 
 **Services Running:**
+
 - Localnet: `sui start` on port 9000
 - Facilitator: `npm run dev` on port 3001
 - Merchant: `npm run dev` on port 3002
 - Widget: `npm run dev` on port 5173
 
 **Verify before starting:**
+
 ```bash
 curl -s http://localhost:3001/health
 curl -s http://localhost:3002/health
@@ -22,7 +25,7 @@ curl -s http://localhost:5173 | head -5
 
 ## 🤖 AI AGENT PROMPT (Copy & Paste)
 
-```
+````
 Run a complete browser-based end-to-end test of the Pay402 payment flow.
 
 OBJECTIVE:
@@ -139,10 +142,11 @@ OUTPUT FORMAT:
 
 ## Console Errors:
 [Any JavaScript errors]
-```
+````
 
 BEGIN TEST NOW.
-```
+
+````
 
 ---
 
@@ -169,26 +173,32 @@ cursor-ai "$(cat docs/testing/BROWSER_E2E_PROMPT.md)"
 
 # Parse results
 # ...
-```
+````
 
 ## Variations
 
 ### Test Optimistic Only
+
 Add to prompt:
+
 ```
 SETTLEMENT MODE: optimistic
 (Skip pessimistic test)
 ```
 
 ### Test Pessimistic Only
+
 Add to prompt:
+
 ```
 SETTLEMENT MODE: pessimistic
 (Skip optimistic test)
 ```
 
 ### Test Both Modes
+
 Add to prompt:
+
 ```
 RUN TWICE:
 1. First run with optimistic mode
@@ -197,7 +207,9 @@ RUN TWICE:
 ```
 
 ### Test With Fresh Wallet
+
 Add to prompt:
+
 ```
 WALLET SETUP:
 - Do NOT use demo keypair
@@ -210,6 +222,7 @@ WALLET SETUP:
 ## Expected Results
 
 ### Successful Test (Optimistic)
+
 ```
 TOTAL: ~150-250ms
 - Data Request → Invoice: ~20ms
@@ -222,6 +235,7 @@ TOTAL: ~150-250ms
 ```
 
 ### Successful Test (Pessimistic)
+
 ```
 TOTAL: ~300-400ms
 - Data Request → Invoice: ~20ms
@@ -236,16 +250,19 @@ TOTAL: ~300-400ms
 ## Troubleshooting
 
 ### Test Hangs
+
 - Check services are running
 - Verify ports 3001, 3002, 5173 accessible
 - Check browser console for errors
 
 ### Payment Fails
+
 - Verify buyer address in invoice matches wallet
 - Check account has sufficient balance
 - Verify invoice not expired
 
 ### Timing Inconsistent
+
 - Run multiple times and average
 - Localnet has variable latency
 - Consider testnet for realistic timing
@@ -253,14 +270,17 @@ TOTAL: ~300-400ms
 ## Future Enhancements
 
 1. **Parallel Mode Testing**
+
    - Run optimistic and pessimistic simultaneously
    - Compare side-by-side
 
 2. **Video Recording**
+
    - Capture full browser session
    - Show in demo
 
 3. **Performance Regression**
+
    - Run on every commit
    - Alert if latency increases
 

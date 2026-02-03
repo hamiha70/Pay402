@@ -64,6 +64,7 @@ export interface InvoiceJWT {
   coinType: string;           // e.g., "0x2::sui::SUI" for now
   expiry: number;             // Unix timestamp
   nonce: string;              // Unique per invoice
+  redirectUrl?: string;       // Optional: Where to redirect after payment
 }
 
 /**

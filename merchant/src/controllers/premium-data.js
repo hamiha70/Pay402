@@ -19,6 +19,7 @@ export async function premiumDataController(req, res) {
       coinType: config.coinType,
       expiry: Math.floor(Date.now() / 1000) + config.invoiceExpirySeconds,
       nonce: generateNonce(),
+      redirectUrl: `http://localhost:${config.port}/api/verify-payment`, // Callback after payment
     };
 
     // Sign invoice JWT

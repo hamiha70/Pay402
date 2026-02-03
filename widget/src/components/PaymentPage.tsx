@@ -36,6 +36,7 @@ export default function PaymentPage({ invoiceJWT: propInvoiceJWT }: PaymentPageP
   const [verificationResult, setVerificationResult] = useState<any>(null);
   const [paymentId, setPaymentId] = useState<string>('');
   const [error, setError] = useState<string>('');
+  const [settlementMode, setSettlementMode] = useState<'optimistic' | 'pessimistic'>('optimistic');
 
   // Parse invoice JWT
   const parseInvoice = () => {
@@ -176,6 +177,19 @@ export default function PaymentPage({ invoiceJWT: propInvoiceJWT }: PaymentPageP
 
       setPaymentId(data.digest);
       setStep('success');
+      
+      // Redirect back to merchant with payment details
+      if (invoice?.redirectUrl) {
+        const redirectUrl = new URL(invoice.redirectUrl);
+        redirectUrl.searchParams.set('digest', data.digest);
+        redirectUrl.searchParams.set('paymentId', data.digest);
+        redirectUrl.searchParams.set('mode', mode);
+        
+        // Redirect after 2 seconds to let user see success message
+        setTimeout(() => {
+          window.location.href = redirectUrl.toString();
+        }, 2000);
+      }
     } catch (err) {
       setError(`Payment failed: ${err instanceof Error ? err.message : String(err)}`);
       setStep('error');
@@ -336,8 +350,56 @@ export default function PaymentPage({ invoiceJWT: propInvoiceJWT }: PaymentPageP
 
           <p>The transaction has been verified. You can safely proceed.</p>
 
-          <button onClick={submitPayment} className="btn-primary">
-            Sign & Pay
+          {/* Settlement Mode Toggle */}
+          <div style={{ 
+            background: '#f3f4f6', 
+            padding: '15px', 
+            borderRadius: '8px', 
+            marginBottom: '20px' 
+          }}>
+            <h3 style={{ marginBottom: '10px', fontSize: '1rem' }}>Settlement Mode:</h3>
+            <div style={{ display: 'flex', gap: '10px' }}>
+              <button
+                onClick={() => setSettlementMode('optimistic')}
+                style={{
+                  flex: 1,
+                  padding: '10px',
+                  background: settlementMode === 'optimistic' ? '#10b981' : 'white',
+                  color: settlementMode === 'optimistic' ? 'white' : '#333',
+                  border: '2px solid ' + (settlementMode === 'optimistic' ? '#10b981' : '#d1d5db'),
+                  borderRadius: '6px',
+                  cursor: 'pointer',
+                  fontWeight: settlementMode === 'optimistic' ? 'bold' : 'normal',
+                }}
+              >
+                ⚡ Optimistic (~50ms)
+                <div style={{ fontSize: '0.75rem', marginTop: '4px' }}>
+                  Instant response, facilitator guarantees
+                </div>
+              </button>
+              <button
+                onClick={() => setSettlementMode('pessimistic')}
+                style={{
+                  flex: 1,
+                  padding: '10px',
+                  background: settlementMode === 'pessimistic' ? '#3b82f6' : 'white',
+                  color: settlementMode === 'pessimistic' ? 'white' : '#333',
+                  border: '2px solid ' + (settlementMode === 'pessimistic' ? '#3b82f6' : '#d1d5db'),
+                  borderRadius: '6px',
+                  cursor: 'pointer',
+                  fontWeight: settlementMode === 'pessimistic' ? 'bold' : 'normal',
+                }}
+              >
+                🔒 Pessimistic (~500ms)
+                <div style={{ fontSize: '0.75rem', marginTop: '4px' }}>
+                  Wait for blockchain confirmation
+                </div>
+              </button>
+            </div>
+          </div>
+
+          <button onClick={() => submitPayment(settlementMode)} className="btn-primary">
+            Sign & Pay ({settlementMode === 'optimistic' ? '⚡ Fast' : '🔒 Safe'})
           </button>
         </div>
       </div>

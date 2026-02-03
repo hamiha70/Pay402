@@ -14,17 +14,6 @@ module payment::payment {
     
     // === Structs ===
     
-    /// Ephemeral receipt returned from settle_payment
-    /// Zero storage cost - exists only in transaction execution
-    public struct EphemeralReceipt has drop {
-        payment_id: vector<u8>,
-        buyer: address,
-        merchant: address,
-        amount: u64,
-        coin_type: vector<u8>,
-        timestamp_ms: u64,
-    }
-    
     /// Event emitted when payment is settled on-chain
     /// Permanent audit trail for off-chain indexing
     public struct PaymentSettled has copy, drop {
@@ -64,9 +53,9 @@ module payment::payment {
     /// * `ctx` - Transaction context
     /// 
     /// # Returns
-    /// EphemeralReceipt with payment details (zero storage cost)
+    /// None - Receipt is emitted as event only (zero storage cost)
     #[allow(lint(self_transfer))]
-    public fun settle_payment<T>(
+    public entry fun settle_payment<T>(
         buyer_coin: &mut Coin<T>,
         amount: u64,
         merchant: address,
@@ -74,7 +63,7 @@ module payment::payment {
         payment_id: vector<u8>,
         clock: &Clock,
         ctx: &mut TxContext
-    ): EphemeralReceipt {
+    ) {
         use sui::coin;
         use sui::clock;
         use std::type_name;
@@ -115,14 +104,7 @@ module payment::payment {
             timestamp_ms,
         });
         
-        // Return ephemeral receipt (zero storage)
-        EphemeralReceipt {
-            payment_id,
-            buyer: @0x0, // TODO: derive from coin ownership
-            merchant,
-            amount,
-            coin_type: coin_type_bytes,
-            timestamp_ms,
-        }
+        // Receipt is dropped automatically (has "drop" ability)
+        // Event provides permanent audit trail for off-chain systems
     }
 }

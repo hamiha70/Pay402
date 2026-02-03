@@ -32,7 +32,10 @@ describe('Proxy Connectivity Test', () => {
 
   beforeAll(async () => {
     const url = getRpcUrl();
-    client = new SuiGrpcClient({ url });
+    client = new SuiGrpcClient({ 
+      network: 'localnet',
+      baseUrl: url 
+    });
 
     try {
       const { execSync } = require('child_process');

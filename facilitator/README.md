@@ -80,6 +80,7 @@ The server will start on `http://localhost:3001`.
 Health check endpoint.
 
 **Response:**
+
 ```json
 {
   "status": "ok",
@@ -95,6 +96,7 @@ Health check endpoint.
 Check buyer's balance and discover coin objects.
 
 **Request:**
+
 ```json
 {
   "address": "0xABC...DEF",
@@ -104,6 +106,7 @@ Check buyer's balance and discover coin objects.
 ```
 
 **Response:**
+
 ```json
 {
   "balance": "20000000",
@@ -129,6 +132,7 @@ Check buyer's balance and discover coin objects.
 Settle payment on-chain via PTB.
 
 **Request:**
+
 ```json
 {
   "buyerAddress": "0xBUYER...",
@@ -142,6 +146,7 @@ Settle payment on-chain via PTB.
 ```
 
 **Amount guidelines for testing:**
+
 - Use small amounts: 10000-100000 micro-USDC (0.01-0.10 USDC)
 - Preserves limited testnet USDC supply (~20 USDC available)
 - Each test costs ~0.02-0.11 USDC total (amount + fee)
@@ -149,6 +154,7 @@ Settle payment on-chain via PTB.
 **Note:** Use USDC for payments. SUI is for gas sponsorship only (even more limited).
 
 **Response:**
+
 ```json
 {
   "success": true,
@@ -168,6 +174,7 @@ npm test
 ```
 
 Test suites:
+
 - `src/__tests__/build-ptb.test.ts` - PTB construction
 - `src/__tests__/api-integration.test.ts` - HTTP endpoints
 - `src/__tests__/ptb-codec.test.ts` - PTB encoding/decoding
@@ -178,6 +185,7 @@ Test suites:
 ### Connection Refused
 
 Check if localnet is running:
+
 ```bash
 localnet status
 localnet start  # if not running
@@ -186,6 +194,7 @@ localnet start  # if not running
 ### "No coins found for buyer"
 
 Buyer address needs USDC:
+
 ```bash
 # Localnet (unlimited):
 curl -X POST http://localhost:3001/fund \
@@ -199,6 +208,7 @@ curl -X POST http://localhost:3001/fund \
 ### Package ID Not Found
 
 Redeploy contract:
+
 ```bash
 cd ../move/payment
 sui client publish --gas-budget 100000000
@@ -208,6 +218,7 @@ sui client publish --gas-budget 100000000
 ### Tests Failing
 
 Ensure active address is funded:
+
 ```bash
 sui client active-address  # Check current address
 localnet start             # Ensure network running
@@ -238,6 +249,7 @@ facilitator/
 ```
 
 **Key Details:**
+
 - Uses gRPC client (@mysten/sui) for better performance
 - Generic `Coin<T>` support (SUI, USDC, any token)
 - Facilitator sponsors gas for all transactions

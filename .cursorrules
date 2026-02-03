@@ -1,29 +1,34 @@
 # Pay402 Cursor Rules
 
 ## Anti-Bloat
+
 - Do work directly, commit with detailed message
 - NO analysis/audit/plan/status markdown files
 - Present findings in chat, not files
 - DELETE temporary docs after user reads them
 
 ## Testing Levels
+
 **Move:** payment_tests.move → `sui move test` in move/payment/
-**TS Facilitator:** src/__tests__/*.test.ts → `npm test` (vitest, Node.js)
-**TS Widget:** src/lib/*.test.ts → `npm test` (vitest + jsdom for browser)
+**TS Facilitator:** src/**tests**/_.test.ts → `npm test` (vitest, Node.js)
+**TS Widget:** src/lib/_.test.ts → `npm test` (vitest + jsdom for browser)
 **Integration:** scripts/smoke-test.sh (all services)
 
 ## Tech Stack (verify in package.json first!)
+
 **Facilitator:** @mysten/sui (gRPC), Express, TypeScript
 **Merchant:** jose (Ed25519 JWT), Express, JavaScript
 **Widget:** React, Vite, custom PTB verifier
 ❌ NO Bull queue, NO @x402/fetch package
 
 ## Directory Structure
+
 **Move:** move/payment/ (NOT contracts/)
 **Controllers:** src/controllers/ (NOT src/api/)
-**Tests:** src/__tests__/ and scripts/
+**Tests:** src/**tests**/ and scripts/
 
 ## Common Traps We Hit
+
 - Widget tests need jsdom (browser env), not plain Node.js
 - localnet_proxy: NO gRPC support (use direct :9000)
 - PTB fixtures: Expire in 5min, regenerate via scripts/generate-test-ptbs.js
@@ -33,12 +38,15 @@
 - Don't create analysis docs when analyzing (ironic bloat!)
 
 ## Per-Component Docs
+
 Each component (facilitator/, merchant/, widget/):
+
 - ONE README.md only (setup + API + troubleshooting)
 - NO status docs, NO implementation-complete docs
 - Testing covered in root docs/development/TESTING.md
 
 ## Commit Discipline
+
 - Batch related changes, run `git status` first
 - Clear messages with metrics (files changed, KB saved, impact)
 - Commits are documentation (explain what + why)

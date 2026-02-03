@@ -11,11 +11,13 @@
 ## Document Purpose
 
 This is the **canonical technical specification** for the Pay402 hackathon implementation. All architecture questions are resolved. This document defines:
+
 - What we build for the hackathon
 - How components interact
 - What we explicitly defer to post-hackathon
 
 **See Also:**
+
 - `DESIGN_RATIONALE.md` - Trade-offs, alternatives considered, and justifications
 - `DEVELOPMENT_GUIDE.md` - Development practices and tooling
 - `WIDGET_DEPLOYMENT.md` - Widget build and deployment specifics
@@ -42,6 +44,7 @@ This is the **canonical technical specification** for the Pay402 hackathon imple
 ### The Core Innovation
 
 **Pay402** enables micropayments with **zero wallet friction** using zkLogin:
+
 - Users authenticate with Google OAuth
 - Derive SUI blockchain address automatically
 - Own funds (non-escrow, self-custody)
@@ -50,19 +53,20 @@ This is the **canonical technical specification** for the Pay402 hackathon imple
 
 ### Key Technical Decisions (Locked)
 
-| Decision | Choice | Rationale |
-|----------|--------|-----------|
-| **Custody Model** | Non-escrow (buyer-owned coins) | Web3 trust boundary, not delegated Web2 |
-| **Invoice Format** | Merchant-signed JWT + hash on-chain | Audit trail, conflict resolution |
-| **Verification** | Tier 1 (facilitator webpage) + Tier 2 (extension, post-hackathon) | Hackathon-realistic, clear upgrade path |
-| **Receipt** | On-chain event with `invoice_hash` | Merchant audit, reconciliation |
-| **Transaction Submission** | Facilitator submits (buyer RPC-free) | Simplifies buyer UX |
-| **Salt Management** | Enoki-managed | Don't DIY, use production-ready service |
-| **Funding** | Demo faucet (testnet/devnet) | Hackathon-appropriate |
+| Decision                   | Choice                                                            | Rationale                               |
+| -------------------------- | ----------------------------------------------------------------- | --------------------------------------- |
+| **Custody Model**          | Non-escrow (buyer-owned coins)                                    | Web3 trust boundary, not delegated Web2 |
+| **Invoice Format**         | Merchant-signed JWT + hash on-chain                               | Audit trail, conflict resolution        |
+| **Verification**           | Tier 1 (facilitator webpage) + Tier 2 (extension, post-hackathon) | Hackathon-realistic, clear upgrade path |
+| **Receipt**                | On-chain event with `invoice_hash`                                | Merchant audit, reconciliation          |
+| **Transaction Submission** | Facilitator submits (buyer RPC-free)                              | Simplifies buyer UX                     |
+| **Salt Management**        | Enoki-managed                                                     | Don't DIY, use production-ready service |
+| **Funding**                | Demo faucet (testnet/devnet)                                      | Hackathon-appropriate                   |
 
 ### What We Build
 
 ✅ **Hackathon Scope:**
+
 1. Move contract with `settle_payment<T>()` and receipt emission
 2. Facilitator backend (Express + TypeScript)
    - PTB construction
@@ -76,6 +80,7 @@ This is the **canonical technical specification** for the Pay402 hackathon imple
 5. Demo faucet (testnet USDC distribution)
 
 ❌ **Out of Scope:**
+
 - Full widget (embedded in merchant pages) - simplified demo version only
 - Browser extension (Tier 2 verifier) - architecture supports, not building
 - Cross-chain (CCTP) - future
@@ -109,18 +114,21 @@ This is the **canonical technical specification** for the Pay402 hackathon imple
 ```
 
 **Buyer:**
+
 - Browser user
 - Authenticates via Google OAuth (zkLogin)
 - Signs PTBs (no wallet extension)
 - Owns USDC coins at zkLogin-derived address
 
 **Merchant:**
+
 - Web service selling premium content/API access
 - Returns 402 challenges with invoice JWT
 - Verifies payment on-chain
 - Delivers content after payment
 
 **Facilitator:**
+
 - Service we build
 - Constructs PTBs from buyer coins
 - Sponsors gas (SUI for tx fees)
@@ -128,6 +136,7 @@ This is the **canonical technical specification** for the Pay402 hackathon imple
 - Provides payment page UI
 
 **SUI Blockchain:**
+
 - Executes PTBs
 - Emits receipt events
 - Hosts USDC coins
@@ -223,6 +232,7 @@ X-X402-Invoice-JWT: eyJhbGciOiJFZERTQSIsInR5cCI6IkpXVCJ9...
 ```
 
 **Invoice JWT Claims:**
+
 ```json
 {
   "iss": "merchant.com",
@@ -239,6 +249,7 @@ X-X402-Invoice-JWT: eyJhbGciOiJFZERTQSIsInR5cCI6IkpXVCJ9...
 ```
 
 **Why JWT:**
+
 - Merchant signs invoice terms (prevents facilitator tampering)
 - Canonical artifact for audit/disputes
 - Standard format (easy to verify)
@@ -250,6 +261,7 @@ https://pay402.io/pay?invoice_jwt=<token>&callback=<url>
 ```
 
 Payment page displays:
+
 - Merchant domain
 - Resource being purchased
 - Amount and currency
@@ -260,11 +272,12 @@ Payment page displays:
 **4a. If no active session:**
 
 User clicks "Sign in with Google" →
+
 ```javascript
 // Enoki handles OAuth flow
 const { address, session } = await enokiClient.createSession({
-  provider: 'google',
-  redirectUrl: currentUrl
+  provider: "google",
+  redirectUrl: currentUrl,
 });
 
 // address = 0xabc123... (deterministic from Google ID + salt)
@@ -272,11 +285,13 @@ const { address, session } = await enokiClient.createSession({
 ```
 
 **4b. Session management:**
+
 - Salt persisted by Enoki (buyer address stable across sessions)
 - Ephemeral key + proof cached until `maxEpoch`
 - If session expires, re-authenticate (same address)
 
 **Display to buyer:**
+
 ```
 ✅ Signed in as user@gmail.com
 📍 Your address: 0xabc123...
@@ -288,6 +303,7 @@ const { address, session } = await enokiClient.createSession({
 **For demo:**
 
 Buyer clicks "Fund (demo faucet)" →
+
 ```typescript
 // Facilitator faucet endpoint
 POST /fund
@@ -301,6 +317,7 @@ POST /fund
 ```
 
 **Display:**
+
 ```
 ✅ Funded: 1.0 USDC
    TX: AbCd1234...
@@ -308,6 +325,7 @@ POST /fund
 ```
 
 **Production (post-hackathon):**
+
 - Credit card onramp
 - Circle USDC faucet (testnet)
 - Bank transfer
@@ -315,16 +333,18 @@ POST /fund
 #### Step 6: Facilitator Constructs PTB
 
 **Inputs:**
+
 - Invoice JWT (validated)
 - Buyer address
 - Buyer USDC coin objects (queried from chain)
 
 **PTB Construction (server-side):**
+
 ```typescript
 // Fetch buyer's USDC coins
 const coins = await suiClient.listCoins({
   owner: buyerAddress,
-  coinType: USDC_TYPE
+  coinType: USDC_TYPE,
 });
 
 // Select coins, merge if needed
@@ -332,7 +352,10 @@ const ptb = new Transaction();
 
 // Optional: Merge multiple coins into one
 if (coins.length > 1) {
-  ptb.mergeCoins(coins[0].objectId, coins.slice(1).map(c => c.objectId));
+  ptb.mergeCoins(
+    coins[0].objectId,
+    coins.slice(1).map((c) => c.objectId)
+  );
 }
 
 // Split exact amount
@@ -353,7 +376,7 @@ ptb.moveCall({
     ptb.pure(amount),
     ptb.pure(assetType),
   ],
-  typeArguments: [USDC_TYPE]
+  typeArguments: [USDC_TYPE],
 });
 
 // Set gas sponsor
@@ -365,6 +388,7 @@ const ptbBytes = await ptb.build();
 ```
 
 **Return to buyer page:**
+
 ```json
 {
   "ptbBytes": "base64_encoded_transaction_bytes",
@@ -388,60 +412,65 @@ function verifyPaymentPTB(
   ptbBytes: Uint8Array,
   invoice: InvoiceJWT
 ): VerificationResult {
-  
   // Parse PTB bytes (NOT facilitator summary!)
   const ptb = deserializeTransaction(ptbBytes);
-  
+
   // Extract commands
   const commands = ptb.commands;
-  
+
   // Invariant 1: Only allowed commands
-  const allowedCommands = ['MergeCoins', 'SplitCoins', 'TransferObjects', 'MoveCall'];
+  const allowedCommands = [
+    "MergeCoins",
+    "SplitCoins",
+    "TransferObjects",
+    "MoveCall",
+  ];
   for (const cmd of commands) {
     if (!allowedCommands.includes(cmd.type)) {
       return { pass: false, reason: `Disallowed command: ${cmd.type}` };
     }
   }
-  
+
   // Invariant 2: All coin operations are USDC only
-  for (const cmd of commands.filter(c => c.type.includes('Coin'))) {
+  for (const cmd of commands.filter((c) => c.type.includes("Coin"))) {
     if (cmd.coinType !== invoice.assetType) {
-      return { pass: false, reason: 'Non-USDC coin operation' };
+      return { pass: false, reason: "Non-USDC coin operation" };
     }
   }
-  
+
   // Invariant 3: Exactly one transfer of exact amount to merchant
-  const transfers = commands.filter(c => c.type === 'TransferObjects');
-  const paymentTransfer = transfers.find(t => 
-    t.recipient === invoice.merchantRecipient &&
-    t.amount === invoice.amount
+  const transfers = commands.filter((c) => c.type === "TransferObjects");
+  const paymentTransfer = transfers.find(
+    (t) =>
+      t.recipient === invoice.merchantRecipient && t.amount === invoice.amount
   );
   if (!paymentTransfer) {
-    return { pass: false, reason: 'Payment transfer not found or incorrect' };
+    return { pass: false, reason: "Payment transfer not found or incorrect" };
   }
-  
+
   // Invariant 4: No transfers to non-buyer addresses (except merchant)
   for (const transfer of transfers) {
-    if (transfer.recipient !== invoice.merchantRecipient &&
-        transfer.recipient !== invoice.buyerAddress) {
-      return { pass: false, reason: 'Unauthorized transfer detected' };
+    if (
+      transfer.recipient !== invoice.merchantRecipient &&
+      transfer.recipient !== invoice.buyerAddress
+    ) {
+      return { pass: false, reason: "Unauthorized transfer detected" };
     }
   }
-  
+
   // Invariant 5: Receipt emission with correct invoice hash
-  const receiptCall = commands.find(c => 
-    c.type === 'MoveCall' &&
-    c.function === 'emit_receipt'
+  const receiptCall = commands.find(
+    (c) => c.type === "MoveCall" && c.function === "emit_receipt"
   );
   if (!receiptCall) {
-    return { pass: false, reason: 'Missing receipt emission' };
+    return { pass: false, reason: "Missing receipt emission" };
   }
-  
+
   const invoiceHash = sha256(invoiceJwtBytes);
   if (receiptCall.args.invoiceHash !== invoiceHash) {
-    return { pass: false, reason: 'Invoice hash mismatch' };
+    return { pass: false, reason: "Invoice hash mismatch" };
   }
-  
+
   // All checks passed
   return { pass: true };
 }
@@ -470,12 +499,13 @@ function verifyPaymentPTB(
 ```
 
 **If verification fails:**
+
 ```
 ❌ Transaction does not match invoice!
    Reason: Amount mismatch (expected 0.1, found 1.0)
-   
+
    DO NOT SIGN THIS TRANSACTION.
-   
+
 [ Report Issue ]  [ Cancel ]
 ```
 
@@ -504,23 +534,23 @@ const tx = await suiClient.executeTransaction({
   signature: signatureBundle,
   options: {
     showEffects: true,
-    showEvents: true
-  }
+    showEvents: true,
+  },
 });
 
 // Check success
-if (tx.effects.status.status !== 'success') {
-  throw new Error('Transaction failed');
+if (tx.effects.status.status !== "success") {
+  throw new Error("Transaction failed");
 }
 
 // Extract receipt event
-const receiptEvent = tx.events.find(e => 
-  e.type.includes('::payment::ReceiptEmitted')
+const receiptEvent = tx.events.find((e) =>
+  e.type.includes("::payment::ReceiptEmitted")
 );
 
 return {
   txDigest: tx.digest,
-  receipt: receiptEvent.parsedJson
+  receipt: receiptEvent.parsedJson,
 };
 ```
 
@@ -533,6 +563,7 @@ return {
 #### Mode 1: Optimistic Settlement (Recommended for UX)
 
 **Flow:**
+
 1. User signs PTB → immediate "Payment Processing..."
 2. Facilitator submits to SUI network → returns tx digest
 3. **Redirect user IMMEDIATELY** to merchant (with tx digest)
@@ -540,24 +571,28 @@ return {
 5. Merchant verifies on-chain receipt asynchronously
 
 **Pros:**
+
 - ✅ **Fast UX:** User sees success in <500ms after signing
 - ✅ **No waiting:** Merchant delivers content immediately
 - ✅ **SUI is fast:** Sub-second finality = low risk
 
 **Cons:**
+
 - ⚠️ **Race condition:** Merchant might query before finality
 - ⚠️ **Requires retry:** Merchant must poll if not found immediately
 
 **Latency:**
+
 - User experience: ~500ms (sign → redirect)
 - Actual finality: 1-3 seconds (user doesn't wait)
 
 **Implementation:**
+
 ```typescript
 // Step 9: Facilitator submits (non-blocking)
 const { digest } = await suiClient.dryRunTransaction(ptbBytes, signature);
 // Redirect immediately with digest (don't wait for finality)
-return { digest, status: 'pending' };
+return { digest, status: "pending" };
 
 // Step 12: Merchant polls for receipt
 async function verifyPayment(txDigest: string) {
@@ -566,7 +601,7 @@ async function verifyPayment(txDigest: string) {
     if (receipt) return receipt;
     await sleep(1000); // Poll every second
   }
-  throw new Error('Settlement timeout');
+  throw new Error("Settlement timeout");
 }
 ```
 
@@ -575,6 +610,7 @@ async function verifyPayment(txDigest: string) {
 #### Mode 2: Wait-for-Finality (Recommended for Security)
 
 **Flow:**
+
 1. User signs PTB → "Payment Processing..."
 2. Facilitator submits to SUI network
 3. **POLL until tx finalized** (1-3 seconds)
@@ -582,63 +618,67 @@ async function verifyPayment(txDigest: string) {
 5. Redirect user with confirmed receipt
 
 **Pros:**
+
 - ✅ **Guaranteed:** Receipt exists before merchant query
 - ✅ **No race conditions:** Merchant gets immediate confirmation
 - ✅ **Simpler merchant:** No polling/retry logic needed
 
 **Cons:**
+
 - ⚠️ **Slower UX:** User waits 1-3 seconds on payment page
 - ⚠️ **Perceived latency:** Feels slower (even if total time same)
 
 **Latency:**
+
 - User experience: 1-3 seconds (sign → wait → redirect)
 - Actual finality: 1-3 seconds (user waits for it)
 
 **Implementation:**
+
 ```typescript
 // Step 9: Facilitator submits (blocking)
 const tx = await suiClient.executeTransaction({
   transactionBlock: ptbBytes,
   signature,
-  options: { showEffects: true, showEvents: true }
+  options: { showEffects: true, showEvents: true },
 });
 
 // Wait for success confirmation
-if (tx.effects.status.status !== 'success') {
-  throw new Error('Transaction failed');
+if (tx.effects.status.status !== "success") {
+  throw new Error("Transaction failed");
 }
 
 // Extract receipt (guaranteed to exist)
-const receipt = tx.events.find(e => 
-  e.type.includes('ReceiptEmitted')
-);
+const receipt = tx.events.find((e) => e.type.includes("ReceiptEmitted"));
 
-return { digest: tx.digest, receipt, status: 'confirmed' };
+return { digest: tx.digest, receipt, status: "confirmed" };
 ```
 
 ---
 
 #### Comparison Table
 
-| Aspect | Optimistic | Wait-for-Finality |
-|--------|------------|-------------------|
-| **User Latency** | ~500ms ✅ | 1-3s ⚠️ |
-| **Merchant Complexity** | Polling required ⚠️ | Simple query ✅ |
-| **Race Conditions** | Possible ⚠️ | None ✅ |
-| **Error Handling** | Async (harder) ⚠️ | Sync (easier) ✅ |
-| **SUI Advantage** | Maximized ✅ | Underutilized ⚠️ |
+| Aspect                  | Optimistic          | Wait-for-Finality |
+| ----------------------- | ------------------- | ----------------- |
+| **User Latency**        | ~500ms ✅           | 1-3s ⚠️           |
+| **Merchant Complexity** | Polling required ⚠️ | Simple query ✅   |
+| **Race Conditions**     | Possible ⚠️         | None ✅           |
+| **Error Handling**      | Async (harder) ⚠️   | Sync (easier) ✅  |
+| **SUI Advantage**       | Maximized ✅        | Underutilized ⚠️  |
 
 ---
 
 #### Recommendation: **Hybrid Approach**
 
 **For Hackathon Demo:**
+
 1. **Implement BOTH modes** (toggle in UI)
 2. **Show latency comparison** (optimistic vs wait)
 3. **Default to Optimistic** (best UX showcase)
 4. **Document trade-offs** (judges see we thought it through)
 
 **Post-Hackathon:**
+
 - Production: Optimistic (with robust merchant polling)
 - High-value: Wait-for-finality (for amounts >$100)
 
@@ -647,6 +687,7 @@ return { digest: tx.digest, receipt, status: 'confirmed' };
 #### Step 10: Receipt Event Emitted
 
 **On-chain event structure:**
+
 ```rust
 // payment.move
 struct ReceiptEmitted has copy, drop {
@@ -661,6 +702,7 @@ struct ReceiptEmitted has copy, drop {
 ```
 
 **Indexed by SUI:**
+
 - Merchants can query by payment_id
 - Buyers can query by their address
 - Full audit trail
@@ -668,6 +710,7 @@ struct ReceiptEmitted has copy, drop {
 #### Step 11: Return to Merchant
 
 Browser redirects to `callback_url`:
+
 ```
 https://api.merchant.com/verify?payment_id=pmt_abc123&tx_digest=AbCd1234...
 ```
@@ -677,42 +720,43 @@ https://api.merchant.com/verify?payment_id=pmt_abc123&tx_digest=AbCd1234...
 ```typescript
 // merchant backend
 async function verifyPayment(paymentId: string, txDigest: string) {
-  
   // Fetch tx from SUI
   const tx = await suiClient.getTransaction({ digest: txDigest });
-  
+
   // Check: tx succeeded
-  if (tx.effects.status.status !== 'success') {
-    throw new Error('Transaction failed');
+  if (tx.effects.status.status !== "success") {
+    throw new Error("Transaction failed");
   }
-  
+
   // Find receipt event
-  const receipt = tx.events.find(e => 
-    e.type.includes('ReceiptEmitted') &&
-    e.parsedJson.payment_id === paymentId
+  const receipt = tx.events.find(
+    (e) =>
+      e.type.includes("ReceiptEmitted") && e.parsedJson.payment_id === paymentId
   );
-  
+
   if (!receipt) {
-    throw new Error('Receipt not found');
+    throw new Error("Receipt not found");
   }
-  
+
   // Verify invoice hash
   const storedInvoice = await db.getInvoice(paymentId);
   const expectedHash = sha256(storedInvoice.jwt);
-  
+
   if (receipt.parsedJson.invoice_hash !== expectedHash) {
-    throw new Error('Invoice hash mismatch - possible fraud');
+    throw new Error("Invoice hash mismatch - possible fraud");
   }
-  
+
   // Verify amount and recipient
-  if (receipt.parsedJson.amount !== storedInvoice.amount ||
-      receipt.parsedJson.merchant !== ourAddress) {
-    throw new Error('Payment details mismatch');
+  if (
+    receipt.parsedJson.amount !== storedInvoice.amount ||
+    receipt.parsedJson.merchant !== ourAddress
+  ) {
+    throw new Error("Payment details mismatch");
   }
-  
+
   // Mark as paid
   await db.markPaid(paymentId, txDigest);
-  
+
   return { verified: true };
 }
 ```
@@ -737,6 +781,7 @@ Content-Type: application/json
 **File:** `move/payment/sources/payment.move`
 
 **Entry Function:**
+
 ```rust
 public entry fun settle_payment<T>(
     payment_coin: Coin<T>,
@@ -749,7 +794,7 @@ public entry fun settle_payment<T>(
 ) {
     // Transfer coin to merchant
     transfer::public_transfer(payment_coin, merchant);
-    
+
     // Emit receipt event
     event::emit(ReceiptEmitted {
         payment_id,
@@ -764,18 +809,21 @@ public entry fun settle_payment<T>(
 ```
 
 **Key Features:**
+
 - Generic `Coin<T>` (works with any token: USDC, SUI, etc.)
 - Receipt emission (audit trail)
 - Clock for timestamp (deterministic)
 - No state storage (ephemeral receipts)
 
 **Tests:**
+
 - 13 unit tests (all passing)
 - Covers: settlement, events, edge cases
 
 ### 2. Facilitator Backend
 
 **Tech Stack:**
+
 - Node.js 20+
 - Express 5
 - TypeScript (strict mode)
@@ -845,6 +893,7 @@ public entry fun settle_payment<T>(
 ```
 
 **Gas Sponsorship:**
+
 ```typescript
 // Facilitator pays SUI gas for all transactions
 // Buyer only needs USDC for payments
@@ -853,6 +902,7 @@ ptb.setGasPayment(facilitatorGasCoins);
 ```
 
 **Configuration (`.env`):**
+
 ```bash
 PORT=3001
 SUI_NETWORK=testnet
@@ -864,6 +914,7 @@ FACILITATOR_FEE=10000  # 0.01 USDC
 ### 3. Payment Page (Widget Simplified)
 
 **Tech Stack:**
+
 - React 18
 - TypeScript
 - Enoki SDK
@@ -875,39 +926,41 @@ FACILITATOR_FEE=10000  # 0.01 USDC
 // PaymentPage.tsx
 export function PaymentPage({ invoiceJwt, callbackUrl }) {
   const [session, setSession] = useState<zkLoginSession | null>(null);
-  const [balance, setBalance] = useState<string>('0');
+  const [balance, setBalance] = useState<string>("0");
   const [ptb, setPtb] = useState<PTBData | null>(null);
-  const [verification, setVerification] = useState<VerificationResult | null>(null);
-  
+  const [verification, setVerification] = useState<VerificationResult | null>(
+    null
+  );
+
   // 1. zkLogin session
   async function handleSignIn() {
-    const session = await enokiClient.createSession({ provider: 'google' });
+    const session = await enokiClient.createSession({ provider: "google" });
     setSession(session);
     checkBalance(session.address);
   }
-  
+
   // 2. Check balance
   async function checkBalance(address: string) {
-    const resp = await fetch('/check-balance', {
-      method: 'POST',
-      body: JSON.stringify({ address, network: 'testnet' })
+    const resp = await fetch("/check-balance", {
+      method: "POST",
+      body: JSON.stringify({ address, network: "testnet" }),
     });
     const data = await resp.json();
     setBalance(data.balance);
   }
-  
+
   // 3. Request PTB
   async function handlePay() {
-    const resp = await fetch('/settle-payment', {
-      method: 'POST',
+    const resp = await fetch("/settle-payment", {
+      method: "POST",
       body: JSON.stringify({
         buyerAddress: session.address,
-        invoiceJwt
-      })
+        invoiceJwt,
+      }),
     });
     const data = await resp.json();
     setPtb(data);
-    
+
     // 4. Verify PTB
     const result = verifyPaymentPTB(
       base64Decode(data.ptbBytes),
@@ -915,37 +968,41 @@ export function PaymentPage({ invoiceJwt, callbackUrl }) {
     );
     setVerification(result);
   }
-  
+
   // 5. Sign and submit
   async function handleSign() {
     if (!verification.pass) {
-      alert('Verification failed!');
+      alert("Verification failed!");
       return;
     }
-    
+
     const signature = await enokiClient.signTransaction(ptb.ptbBytes);
-    
-    const resp = await fetch('/submit-signature', {
-      method: 'POST',
-      body: JSON.stringify({ ...signature })
+
+    const resp = await fetch("/submit-signature", {
+      method: "POST",
+      body: JSON.stringify({ ...signature }),
     });
     const { txDigest } = await resp.json();
-    
+
     // 6. Return to merchant
     window.location.href = `${callbackUrl}?tx_digest=${txDigest}`;
   }
-  
+
   return (
     <div>
       {!session && <button onClick={handleSignIn}>Sign in with Google</button>}
-      {session && balance === '0' && <button onClick={handleFund}>Fund (demo)</button>}
-      {session && balance > '0' && !ptb && <button onClick={handlePay}>Pay</button>}
+      {session && balance === "0" && (
+        <button onClick={handleFund}>Fund (demo)</button>
+      )}
+      {session && balance > "0" && !ptb && (
+        <button onClick={handlePay}>Pay</button>
+      )}
       {ptb && verification && (
         <div>
           <InvoiceSummary invoice={parseInvoiceJwt(invoiceJwt)} />
           <VerificationDisplay result={verification} />
           <button onClick={handleSign} disabled={!verification.pass}>
-            {verification.pass ? 'Sign and Pay' : 'Verification Failed'}
+            {verification.pass ? "Sign and Pay" : "Verification Failed"}
           </button>
         </div>
       )}
@@ -960,34 +1017,34 @@ See "PTB Template and Verification" section below.
 ### 4. Demo Merchant
 
 **Simple 402 server:**
+
 ```typescript
 // demo/merchant-server.ts
-app.get('/premium-data', async (req, res) => {
-  
+app.get("/premium-data", async (req, res) => {
   // Check if paid
   const paymentId = req.query.payment_id;
-  if (paymentId && await verifyPayment(paymentId)) {
-    return res.json({ data: 'Premium content here' });
+  if (paymentId && (await verifyPayment(paymentId))) {
+    return res.json({ data: "Premium content here" });
   }
-  
+
   // Not paid, return 402
   const invoice = createInvoiceJwt({
     payment_id: generateId(),
-    amount: '100000',  // 0.1 USDC
+    amount: "100000", // 0.1 USDC
     assetType: USDC_TYPE,
     merchantRecipient: MERCHANT_ADDRESS,
-    resource: '/premium-data',
-    exp: Date.now() + 600000  // 10 min
+    resource: "/premium-data",
+    exp: Date.now() + 600000, // 10 min
   });
-  
+
   const invoiceJwt = signJwt(invoice, merchantPrivateKey);
-  
+
   res.status(402).json({
-    error: 'Payment required',
-    facilitator_url: 'https://pay402.io/pay',
-    callback_url: 'https://api.merchant.com/verify'
+    error: "Payment required",
+    facilitator_url: "https://pay402.io/pay",
+    callback_url: "https://api.merchant.com/verify",
   });
-  res.setHeader('X-X402-Invoice-JWT', invoiceJwt);
+  res.setHeader("X-X402-Invoice-JWT", invoiceJwt);
 });
 ```
 
@@ -1000,14 +1057,17 @@ app.get('/premium-data', async (req, res) => {
 **Only these commands are permitted:**
 
 1. **MergeCoins** (USDC only)
+
    - Purpose: Consolidate buyer's USDC coins
    - Constraint: All coins must be owned by buyer
 
 2. **SplitCoins** (USDC only)
+
    - Purpose: Create exact payment amount
    - Constraint: Split amount must match invoice
 
 3. **TransferObjects**
+
    - Purpose: Send payment coin to merchant
    - Constraint: Only payment coin to merchant, change back to buyer
 
@@ -1022,19 +1082,23 @@ app.get('/premium-data', async (req, res) => {
 Given invoice `(payment_id, amount, assetType, merchantRecipient, invoiceHash)`:
 
 1. **Asset Type Match**
+
    - All coin operations use `assetType` from invoice
    - No operations on other coin types
 
 2. **Exact Payment**
+
    - Exactly one transfer of `amount` to `merchantRecipient`
    - Amount must be exact (not approximate)
 
 3. **No Unauthorized Transfers**
+
    - No transfers to addresses other than:
      - `merchantRecipient` (payment)
      - `buyerAddress` (change)
 
 4. **Receipt Emission**
+
    - Exactly one `MoveCall` to `payment::emit_receipt`
    - Arguments:
      - `payment_id` matches invoice
@@ -1050,6 +1114,7 @@ Given invoice `(payment_id, amount, assetType, merchantRecipient, invoiceHash)`:
 **Reference implementation:** `widget/src/verifier.ts`
 
 **Test vectors:**
+
 ```typescript
 // PASS: Valid payment PTB
 const validPTB = {
@@ -1085,11 +1150,13 @@ verifyPaymentPTB(extraTransferPTB, invoice) // → { pass: false, reason: 'Unaut
 ### Facilitator Coin Selection
 
 **Facilitator can:**
+
 - Query buyer's USDC coins
 - Select which coins to use as inputs
 - Merge coins if needed for sufficient balance
 
 **Buyer verifier ensures:**
+
 - All selected coins are owned by buyer
 - Merge operations are USDC-only
 - Final payment amount is exact
@@ -1104,6 +1171,7 @@ This design supports efficient coin management while preventing facilitator abus
 ### On-Chain Event (R1 - Chosen for Hackathon)
 
 **Event Structure:**
+
 ```rust
 struct ReceiptEmitted has copy, drop {
     payment_id: vector<u8>,        // Unique per payment
@@ -1117,6 +1185,7 @@ struct ReceiptEmitted has copy, drop {
 ```
 
 **Why Event (not object):**
+
 - ✅ Simple merchant audit (query by payment_id)
 - ✅ Low gas cost (events cheaper than objects)
 - ✅ Automatic indexing (SUI RPC events API)
@@ -1124,6 +1193,7 @@ struct ReceiptEmitted has copy, drop {
 - ❌ Slightly more indexable (privacy trade-off accepted for hackathon)
 
 **Config Flag:**
+
 ```typescript
 // config.ts
 export const ENABLE_RECEIPT_EVENTS = process.env.ENABLE_RECEIPTS !== 'false';
@@ -1135,6 +1205,7 @@ if (ENABLE_RECEIPT_EVENTS) {
 ```
 
 **Post-Hackathon Options:**
+
 - Add optional object-based receipts (R3)
 - Implement privacy-preserving receipt ZK proofs
 - See `DESIGN_RATIONALE.md` for full comparison
@@ -1149,6 +1220,7 @@ function computeInvoiceHash(invoiceJwt: string): Uint8Array {
 ```
 
 **Why mandatory:**
+
 - Prevents "he said/she said" disputes
 - Merchant can prove exact terms
 - On-chain commitment to off-chain invoice
@@ -1163,24 +1235,29 @@ function computeInvoiceHash(invoiceJwt: string): Uint8Array {
 #### Tier 1 (Hackathon)
 
 **Buyer trusts:**
+
 - ✅ Facilitator service availability (uptime)
 - ✅ Facilitator gas sponsorship (pays SUI fees)
 - ⚠️ Facilitator web page code (verifier runs here)
 
 **Buyer does NOT trust:**
+
 - ❌ Facilitator to alter invoice terms (prevented by merchant JWT)
 - ❌ Facilitator to overcharge (prevented by verifier checking exact amount)
 - ❌ Facilitator to sign without buyer approval (buyer signs PTB)
 
 **Merchant trusts:**
+
 - ✅ SUI blockchain finality
 - ✅ On-chain receipt events
 
 **Merchant does NOT trust:**
+
 - ❌ Buyer to pay without on-chain settlement
 - ❌ Facilitator to attest payment without on-chain proof
 
 **Key Property:**
+
 > Facilitator cannot spend buyer funds without buyer signature over exact PTB bytes.
 
 #### Tier 2 (Production Hardening - Post-Hackathon)
@@ -1189,40 +1266,45 @@ function computeInvoiceHash(invoiceJwt: string): Uint8Array {
 Move verifier to buyer-controlled extension.
 
 **Buyer trusts:**
+
 - ✅ Browser extension they installed (from audited source)
 - ✅ Extension marketplace review process
 
 **Buyer does NOT trust:**
+
 - ❌ Facilitator web page (extension verifies independently)
 
 **Protocol unchanged:**
 Same invoice JWT, same PTB format, same on-chain settlement.
 
 **Messaging to Judges:**
+
 > "Today, the verifier runs in our web app. In production, the same verifier logic ships as a browser extension, moving trust to the buyer. No protocol changes needed."
 
 ### Attack Vectors and Mitigations
 
-| Attack | Mitigation |
-|--------|------------|
-| **Facilitator overcharges buyer** | Verifier checks exact amount from PTB bytes |
-| **Facilitator alters invoice** | Invoice signed by merchant (JWT) |
-| **Facilitator submits without signature** | Blockchain rejects (signature required) |
-| **Merchant falsely claims non-payment** | Receipt event on-chain (immutable) |
-| **Buyer double-spends coin** | SUI Move object ownership (atomic) |
-| **Replay attack (reuse signature)** | Nonce in PTB (SUI sequence number) |
-| **Address enumeration** | Salt service (Enoki) prevents |
-| **Loss of funds on browser clear** | Salt persistence (Enoki), same address derived |
+| Attack                                    | Mitigation                                     |
+| ----------------------------------------- | ---------------------------------------------- |
+| **Facilitator overcharges buyer**         | Verifier checks exact amount from PTB bytes    |
+| **Facilitator alters invoice**            | Invoice signed by merchant (JWT)               |
+| **Facilitator submits without signature** | Blockchain rejects (signature required)        |
+| **Merchant falsely claims non-payment**   | Receipt event on-chain (immutable)             |
+| **Buyer double-spends coin**              | SUI Move object ownership (atomic)             |
+| **Replay attack (reuse signature)**       | Nonce in PTB (SUI sequence number)             |
+| **Address enumeration**                   | Salt service (Enoki) prevents                  |
+| **Loss of funds on browser clear**        | Salt persistence (Enoki), same address derived |
 
 ### Gas Sponsorship Security
 
 **Facilitator sponsors gas:**
+
 ```typescript
 ptb.setSender(facilitatorAddress);
 ptb.setGasPayment(facilitatorGasCoins);
 ```
 
 **Constraints:**
+
 - Facilitator pays SUI for gas
 - Buyer pays USDC for payment
 - Facilitator cannot redirect buyer's USDC (verifier prevents)
@@ -1232,6 +1314,7 @@ ptb.setGasPayment(facilitatorGasCoins);
 What if buyer signs malicious PTB that drains facilitator gas?
 
 **Mitigation:**
+
 - Gas budget capped per tx (max ~0.1 SUI)
 - Facilitator can rate-limit by address
 - Verifier prevents complex PTBs (only template commands)
@@ -1243,6 +1326,7 @@ What if buyer signs malicious PTB that drains facilitator gas?
 ### Demo Script (90 Seconds)
 
 **Setup (pre-demo):**
+
 - Merchant server running
 - Facilitator backend running
 - Payment page deployed
@@ -1251,22 +1335,26 @@ What if buyer signs malicious PTB that drains facilitator gas?
 **Live Demo:**
 
 **[0:00-0:15] Problem Setup**
+
 - "Here's a premium API endpoint that costs $0.10 per request."
 - Browser: `GET /premium-data` → 402 Payment Required
 - "Traditional crypto: install wallet, buy crypto, manage keys. Too much friction."
 
 **[0:15-0:30] zkLogin (No Wallet)**
+
 - Click "Sign in with Google"
 - Show Google OAuth popup → auto-close
 - "Now I have a blockchain address, no wallet installed."
 - Show: Address, Balance (0 USDC)
 
 **[0:30-0:45] Funding (First Payment)**
+
 - Click "Fund (demo faucet)"
 - Show: TX digest, Balance (1.0 USDC)
 - "In production, this is a credit card onramp."
 
 **[0:45-1:00] Payment with Verification**
+
 - Click "Pay 0.1 USDC"
 - Show invoice terms (from merchant JWT)
 - Show PTB verification results:
@@ -1277,12 +1365,14 @@ What if buyer signs malicious PTB that drains facilitator gas?
 - Click "Sign and Pay"
 
 **[1:00-1:15] Merchant Verification**
+
 - Browser redirects to merchant
 - Merchant shows "Verifying payment..."
 - Show receipt event on-chain (payment_id, invoice_hash, amounts)
 - Content delivered: "Here's your premium data"
 
 **[1:15-1:30] Second Payment (Persistence)**
+
 - "Now let's pay again to show persistence."
 - Request same endpoint → 402
 - Pay page: Balance 0.9 USDC (no funding needed!)
@@ -1290,6 +1380,7 @@ What if buyer signs malicious PTB that drains facilitator gas?
 - "Same address, same balance, no re-setup."
 
 **Optional: Attack Demo (Nice-to-Have)**
+
 - Toggle "malicious facilitator" mode
 - PTB shows amount 10x higher
 - Verifier: ❌ Amount mismatch
@@ -1313,6 +1404,7 @@ What if buyer signs malicious PTB that drains facilitator gas?
 **Total:** 48 hours (2 days)
 
 **Breakdown:**
+
 - Move contract: ✅ Complete (13/13 tests passing)
 - Facilitator backend: ✅ Complete (3 endpoints working)
 - Payment page: 16 hours (zkLogin + verifier + UI)
@@ -1331,11 +1423,13 @@ What if buyer signs malicious PTB that drains facilitator gas?
 ### Dependencies
 
 **Required:**
+
 - Enoki SDK (zkLogin)
 - @mysten/sui (v2.1.0+)
 - SUI testnet/devnet RPC
 
 **Optional (deferred):**
+
 - CCTP (cross-chain)
 - Privacy ZK proofs
 - Wallet Standard integration
@@ -1343,11 +1437,13 @@ What if buyer signs malicious PTB that drains facilitator gas?
 ### Browser Compatibility
 
 **Target:**
+
 - Chrome/Edge (primary)
 - Firefox (secondary)
 - Safari (if time permits)
 
 **Required APIs:**
+
 - Fetch API
 - Web Crypto API (SHA-256)
 - LocalStorage (session caching)
@@ -1399,6 +1495,7 @@ tmux layout (recommended):
 ```
 
 **Configuration:**
+
 ```bash
 # facilitator/.env.local
 SUI_NETWORK=localnet
@@ -1418,10 +1515,11 @@ VITE_FACILITATOR_URL=http://localhost:3001
 ```
 
 **Flow test:**
+
 1. Open http://localhost:3000 in browser
 2. Click "Get Data ($0.01)"
 3. Browser redirects to http://localhost:5173?invoice_jwt=...&callback=http://localhost:3000/api/verify
-4. Payment page calls http://localhost:3001/* (facilitator)
+4. Payment page calls http://localhost:3001/\* (facilitator)
 5. After payment, redirects to http://localhost:3000/api/verify?payment_id=...&tx_digest=...
 6. Merchant verifies, displays content
 
@@ -1437,6 +1535,7 @@ Change:
 ```
 
 **Commands:**
+
 ```bash
 # Deploy to testnet
 cd move/payment
@@ -1484,6 +1583,7 @@ Vercel deployment (single project):
 ```
 
 **Directory structure for Vercel:**
+
 ```
 Pay402/
 ├── demo/                    # Merchant demo
@@ -1507,6 +1607,7 @@ Pay402/
 ```
 
 **Configuration:**
+
 ```bash
 # .env.production (Vercel environment variables)
 SUI_NETWORK=testnet
@@ -1517,6 +1618,7 @@ PAYMENT_PAGE_URL=https://pay402.io/pay
 ```
 
 **Vercel setup:**
+
 ```bash
 # Install Vercel CLI
 npm i -g vercel
@@ -1531,6 +1633,7 @@ vercel env add SUI_NETWORK
 ```
 
 **Alternative (separate subdomains):**
+
 ```
 https://demo.pay402.io    → merchant demo
 https://pay.pay402.io     → payment page
@@ -1539,11 +1642,11 @@ https://api.pay402.io     → facilitator backend
 
 ### URL Structure Summary
 
-| Phase | Merchant | Payment Page | Facilitator | Blockchain |
-|-------|----------|--------------|-------------|------------|
-| **Local** | :3000 | :5173 | :3001 | localhost:9000 (localnet) |
-| **Testnet Test** | :3000 | :5173 | :3001 | testnet.sui.io (testnet) |
-| **Deployed** | pay402.io/demo | pay402.io/pay | pay402.io/api | testnet.sui.io (testnet) |
+| Phase            | Merchant       | Payment Page  | Facilitator   | Blockchain                |
+| ---------------- | -------------- | ------------- | ------------- | ------------------------- |
+| **Local**        | :3000          | :5173         | :3001         | localhost:9000 (localnet) |
+| **Testnet Test** | :3000          | :5173         | :3001         | testnet.sui.io (testnet)  |
+| **Deployed**     | pay402.io/demo | pay402.io/pay | pay402.io/api | testnet.sui.io (testnet)  |
 
 ### CORS Configuration
 
@@ -1553,15 +1656,17 @@ https://api.pay402.io     → facilitator backend
 
 ```typescript
 // facilitator/src/index.ts
-app.use(cors({
-  origin: [
-    'https://pay402.io',
-    'https://pay402.vercel.app',
-    'http://localhost:5173', // Dev
-    'http://localhost:3000'  // Dev
-  ],
-  credentials: true
-}));
+app.use(
+  cors({
+    origin: [
+      "https://pay402.io",
+      "https://pay402.vercel.app",
+      "http://localhost:5173", // Dev
+      "http://localhost:3000", // Dev
+    ],
+    credentials: true,
+  })
+);
 ```
 
 ### Environment Detection
@@ -1569,10 +1674,10 @@ app.use(cors({
 ```typescript
 // shared/config.ts
 export const ENV = {
-  isDev: process.env.NODE_ENV === 'development',
-  facilitatorUrl: process.env.FACILITATOR_URL || 'http://localhost:3001',
-  paymentPageUrl: process.env.PAYMENT_PAGE_URL || 'http://localhost:5173',
-  merchantUrl: process.env.MERCHANT_URL || 'http://localhost:3000'
+  isDev: process.env.NODE_ENV === "development",
+  facilitatorUrl: process.env.FACILITATOR_URL || "http://localhost:3001",
+  paymentPageUrl: process.env.PAYMENT_PAGE_URL || "http://localhost:5173",
+  merchantUrl: process.env.MERCHANT_URL || "http://localhost:3000",
 };
 ```
 
@@ -1583,40 +1688,49 @@ export const ENV = {
 ### Post-Hackathon Features
 
 ❌ **Full Embedded Widget**
+
 - Hackathon: Payment page only (standalone URL)
 - Post: Widget embedded in merchant pages (like Stripe.js)
 
 ❌ **Browser Extension (Tier 2 Verifier)**
+
 - Hackathon: Verifier in web page (Tier 1)
 - Post: Extension for buyer-controlled verification
 
 ❌ **Cross-Chain (CCTP)**
+
 - Hackathon: SUI-only
 - Post: Bridge USDC from Ethereum/Base/Solana
 
 ❌ **Privacy Enhancements**
+
 - Hackathon: Public receipts
 - Post: ZK receipt proofs, coin mixing
 
 ❌ **On-Chain `pay_exact` Function**
+
 - Hackathon: Template verification in client
 - Post: Simplify with single Move entrypoint
 
 ❌ **Production Onramps**
+
 - Hackathon: Demo faucet
 - Post: Credit card, bank transfer, Circle USDC faucet
 
 ❌ **Multi-Merchant Routing**
+
 - Hackathon: One facilitator, any merchant
 - Post: Facilitator marketplace, routing
 
 ❌ **Agentic Payments (AI Agents)**
+
 - Hackathon: Human buyers only
 - Post: API keys for AI agents
 
 ### Assumptions
 
 ✅ **Accepted for Hackathon:**
+
 - Buyer trusts facilitator web page (Tier 1)
 - Public receipt events (no privacy)
 - Testnet/devnet only (no mainnet)
@@ -1630,6 +1744,7 @@ export const ENV = {
 This specification is **locked and ready for implementation**.
 
 **Next Steps:**
+
 1. Implement payment page (React + Enoki + verifier)
 2. Implement demo merchant (simple 402 server)
 3. Integration testing (end-to-end flow)

@@ -9,9 +9,9 @@
 
 ## Testing Levels
 
-**Move:** payment_tests.move → `sui move test` in move/payment/
-**TS Facilitator:** src/**tests**/_.test.ts → `npm test` (vitest, Node.js)
-**TS Widget:** src/lib/_.test.ts → `npm test` (vitest + jsdom for browser)
+**Move:** payment*tests.move → `sui move test` in move/payment/
+**TS Facilitator:** src/**tests**/*.test.ts → `npm test` (vitest, Node.js)
+**TS Widget:** src/lib/\_.test.ts → `npm test` (vitest + jsdom for browser)
 **Integration:** scripts/smoke-test.sh (all services)
 
 ## Tech Stack (verify in package.json first!)
@@ -30,6 +30,7 @@
 ## Debugging Protocol: CHECK LOGS FIRST
 
 **MANDATORY SEQUENCE when debugging:**
+
 1. Read logs BEFORE guessing (facilitator: /tmp/facilitator.log or terminal)
 2. Read FULL error context (stack, request/response, data shapes)
 3. Inspect actual API responses in logs before changing code

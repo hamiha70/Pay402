@@ -24,7 +24,7 @@ describe('Blockchain State Consistency', () => {
   beforeAll(async () => {
     client = new SuiGrpcClient({
       network: 'localnet',
-      baseUrl: 'http://127.0.0.1:44340', // Using proxy (your current setup)
+      baseUrl: 'http://127.0.0.1:9000', // Direct connection (proxy doesn't support gRPC)
     });
     
     // Get funded sender address
@@ -38,7 +38,7 @@ describe('Blockchain State Consistency', () => {
     console.log('\nTest configuration:');
     console.log('  Sender:', senderAddress);
     console.log('  Recipient:', recipientAddress);
-    console.log('  Using proxy:', 'http://127.0.0.1:44340');
+    console.log('  RPC URL:', 'http://127.0.0.1:9000 (direct)');
   });
 
   it('should handle consecutive state-modifying operations without interference', async () => {
@@ -103,7 +103,7 @@ describe('Blockchain State Consistency', () => {
     console.log(`   - Built 2 consecutive transactions`);
     console.log(`   - Queried state 3 times`);
     console.log(`   - No interference detected`);
-    console.log(`   - Proxy handled read-after-write correctly`);
+    console.log(`   - Consecutive operations are safe`);
   });
 
   it('should query gas objects consistently during rapid PTB building', async () => {

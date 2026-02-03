@@ -123,35 +123,41 @@ export async function buildPTBController(req: Request, res: Response): Promise<v
     // Set sender (buyer)
     tx.setSender(buyerAddress);
     
-    // Use gas coin as the source (buyer pays with SUI)
-    // Split the required amounts from gas coin
-    const [merchantCoin, feeCoin] = tx.splitCoins(tx.gas, [
-      tx.pure.u64(amountBigInt),
-      tx.pure.u64(feeBigInt),
-    ]);
+    // Find suitable coin (for now, use first coin with sufficient balance)
+    // TODO: Implement coin merging for production
+    const suitableCoin = coins.objects.find(coin => BigInt(coin.balance) >= totalRequired);
     
-    // Transfer to merchant
-    tx.transferObjects([merchantCoin], invoice.merchantRecipient);
+    if (!suitableCoin) {
+      res.status(400).json({
+        error: 'No single coin with sufficient balance',
+        required: totalRequired.toString(),
+        available: totalBalance.toString(),
+        note: 'Coin merging not yet implemented - need single USDC coin object',
+      });
+      return;
+    }
     
-    // Transfer fee to facilitator
-    tx.transferObjects([feeCoin], invoice.facilitatorRecipient);
+    // Convert payment ID (nonce) to bytes
+    const paymentIdBytes = Array.from(Buffer.from(invoice.nonce, 'utf-8'));
     
-    // TODO: Call settle_payment on Move contract to emit receipt event
-    // TEMPORARILY DISABLED: Function signature mismatch needs fixing
-    // Move contract expects: settle_payment<T>(buyer_coin, amount, merchant, fee, payment_id, clock)
-    // 
-    // tx.moveCall({
-    //   target: `${config.packageId}::payment::settle_payment`,
-    //   arguments: [
-    //     tx.pure.string(invoice.nonce),
-    //     tx.pure.u64(invoice.amount),
-    //     tx.pure.address(invoice.merchantRecipient),
-    //     tx.pure.u64(invoice.facilitatorFee),
-    //     tx.pure.address(invoice.facilitatorRecipient),
-    //     tx.pure.string(invoiceJWT),
-    //     tx.object(CLOCK_OBJECT_ID),
-    //   ],
-    // });
+    // Call settle_payment<T> Move function
+    // This will:
+    // 1. Split merchant amount from buyer's coin
+    // 2. Split facilitator fee from buyer's coin  
+    // 3. Transfer both amounts atomically
+    // 4. Emit ReceiptEmitted event
+    tx.moveCall({
+      target: `${config.packageId}::payment::settle_payment`,
+      typeArguments: [invoice.coinType],
+      arguments: [
+        tx.object(suitableCoin.objectId),          // &mut Coin<T> (buyer's USDC)
+        tx.pure.u64(amountBigInt),                 // amount: u64
+        tx.pure.address(invoice.merchantRecipient), // merchant: address
+        tx.pure.u64(feeBigInt),                    // facilitator_fee: u64
+        tx.pure.vector('u8', paymentIdBytes),      // payment_id: vector<u8>
+        tx.object(CLOCK_OBJECT_ID),                // clock: &Clock
+      ],
+    });
     
     // Set gas budget (facilitator will sponsor)
     tx.setGasBudget(100000000);

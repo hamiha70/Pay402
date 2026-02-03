@@ -4,6 +4,7 @@ import { healthController } from './controllers/health.js';
 import { checkBalanceController } from './controllers/balance.js';
 import { settlePaymentController } from './controllers/payment.js';
 import { buildPTBController } from './controllers/build-ptb.js';
+import { submitPaymentController } from './controllers/submit-payment.js';
 import { fundController } from './controllers/fund.js';
 
 const app: Express = express();
@@ -47,7 +48,8 @@ app.get('/', (req, res) => {
       'GET /health': 'Health check',
       'POST /check-balance': 'Check buyer USDC balance',
       'POST /build-ptb': 'Build unsigned PTB from invoice JWT',
-      'POST /settle-payment': 'Submit signed payment transaction',
+      'POST /submit-payment': 'Submit signed PTB (optimistic or wait mode)',
+      'POST /settle-payment': '[LEGACY] Direct settlement (bypasses buyer signature)',
       'POST /fund': 'Fund wallet with test USDC (dev only)',
     },
     docs: 'See facilitator/SETUP.md for API documentation',
@@ -57,7 +59,8 @@ app.get('/', (req, res) => {
 app.get('/health', healthController);
 app.post('/check-balance', checkBalanceController);
 app.post('/build-ptb', buildPTBController);
-app.post('/settle-payment', settlePaymentController);
+app.post('/submit-payment', submitPaymentController);  // NEW: Accepts signed PTB
+app.post('/settle-payment', settlePaymentController);   // LEGACY: Direct settlement
 app.post('/fund', fundController);
 
 // 404 handler

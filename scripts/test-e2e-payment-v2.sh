@@ -32,7 +32,7 @@ echo
 
 echo -e "${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
 echo -e "${BLUE}  Pay402 End-to-End Payment Flow Test (v2)${NC}"
-echo -e "${BLUE}  Two isolated runs: Optimistic + Wait modes${NC}"
+echo -e "${BLUE}  Two isolated runs: Optimistic + Pessimistic modes${NC}"
 echo -e "${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
 echo
 
@@ -186,9 +186,9 @@ run_payment_flow() {
         OPT_TOTAL=$FLOW_LAT
         OPT_HTTP=$HTTP_LAT
     else
-        WAIT_DIGEST=$DIGEST
-        WAIT_TOTAL=$FLOW_LAT
-        WAIT_HTTP=$HTTP_LAT
+        PESS_DIGEST=$DIGEST
+        PESS_TOTAL=$FLOW_LAT
+        PESS_HTTP=$HTTP_LAT
     fi
 }
 
@@ -202,9 +202,9 @@ sleep 2
 echo
 
 #############################################################################
-# RUN 2: WAIT MODE
+# RUN 2: PESSIMISTIC MODE
 #############################################################################
-run_payment_flow "wait" "2"
+run_payment_flow "pessimistic" "2"
 
 #############################################################################
 # SUMMARY
@@ -220,10 +220,10 @@ echo -e "    Total flow: ${OPT_TOTAL}ms"
 echo -e "    HTTP submit: ${OPT_HTTP}ms"
 echo -e "    Digest: ${OPT_DIGEST}"
 echo
-echo -e "  Wait Mode:"
-echo -e "    Total flow: ${WAIT_TOTAL}ms"
-echo -e "    HTTP submit: ${WAIT_HTTP}ms"
-echo -e "    Digest: ${WAIT_DIGEST}"
+echo -e "  Pessimistic Mode:"
+echo -e "    Total flow: ${PESS_TOTAL}ms"
+echo -e "    HTTP submit: ${PESS_HTTP}ms"
+echo -e "    Digest: ${PESS_DIGEST}"
 echo
 echo -e "${YELLOW}NOTE: Localnet vs Testnet${NC}"
 echo -e "  - Localnet: Both modes ~200-300ms (instant finality)"

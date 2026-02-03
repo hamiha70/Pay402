@@ -556,7 +556,7 @@ return {
 
 ---
 
-### Settlement Modes: Optimistic vs Wait-for-Finality
+### Settlement Modes: Optimistic vs Pessimistic
 
 **CRITICAL ARCHITECTURAL DECISION:** How long does the user wait after signing?
 
@@ -745,7 +745,7 @@ async function submitPaymentOptimistic(req, res) {
 
 ---
 
-#### Mode 2: Wait-for-Finality (Recommended for High-Value/Security)
+#### Mode 2: Pessimistic Settlement (Recommended for High-Value/Security)
 
 **Business Model:**
 
@@ -846,16 +846,131 @@ async function submitPaymentWait(req, res) {
 
 #### Comparison Table
 
-| Aspect                    | TRUE Optimistic                    | Wait-for-Finality         |
-| ------------------------- | ---------------------------------- | ------------------------- |
-| **User Latency**          | ~50ms ✅✅                         | ~700ms ⚠️                 |
-| **Merchant Delivery**     | Immediate (before settlement) ✅   | After confirmation ⚠️     |
-| **Facilitator Risk**      | HIGH (must pay if fails) ⚠️        | ZERO (already settled) ✅ |
-| **Capital Requirements**  | Reserve pool needed ⚠️             | None ✅                   |
-| **Pre-validation**        | Critical (balance, sig, PTB) ⚠️    | Optional ✅               |
-| **Merchant Complexity**   | Webhook for digest notification ⚠️ | Immediate receipt ✅      |
-| **Competitive Advantage** | Stripe-like instant UX ✅          | Standard crypto UX ⚠️     |
-| **Best For**              | Low-value, high-volume ✅          | High-value, low-risk ✅   |
+| Aspect                     | Optimistic                        | Pessimistic              |
+| -------------------------- | --------------------------------- | ------------------------ |
+| **User Latency**           | ~50-100ms ✅✅                    | ~550-600ms ⚠️            |
+| **Merchant Delivery**      | Immediate (before finality) ✅    | After confirmation ⚠️    |
+| **Facilitator Risk**       | LOW (front-running only) ⚠️       | ZERO (already settled) ✅ |
+| **Capital Requirements**   | Small reserve pool ⚠️             | None ✅                  |
+| **Pre-validation**         | Critical (balance, sig, PTB) ✅   | Critical (same) ✅       |
+| **Submit Timing**          | Before response ✅                | Before response ✅       |
+| **Finality Wait**          | No (return after submit) ✅       | Yes (blocks ~500ms) ⚠️   |
+| **Response Format**        | `{ safeToDeliver, digest }` ✅    | `{ safeToDeliver, digest, receipt }` ✅ |
+| **Merchant Blockchain**    | NEVER (facilitator abstracts) ✅  | NEVER (facilitator abstracts) ✅ |
+| **Merchant Complexity**    | Trust facilitator signal ✅       | Trust facilitator signal ✅ |
+| **Competitive Advantage**  | Stripe-like instant UX ✅         | Standard crypto UX ⚠️    |
+| **Best For**               | Low-value, high-volume ✅         | High-value, low-risk ✅  |
+
+---
+
+#### Merchant Integration (Unified Model)
+
+**KEY PRINCIPLE: Merchant NEVER interacts with blockchain directly**
+
+### **Facilitator's Role:**
+```
+Facilitator = Blockchain abstraction layer
+- Validates PTB
+- Submits to blockchain
+- Extracts receipts (if pessimistic)
+- Provides simple HTTP API to merchant
+```
+
+### **Response Format (Both Modes):**
+
+```json
+// OPTIMISTIC:
+{
+  "success": true,
+  "mode": "optimistic",
+  "safeToDeliver": true,
+  "digest": "AbCd1234...",
+  "receipt": null,  // Not available (not finalized yet)
+  "httpLatency": "60ms"
+}
+
+// PESSIMISTIC:
+{
+  "success": true,
+  "mode": "pessimistic",
+  "safeToDeliver": true,
+  "digest": "AbCd1234...",
+  "receipt": {
+    "paymentId": "pmt_abc123",
+    "buyer": "0xbuyer...",
+    "merchant": "0xmerch...",
+    "amount": "100000",
+    "timestamp": 1738396800000
+  },
+  "httpLatency": "600ms"
+}
+```
+
+### **Redirect URL Format:**
+
+```
+OPTIMISTIC:
+/verify?digest=AbCd1234&mode=optimistic&safe=true
+
+PESSIMISTIC:
+/verify?digest=AbCd1234&mode=pessimistic&safe=true&receipt={base64}
+```
+
+### **Merchant Verification Code (NO BLOCKCHAIN!):**
+
+```typescript
+// Merchant trusts facilitator in BOTH cases
+function verifyPayment(searchParams: URLSearchParams) {
+  const safe = searchParams.get('safe') === 'true';
+  const digest = searchParams.get('digest');
+  const mode = searchParams.get('mode');
+  
+  if (!safe || !digest) {
+    throw new Error('Invalid payment proof');
+  }
+  
+  // Merchant trusts facilitator's "safe to deliver" signal
+  // NO blockchain query needed for delivery decision!
+  
+  if (mode === 'pessimistic') {
+    // Bonus: Receipt already in URL (for logging/accounting)
+    const receipt = JSON.parse(atob(searchParams.get('receipt')));
+    logPayment({ digest, receipt, verified: true });
+    return { verified: true, receipt };
+  } else {
+    // Optimistic: Log digest for audit trail
+    logPayment({ digest, mode: 'optimistic', trusted: true });
+    return { verified: true, digest };
+  }
+}
+
+// Deliver content IMMEDIATELY in both cases
+deliverContent();
+```
+
+### **Auditability (Later, If Needed):**
+
+```typescript
+// Weeks/months later: Dispute resolution
+// Merchant can NOW query blockchain with saved digest
+
+// Option 1: Query facilitator API (easiest)
+const proof = await fetch(`/payment-status/${savedDigest}`);
+
+// Option 2: Query blockchain directly (trustless)
+const tx = await suiClient.getTransactionBlock({ digest: savedDigest });
+const receipt = tx.events.find(e => e.type.includes('ReceiptEmitted'));
+
+// Proof: Receipt exists on-chain = customer paid ✅
+```
+
+**Key Benefits:**
+- ✅ Merchant can be static HTML (no backend needed)
+- ✅ No blockchain SDK required
+- ✅ No RPC endpoints to manage
+- ✅ Same code for both modes (just checks `mode` flag)
+- ✅ Facilitator handles all blockchain complexity
+- ✅ Audit trail preserved (digest on-chain forever)
 
 ---
 

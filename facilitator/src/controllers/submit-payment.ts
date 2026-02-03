@@ -143,8 +143,9 @@ export async function submitPaymentController(req: Request, res: Response): Prom
       const submitLatency = Date.now() - submitStart;
       const digest = result.$kind === 'Transaction' ? result.Transaction.digest : null;
       
-      // Step 3: IMMEDIATE "safe to deliver" (BEFORE waiting for finality)
+      // Step 3: "SAFE TO DELIVER" signal (BEFORE waiting for finality)
       // Merchant trusts facilitator's validation + immediate submit
+      // Facilitator guarantees payment (takes risk if settlement fails)
       const httpLatency = Date.now() - startTime;
       
       res.json({
@@ -152,10 +153,10 @@ export async function submitPaymentController(req: Request, res: Response): Prom
         mode: 'optimistic',
         safeToDeliver: true,
         digest,  // Available immediately after submit
+        receipt: null,  // Not available yet (transaction not finalized)
         validateLatency: `${validateLatency}ms`,
         submitLatency: `${submitLatency}ms`,
         httpLatency: `${httpLatency}ms`,
-        note: 'Transaction submitted - merchant can deliver (finality in background)',
         timestamp: Date.now(),
       });
       
@@ -202,13 +203,13 @@ export async function submitPaymentController(req: Request, res: Response): Prom
       return;
     }
     
-    // ===== MODE 2: WAIT-FOR-FINALITY (GUARANTEED) =====
-    if (settlementMode === 'wait') {
-      logger.info('Using WAIT-FOR-FINALITY settlement mode');
+    // ===== MODE 2: PESSIMISTIC SETTLEMENT (GUARANTEED) =====
+    if (settlementMode === 'pessimistic') {
+      logger.info('Using PESSIMISTIC settlement mode');
       
       const submitStart = Date.now();
       
-      // WAIT: Submit and wait for finality with full effects
+      // PESSIMISTIC: Submit and wait for finality with full effects
       // This is the INTENDED behavior - block until confirmed
       const result = await client.executeTransaction({
         transaction: txBytes,
@@ -258,13 +259,14 @@ export async function submitPaymentController(req: Request, res: Response): Prom
       
       const receipt = receiptEvent?.parsedJson as ReceiptEvent | undefined;
       
-      // Return with confirmed receipt
+      // Return "SAFE TO DELIVER" with confirmed receipt
+      // Merchant trusts facilitator (transaction already finalized)
+      // Zero risk: settlement already confirmed on-chain
       res.json({
         success: true,
-        mode: 'wait',
+        mode: 'pessimistic',
+        safeToDeliver: true,  // Confirmed on-chain (no risk)
         digest,
-        submitLatency: `${submitLatency}ms`,  // Time to finality + extract receipt
-        httpLatency: `${httpLatency}ms`,      // Total HTTP round-trip
         receipt: receipt ? {
           paymentId: receipt.payment_id,
           buyer: receipt.buyer,
@@ -272,11 +274,12 @@ export async function submitPaymentController(req: Request, res: Response): Prom
           amount: receipt.amount,
           timestamp: receipt.timestamp,
         } : null,
-        status: 'confirmed',
+        submitLatency: `${submitLatency}ms`,  // Time to finality + extract receipt
+        httpLatency: `${httpLatency}ms`,      // Total HTTP round-trip
         timestamp: Date.now(),
       });
       
-      logger.info('=== SUBMIT PAYMENT SUCCESS (WAIT) ===', {
+      logger.info('=== SUBMIT PAYMENT SUCCESS (PESSIMISTIC) ===', {
         submitLatency: `${submitLatency}ms`,
         httpLatency: `${httpLatency}ms`,
         hasReceipt: !!receipt
@@ -287,7 +290,7 @@ export async function submitPaymentController(req: Request, res: Response): Prom
     // Invalid mode
     res.status(400).json({
       error: 'Invalid settlement mode',
-      validModes: ['optimistic', 'wait'],
+      validModes: ['optimistic', 'pessimistic'],
       provided: settlementMode,
     });
     

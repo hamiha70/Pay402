@@ -40,8 +40,8 @@ interface ReceiptEvent {
  * Submit buyer-signed PTB to blockchain
  * 
  * Two settlement modes:
- * 1. Optimistic: Return digest immediately (~500ms UX)
- * 2. Pessimistic: Block until confirmed (~500-700ms UX)
+ * 1. Optimistic: Return digest immediately (~10-50ms UX, facilitator guarantees)
+ * 2. Pessimistic: Block until confirmed (~150-800ms UX, zero risk)
  */
 export async function submitPaymentController(req: Request, res: Response): Promise<void> {
   const startTime = Date.now();

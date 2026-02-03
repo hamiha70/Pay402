@@ -230,7 +230,11 @@ export async function buildPTBController(req: Request, res: Response): Promise<v
         tx.pure.address(invoice.merchantRecipient), // merchant: address
         tx.pure.u64(feeBigInt),                    // facilitator_fee: u64
         tx.pure.vector('u8', paymentIdBytes),      // payment_id: vector<u8>
-        tx.object(CLOCK_OBJECT_ID),                // clock: &Clock
+        tx.sharedObjectRef({                       // clock: &Clock (immutable shared object)
+          objectId: CLOCK_OBJECT_ID,
+          initialSharedVersion: 1,
+          mutable: false,
+        }),
       ],
     });
     

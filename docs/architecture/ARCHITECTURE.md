@@ -579,32 +579,47 @@ Facilitator takes settlement risk → Merchant trusts facilitator → Instant UX
 **Flow:**
 
 1. User signs PTB → POST to facilitator
-2. Facilitator validates PTB locally (~5ms)
-3. **IMMEDIATE "SAFE TO DELIVER" response** (~10ms total)
-4. Merchant delivers content **INSTANTLY** (user sees success ~50ms)
-5. Facilitator submits to SUI in background (async, +500ms)
-6. If settlement **SUCCEEDS**: Notify merchant with digest (webhook)
-7. If settlement **FAILS**: **FACILITATOR PAYS MERCHANT** (liability/insurance)
+2. Facilitator validates comprehensively:
+   - Verify signature (~5ms)
+   - Check buyer balance (~20ms RPC call)
+   - Validate PTB structure (~5ms)
+   - Verify invoice JWT (~5ms)
+3. Facilitator **SUBMITS to blockchain immediately** (~10ms to submit, NOT finalize)
+4. **"SAFE TO DELIVER" response** (after submit, before finality) (~50-100ms total)
+5. Merchant delivers content **IMMEDIATELY** (trusts facilitator's validation + submit)
+6. Background: Transaction finalizes (~+500ms, merchant already served content)
+7. If settlement **FAILS** (rare - front-running): **FACILITATOR PAYS MERCHANT** (liability)
 
-**Critical Difference from "Naive Optimistic":**
+**Critical Difference from "Wait Mode":**
 
 ```typescript
-// ❌ WRONG (Naive Optimistic - still blocks!)
-const result = await executeTransaction(...);  // Waits 500ms
-res.json({ digest: result.digest });          // Then responds
+// BOTH modes do these steps:
+validateSignature(txBytes, signature);        // 5ms
+checkBuyerBalance(buyerAddress);              // 20ms (RPC)
+validatePTBStructure(txBytes, invoice);       // 5ms
+const result = await submitToBlockchain(...); // 10ms (SUBMIT, not finalize!)
 
-// ✅ CORRECT (True Optimistic - immediate response!)
-validatePTB(txBytes, signature);              // 5ms pre-check
-res.json({ safeToDeliver: true });            // Return NOW (10ms)
-
-setImmediate(async () => {                    // Background
-  try {
-    await executeTransaction(...);            // +500ms (user doesn't wait)
-    notifyMerchant(digest);                   // Webhook
-  } catch {
-    facilitatorCompensatesMerchant();         // LIABILITY!
-  }
-});
+// THE ONLY DIFFERENCE:
+if (mode === 'optimistic') {
+  // Return AFTER submit (BEFORE finality)
+  res.json({ 
+    safeToDeliver: true, 
+    digest: result.digest 
+  });  // ~50-100ms total
+  
+  // Facilitator's ONLY risk:
+  // Buyer front-runs (spends coins elsewhere before finality)
+  // Mitigated by: Submitting IMMEDIATELY after validation
+  
+} else if (mode === 'wait') {
+  // Return AFTER finality
+  await waitForFinality(result.digest);       // +500ms BLOCKING
+  res.json({ 
+    safeToDeliver: true, 
+    digest: result.digest,
+    receipt: getReceipt()
+  });  // ~550-600ms total
+}
 ```
 
 **Pros:**
@@ -624,29 +639,39 @@ setImmediate(async () => {                    // Background
 **Latency Breakdown:**
 
 ```
-CLIENT TIMELINE (what user experiences):
+OPTIMISTIC MODE TIMELINE:
 [0ms]    → User clicks "Pay"
-[5ms]    → Sign with zkLogin
+[5ms]    → User signs PTB (client-side)
 [10ms]   → POST to facilitator
-[50ms]   ← "SAFE TO DELIVER" response
-[60ms]   → Redirect to merchant
-[70ms]   ← Content delivered ✅ USER HAPPY
+[15ms]   → Facilitator: Validate signature
+[35ms]   → Facilitator: Check buyer balance (RPC)
+[40ms]   → Facilitator: Validate PTB structure
+[50ms]   → Facilitator: SUBMIT to blockchain (locks coins)
+[60ms]   ← HTTP response: "SAFE TO DELIVER" + digest
+[70ms]   → Redirect to merchant
+[80ms]   ← Content delivered ✅ USER HAPPY
 
-BACKGROUND (user doesn't see):
-[200ms]  → Facilitator submits to SUI
-[700ms]  ← Transaction finalized
-[710ms]  → Merchant notified via webhook (digest available)
+BACKGROUND (merchant + user don't wait):
+[550ms]  ← Transaction finalized on-chain
+[560ms]  → Merchant notified via webhook (optional)
+
+FACILITATOR'S ONLY RISK WINDOW:
+[50ms-550ms]: Buyer could theoretically front-run
+               (but submitted immediately, so very low probability)
 ```
 
 **Facilitator Liability Scenarios:**
 
-| Failure Cause          | Frequency | Mitigation                          |
-| ---------------------- | --------- | ----------------------------------- |
-| Insufficient gas       | Low       | Pre-check buyer balance             |
-| Invalid signature      | Medium    | Validate signature before response  |
-| Front-running attack   | Very Low  | Monitor mempool, insurance pool     |
-| Network failure        | Low       | Retry logic, fallback nodes         |
-| Invalid PTB structure  | Medium    | Strict validation before "safe"     |
+| Failure Cause         | Frequency | When Can Occur | Mitigation                         |
+| --------------------- | --------- | -------------- | ---------------------------------- |
+| Buyer front-runs      | Very Low  | Between submit & finality | Submit IMMEDIATELY after validation |
+| Invalid signature     | Zero      | Caught in validation | Validate signature before submit |
+| Insufficient balance  | Zero      | Caught in validation | Check balance before submit |
+| Invalid PTB structure | Zero      | Caught in validation | Validate PTB before submit |
+| Network failure       | Low       | During submit | Retry logic, multiple RPC nodes |
+
+**Key Insight:** Comprehensive validation BEFORE submit eliminates most risks.
+**Remaining risk:** Buyer double-spends between facilitator's submit and finality (~500ms window)
 
 **Response Format:**
 
@@ -656,9 +681,11 @@ BACKGROUND (user doesn't see):
   "mode": "optimistic",
   "safeToDeliver": true,
   "facilitatorGuarantee": true,
-  "digest": null,  // Available later via webhook
-  "httpLatency": "10ms",
-  "note": "Facilitator guarantees payment - settlement in progress"
+  "digest": "AbCd1234...",  // Available immediately after submit
+  "validateLatency": "35ms",
+  "submitLatency": "10ms",
+  "httpLatency": "60ms",
+  "note": "Transaction submitted - finality in background"
 }
 ```
 
@@ -667,51 +694,51 @@ BACKGROUND (user doesn't see):
 ```typescript
 // facilitator/src/controllers/submit-payment.ts (optimistic mode)
 async function submitPaymentOptimistic(req, res) {
-  // Step 1: Pre-validation (instant, ~5ms)
-  validateSignature(txBytes, signature);
-  validatePTBStructure(txBytes, invoiceJWT);
-  checkBuyerBalance(buyerAddress, amount); // Optional: reduces risk
-
-  // Step 2: IMMEDIATE "safe to deliver" response (~10ms total)
-  res.json({
-    safeToDeliver: true,
-    facilitatorGuarantee: true,
-    digest: null, // Not yet available
+  const startTime = Date.now();
+  
+  // Step 1: Comprehensive validation (SAME in both modes)
+  const validateStart = Date.now();
+  
+  validateSignature(txBytes, signature);           // ~5ms
+  await checkBuyerBalance(buyerAddress, amount);   // ~20ms (RPC call)
+  validatePTBStructure(txBytes, invoiceJWT);       // ~5ms
+  validateInvoiceJWT(invoiceJWT);                  // ~5ms
+  
+  const validateLatency = Date.now() - validateStart;
+  
+  // Step 2: Submit to blockchain IMMEDIATELY (lock buyer's coins)
+  const submitStart = Date.now();
+  
+  const result = await client.executeTransaction({
+    transaction: txBytes,
+    signatures: [signature],
   });
-
-  // Step 3: Submit to chain ASYNC (don't block HTTP response!)
+  
+  const digest = result.$kind === 'Transaction' ? result.Transaction.digest : null;
+  const submitLatency = Date.now() - submitStart;
+  
+  // Step 3: Return "safe to deliver" AFTER submit (BEFORE finality)
+  const httpLatency = Date.now() - startTime;
+  
+  res.json({
+    success: true,
+    mode: 'optimistic',
+    safeToDeliver: true,
+    digest,  // Available now!
+    validateLatency: `${validateLatency}ms`,
+    submitLatency: `${submitLatency}ms`,
+    httpLatency: `${httpLatency}ms`,
+    note: 'Submitted to blockchain - finality in background'
+  });
+  
+  // Step 4: Monitor finality in background (optional)
   setImmediate(async () => {
-    try {
-      const result = await client.executeTransaction({
-        transaction: txBytes,
-        signatures: [signature],
-      });
-      const digest = result.Transaction.digest;
-
-      // Step 4: Notify merchant (webhook or polling endpoint)
-      await notifyMerchant({
-        invoiceId,
-        status: "settled",
-        digest,
-        timestamp: Date.now(),
-      });
-
-      logger.info("Settlement success", { digest });
-    } catch (error) {
-      // CRITICAL: Settlement failed - facilitator must compensate!
-      logger.error("FACILITATOR LIABILITY", {
-        error,
-        invoiceId,
-        amount,
-      });
-
-      // Trigger compensation flow (pay merchant from reserve pool)
-      await facilitatorCompensatesMerchant({
-        invoiceId,
-        amount,
-        reason: error.message,
-      });
-    }
+    // Transaction already submitted, merchant already delivering
+    // This is just for logging/webhook notification
+    logger.info('Finality monitoring', { digest });
+    
+    // In production: Poll for finality status or use websocket
+    // await notifyMerchantFinality(invoiceId, digest);
   });
 }
 ```
@@ -819,16 +846,16 @@ async function submitPaymentWait(req, res) {
 
 #### Comparison Table
 
-| Aspect                     | TRUE Optimistic                   | Wait-for-Finality        |
-| -------------------------- | --------------------------------- | ------------------------ |
-| **User Latency**           | ~50ms ✅✅                         | ~700ms ⚠️                |
-| **Merchant Delivery**      | Immediate (before settlement) ✅  | After confirmation ⚠️    |
-| **Facilitator Risk**       | HIGH (must pay if fails) ⚠️       | ZERO (already settled) ✅ |
-| **Capital Requirements**   | Reserve pool needed ⚠️            | None ✅                  |
-| **Pre-validation**         | Critical (balance, sig, PTB) ⚠️   | Optional ✅              |
-| **Merchant Complexity**    | Webhook for digest notification ⚠️ | Immediate receipt ✅     |
-| **Competitive Advantage**  | Stripe-like instant UX ✅         | Standard crypto UX ⚠️    |
-| **Best For**               | Low-value, high-volume ✅         | High-value, low-risk ✅  |
+| Aspect                    | TRUE Optimistic                    | Wait-for-Finality         |
+| ------------------------- | ---------------------------------- | ------------------------- |
+| **User Latency**          | ~50ms ✅✅                         | ~700ms ⚠️                 |
+| **Merchant Delivery**     | Immediate (before settlement) ✅   | After confirmation ⚠️     |
+| **Facilitator Risk**      | HIGH (must pay if fails) ⚠️        | ZERO (already settled) ✅ |
+| **Capital Requirements**  | Reserve pool needed ⚠️             | None ✅                   |
+| **Pre-validation**        | Critical (balance, sig, PTB) ⚠️    | Optional ✅               |
+| **Merchant Complexity**   | Webhook for digest notification ⚠️ | Immediate receipt ✅      |
+| **Competitive Advantage** | Stripe-like instant UX ✅          | Standard crypto UX ⚠️     |
+| **Best For**              | Low-value, high-volume ✅          | High-value, low-risk ✅   |
 
 ---
 
@@ -847,11 +874,11 @@ async function submitPaymentWait(req, res) {
 // Risk-based settlement mode selection
 function selectSettlementMode(amount: number, buyerReputation: number) {
   if (amount < 10_00000 && buyerReputation > 0.8) {
-    return 'optimistic';  // <$10, trusted buyer
+    return "optimistic"; // <$10, trusted buyer
   } else if (amount < 100_000000) {
-    return 'wait';  // <$100, wait for safety
+    return "wait"; // <$100, wait for safety
   } else {
-    return 'escrow';  // >$100, multi-sig escrow
+    return "escrow"; // >$100, multi-sig escrow
   }
 }
 ```

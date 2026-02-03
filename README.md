@@ -139,14 +139,13 @@ No wallet, no seed phrases, no crypto knowledge required.
 ```
 
 **Components:**
-1. **Move Contract:** Generic `Coin<T>` payment settlement (4-6 hours)
-2. **Facilitator API:** Balance checking, verification, settlement (8-10 hours)
-3. **Browser Widget:** zkLogin + x402 integration (8-10 hours)
-4. **Demo Page:** Showcase implementation (2 hours)
+1. **Move Contract (move/payment/):** Generic `Coin<T>` payment settlement with atomic transfers
+2. **Facilitator API (facilitator/):** PTB construction, gas sponsorship, balance checking
+3. **Merchant Service (merchant/):** Invoice generation (JWT), payment verification, content delivery
+4. **Payment Widget (widget/):** zkLogin integration, PTB verification, payment UI
+5. **Helper Scripts (scripts/):** Test fixture generation, dev environment setup
 
-**Total Build Time:** 24 hours (hackathon-ready!)
-
-See [ARCHITECTURE.md](docs/ARCHITECTURE.md) for full details.
+See [ARCHITECTURE.md](docs/architecture/ARCHITECTURE.md) for full details.
 
 ---
 
@@ -157,17 +156,22 @@ See [ARCHITECTURE.md](docs/ARCHITECTURE.md) for full details.
 - **USDC:** Native Circle USDC on SUI
 - **zkLogin:** Google OAuth → blockchain address
 
-### Backend (Facilitator)
+### Backend
+**Facilitator (facilitator/):**
 - **Node.js + Express:** API server
-- **@mysten/sui.js:** SUI SDK
-- **Bull:** Job queue for async settlement
+- **@mysten/sui:** SUI SDK with gRPC client
 - **TypeScript:** Type-safe development
 
+**Merchant (merchant/):**
+- **Node.js + Express:** Demo merchant service
+- **jose:** JWT signing with Ed25519
+- **JavaScript:** Lightweight implementation
+
 ### Frontend (Widget)
-- **React:** UI components
-- **@mysten/dapp-kit:** zkLogin integration
-- **@x402/fetch:** x402 protocol client
-- **TypeScript:** Compiled to JavaScript for embedding
+- **React + Vite:** UI components and dev server
+- **@mysten/enoki:** zkLogin integration
+- **TypeScript:** Type-safe development
+- **Custom PTB Verifier:** Client-side transaction verification
 
 ### Infrastructure
 - **Mysten Enoki:** Salt service (zkLogin)
@@ -179,41 +183,67 @@ See [ARCHITECTURE.md](docs/ARCHITECTURE.md) for full details.
 ## Project Structure
 
 ```
-pay402/
+Pay402/
 ├── README.md                     # This file
+├── PORT_STATUS.md                # Service ports reference
+├── DOCS_INDEX.md                 # Documentation navigation
 ├── LICENSE                       # MIT License
-├── docs/
-│   ├── ARCHITECTURE.md           # Detailed architecture (READ THIS!)
-│   ├── DEMO.md                   # Demo script & video
-│   ├── API_REFERENCE.md          # Facilitator API docs
-│   └── DEPLOYMENT.md             # Deployment guide
-├── contracts/                    # SUI Move contracts
+├── docs/                         # Documentation
+│   ├── architecture/             # System design
+│   │   ├── ARCHITECTURE.md       # Detailed architecture
+│   │   ├── COMPONENT_BREAKDOWN.md
+│   │   └── DESIGN_RATIONALE.md
+│   ├── development/              # Dev guides
+│   │   ├── DEVELOPMENT_GUIDE.md
+│   │   ├── TESTING.md
+│   │   ├── GENERATE_TEST_FIXTURES.md
+│   │   └── CODEBASE_AUDIT.md
+│   ├── security/                 # Security analysis
+│   │   └── PTB_VERIFIER_SECURITY.md
+│   ├── deployment/               # Deployment guides
+│   │   └── WIDGET_DEPLOYMENT.md
+│   ├── reference/                # Technical reference
+│   │   └── VERIFIER_EXPLAINER.md
+│   └── archive/                  # Historical docs
+├── move/payment/                 # SUI Move contracts
 │   ├── Move.toml
 │   ├── sources/
 │   │   └── payment.move          # Generic Coin<T> settlement
 │   └── tests/
-│       └── payment_tests.move
+│       └── payment_tests.move    # 18 comprehensive tests
 ├── facilitator/                  # Backend API
 │   ├── package.json
 │   ├── src/
-│   │   ├── api/                  # API endpoints
-│   │   ├── services/             # SUI client, queue, etc.
-│   │   └── index.ts
-│   └── Dockerfile
-├── widget/                       # Frontend widget
+│   │   ├── controllers/          # API endpoints
+│   │   ├── __tests__/            # 37 passing tests
+│   │   ├── utils/                # Helper functions
+│   │   ├── config.ts             # Configuration
+│   │   ├── sui.ts                # SUI client setup
+│   │   └── index.ts              # Entry point
+│   └── tsconfig.json
+├── merchant/                     # Demo merchant service
 │   ├── package.json
 │   ├── src/
-│   │   ├── Pay402.ts             # Main widget class
-│   │   ├── ZkLoginManager.ts     # zkLogin integration
-│   │   └── components/           # React components
-│   └── webpack.config.js
-├── demo/                         # Demo page
-│   ├── index.html
-│   └── assets/
-└── scripts/                      # Build & deployment scripts
-    ├── deploy-contract.sh
-    ├── setup-facilitator.sh
-    └── test-flow.sh
+│   │   ├── controllers/          # Invoice & verification
+│   │   ├── utils/                # JWT signing helpers
+│   │   ├── config.js             # Configuration
+│   │   └── index.js              # Entry point
+│   └── public/
+│       └── index.html            # Demo UI
+├── widget/                       # Payment page (React)
+│   ├── package.json
+│   ├── src/
+│   │   ├── components/           # React components
+│   │   ├── lib/
+│   │   │   └── verifier.ts       # PTB verification
+│   │   ├── hooks/                # React hooks
+│   │   ├── __fixtures__/         # Test fixtures
+│   │   └── App.tsx               # Main app
+│   └── vite.config.ts
+└── scripts/                      # Helper scripts
+    ├── generate-test-ptbs.js     # Fixture generation
+    ├── pay402-tmux.sh            # Dev environment
+    └── smoke-test.sh             # Full system test
 ```
 
 ---
@@ -287,42 +317,50 @@ pay402/
 
 ### Prerequisites
 - Node.js 18+
-- SUI CLI (for contract development)
-- Google OAuth credentials
+- SUI CLI + Suibase (for local blockchain)
+- Google OAuth credentials (for zkLogin)
 
-### Setup
+### Quick Setup
 
 ```bash
-# Clone repository
-git clone https://github.com/yourusername/pay402.git
-cd pay402
+# 1. Start local SUI network
+localnet start
 
-# Install dependencies
-npm install
-
-# Set up environment
-cp .env.example .env
-# Edit .env with your credentials
-
-# Deploy contract
-cd contracts
+# 2. Deploy Move contract
+cd move/payment
 sui move build
 sui client publish --gas-budget 100000000
 
-# Start facilitator
-cd ../facilitator
-npm run dev
+# 3. Start all services (tmux)
+cd ../../
+./scripts/pay402-tmux.sh
 
-# Build widget
-cd ../widget
-npm run build
-
-# Run demo
-cd ../demo
-npm start
+# 4. Visit in browser
+# Merchant: http://localhost:3002
+# Payment Page: http://localhost:5173
+# Facilitator API: http://localhost:3001/health
 ```
 
-See [ARCHITECTURE.md](docs/ARCHITECTURE.md) for detailed setup instructions.
+### Manual Setup (Alternative)
+
+```bash
+# Terminal 1: Facilitator
+cd facilitator
+npm install
+npm run dev
+
+# Terminal 2: Merchant
+cd merchant
+npm install
+npm start
+
+# Terminal 3: Widget
+cd widget
+npm install
+npm run dev
+```
+
+See [DEVELOPMENT_GUIDE.md](docs/development/DEVELOPMENT_GUIDE.md) for detailed setup instructions.
 
 ---
 
@@ -334,17 +372,30 @@ See [ARCHITECTURE.md](docs/ARCHITECTURE.md) for detailed setup instructions.
 ### Video Demo
 [Watch on YouTube](https://youtube.com/...) (coming soon)
 
-### Demo Script (60 seconds)
-See [DEMO.md](docs/DEMO.md) for full script and recording instructions.
+### Testing Locally
+
+```bash
+# 1. Start services
+./scripts/pay402-tmux.sh
+
+# 2. Visit merchant demo
+open http://localhost:3002
+
+# 3. Click "Get Premium Data"
+# 4. Copy invoice JWT
+# 5. Paste in payment page: http://localhost:5173
+```
 
 ---
 
 ## Resources
 
 ### Documentation
-- [Architecture Guide](docs/ARCHITECTURE.md) - Complete technical design
-- [API Reference](docs/API_REFERENCE.md) - Facilitator API docs
-- [Deployment Guide](docs/DEPLOYMENT.md) - Production deployment
+- [Documentation Index](DOCS_INDEX.md) - Central navigation hub
+- [Architecture Guide](docs/architecture/ARCHITECTURE.md) - Complete technical design
+- [Development Guide](docs/development/DEVELOPMENT_GUIDE.md) - Setup and build
+- [Testing Guide](docs/development/TESTING.md) - Test strategy
+- [Widget Deployment](docs/deployment/WIDGET_DEPLOYMENT.md) - Production deployment
 
 ### External Links
 - **SUI:** https://docs.sui.io/

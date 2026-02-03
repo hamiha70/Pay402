@@ -20,6 +20,7 @@ Pay402 is a **complete, production-ready HTTP payment protocol** implementing X-
 **Status:** ✅ Fully Compliant
 
 **Implementation:**
+
 - CAIP-2 (Blockchain ID): `sui:testnet`, `sui:mainnet`
 - CAIP-10 (Account ID): `sui:testnet:0xAddress...`
 - CAIP-19 (Asset Type): `sui:testnet/coin:0x2::usdc::USDC`
@@ -27,6 +28,7 @@ Pay402 is a **complete, production-ready HTTP payment protocol** implementing X-
 - 100% backward compatible with legacy invoices
 
 **Files:**
+
 - `facilitator/src/utils/caip.ts` - CAIP utilities
 - `widget/src/lib/caip.ts` - CAIP utilities (browser)
 - `widget/src/lib/caip.test.ts` - 22 tests
@@ -38,6 +40,7 @@ Pay402 is a **complete, production-ready HTTP payment protocol** implementing X-
 **Status:** ✅ Production Ready
 
 **Features:**
+
 - Generic `settle_payment<T>` function (works with any coin type)
 - Buyer identity validation (`ctx.sender() == buyer`)
 - Facilitator sponsorship support (`ctx.sponsor()`)
@@ -46,6 +49,7 @@ Pay402 is a **complete, production-ready HTTP payment protocol** implementing X-
 - Front-running protection (`&mut Coin<T>`)
 
 **Tests:** 20 passing
+
 - Buyer validation tests
 - Amount/fee handling tests
 - Balance checks
@@ -61,6 +65,7 @@ Pay402 is a **complete, production-ready HTTP payment protocol** implementing X-
 **Status:** ✅ Production Ready
 
 **Endpoints:**
+
 - `POST /build-ptb` - Build unsigned PTB from invoice
 - `POST /submit-payment` - Submit signed PTB (optimistic/pessimistic)
 - `POST /check-balance` - Check buyer balance
@@ -68,6 +73,7 @@ Pay402 is a **complete, production-ready HTTP payment protocol** implementing X-
 - `GET /health` - Health check
 
 **Features:**
+
 - CAIP field parsing
 - Coin selection logic
 - PTB construction (calls `settle_payment`)
@@ -78,11 +84,13 @@ Pay402 is a **complete, production-ready HTTP payment protocol** implementing X-
 - Receipt event extraction
 
 **Tests:** 3 test files
+
 - `balance.test.ts`
 - `fund.test.ts`
 - `health.test.ts`
 
 **Files:**
+
 - `facilitator/src/controllers/build-ptb.ts` (296 lines)
 - `facilitator/src/controllers/submit-payment.ts` (350 lines)
 
@@ -93,6 +101,7 @@ Pay402 is a **complete, production-ready HTTP payment protocol** implementing X-
 **Status:** ✅ Production Ready
 
 **Features:**
+
 - Invoice JWT parsing
 - PTB verification (client-side security)
 - Wallet integration (Enoki zkLogin + Demo Keypair)
@@ -102,6 +111,7 @@ Pay402 is a **complete, production-ready HTTP payment protocol** implementing X-
 - Merchant redirect
 
 **Flow:**
+
 1. Parse invoice JWT
 2. Request PTB from facilitator
 3. Verify PTB client-side
@@ -111,6 +121,7 @@ Pay402 is a **complete, production-ready HTTP payment protocol** implementing X-
 7. Redirect to merchant
 
 **Tests:** 31 passing
+
 - Invoice parsing
 - PTB building
 - PTB verification
@@ -127,6 +138,7 @@ Pay402 is a **complete, production-ready HTTP payment protocol** implementing X-
 **Status:** ✅ Production Ready
 
 **Security Checks:**
+
 - ✅ Merchant address matches invoice
 - ✅ Amount matches invoice
 - ✅ Facilitator fee matches invoice
@@ -136,12 +148,14 @@ Pay402 is a **complete, production-ready HTTP payment protocol** implementing X-
 - ✅ CAIP field consistency
 
 **Features:**
+
 - Supports `settle_payment` Move call pattern
 - Supports legacy transfer pattern
 - Comprehensive error messages
 - Browser-compatible (no Node.js dependencies)
 
 **Tests:** 13 security tests + 3 basic tests
+
 - Valid PTB tests
 - Coin type mismatch attacks
 - Merchant address mismatch attacks
@@ -158,6 +172,7 @@ Pay402 is a **complete, production-ready HTTP payment protocol** implementing X-
 **Status:** ✅ Comprehensive
 
 **Documents Created:**
+
 - `SECURITY_MODEL.md` (432 lines) - Defense-in-depth security analysis
 - `X402_V2_COMPLIANCE_AND_CROSS_CHAIN.md` (1029 lines) - PayAI research, CCTP strategy
 - `X402_V2_IMPLEMENTATION_SUMMARY.md` (299 lines) - Phase 1 summary
@@ -177,6 +192,7 @@ Pay402 is a **complete, production-ready HTTP payment protocol** implementing X-
 ### TypeScript Tests: 77 passing (2 skipped)
 
 **Breakdown:**
+
 - `PaymentPage.test.ts`: 31 passing
 - `caip.test.ts`: 22 passing (NEW)
 - `verifier.test.ts`: 3 passing
@@ -184,6 +200,7 @@ Pay402 is a **complete, production-ready HTTP payment protocol** implementing X-
 - `verifier.real-ptb.test.ts`: 6 passing
 
 **Coverage:**
+
 - Invoice parsing ✅
 - CAIP field parsing ✅
 - PTB building ✅
@@ -197,6 +214,7 @@ Pay402 is a **complete, production-ready HTTP payment protocol** implementing X-
 ### Move Tests: 20 passing
 
 **Coverage:**
+
 - `test_buyer_match_succeeds` ✅
 - `test_buyer_mismatch_fails` ✅
 - `test_buyer_pays_amount_plus_fee_merchant_receives_full_amount` ✅
@@ -225,6 +243,7 @@ Pay402 is a **complete, production-ready HTTP payment protocol** implementing X-
 ### Optimistic Settlement
 
 **Latency:** ~45ms (total HTTP round-trip)
+
 - Validate PTB: ~15ms
 - Calculate digest: ~5ms
 - HTTP response: ~25ms
@@ -239,6 +258,7 @@ Pay402 is a **complete, production-ready HTTP payment protocol** implementing X-
 ### Pessimistic Settlement
 
 **Latency:** ~680ms (testnet), ~20-50ms (localnet)
+
 - Validate PTB: ~15ms
 - Submit + finality: ~650ms
 - Extract receipt: ~10ms
@@ -268,7 +288,7 @@ Pay402 is a **complete, production-ready HTTP payment protocol** implementing X-
 ✅ Facilitator adds extra transfer → **Blocked by widget verifier**  
 ✅ Facilitator doesn't sponsor → **Buyer receives fee (net zero)**  
 ✅ Buyer front-runs payment → **Blocked by `&mut Coin<T>`**  
-✅ Replay attack → **Blocked by blockchain (unique digest)**  
+✅ Replay attack → **Blocked by blockchain (unique digest)**
 
 **Result:** Buyer cannot be cheated, even by malicious facilitator
 
@@ -321,7 +341,7 @@ Pay402/
 ✅ **Optimistic Settlement** - Sub-50ms latency  
 ✅ **Front-Running Protection** - `&mut Coin<T>` pattern  
 ✅ **Comprehensive Testing** - 97 tests passing  
-✅ **Security Validated** - 7 attack scenarios tested  
+✅ **Security Validated** - 7 attack scenarios tested
 
 ### Documentation
 
@@ -329,7 +349,7 @@ Pay402/
 ✅ **Security Model** - Defense-in-depth analysis  
 ✅ **E2E Flow** - Complete sequence diagrams  
 ✅ **API Reference** - All endpoints documented  
-✅ **Testing Guide** - How to run all tests  
+✅ **Testing Guide** - How to run all tests
 
 ### Code Quality
 
@@ -337,7 +357,7 @@ Pay402/
 ✅ **Move Best Practices** - Generic functions, proper validation  
 ✅ **Error Handling** - Comprehensive error messages  
 ✅ **Logging** - Structured logging throughout  
-✅ **Comments** - Security rationale documented  
+✅ **Comments** - Security rationale documented
 
 ---
 
@@ -348,6 +368,7 @@ Pay402/
 **Status:** CAIP utilities already support Arc
 
 **Implementation:**
+
 ```typescript
 // Arc invoice (future)
 {
@@ -369,6 +390,7 @@ Pay402/
 ```
 
 **Required:**
+
 1. CCTP integration for cross-chain USDC transfer
 2. Arc RPC endpoint configuration
 3. Cross-chain receipt verification
@@ -381,6 +403,7 @@ Pay402/
 ### Additional Features
 
 **Planned:**
+
 - [ ] Webhook notifications for merchants
 - [ ] Payment history dashboard
 - [ ] Refund support
@@ -396,6 +419,7 @@ Pay402/
 **Total Commits:** 2
 
 ### Commit 1: X-402 V2 Compliance
+
 ```
 feat: X-402 V2 compliance with CAIP standards + comprehensive testing
 
@@ -403,6 +427,7 @@ feat: X-402 V2 compliance with CAIP standards + comprehensive testing
 ```
 
 **Changes:**
+
 - CAIP standards implementation
 - PTB builder fix (passes original coin)
 - Verifier refactor (supports settle_payment)
@@ -413,6 +438,7 @@ feat: X-402 V2 compliance with CAIP standards + comprehensive testing
 ---
 
 ### Commit 2: E2E Documentation
+
 ```
 docs: add comprehensive E2E flow documentation
 
@@ -420,6 +446,7 @@ docs: add comprehensive E2E flow documentation
 ```
 
 **Changes:**
+
 - Complete E2E flow documentation
 - API reference
 - Performance metrics
@@ -430,6 +457,7 @@ docs: add comprehensive E2E flow documentation
 ## 🚦 Production Readiness Checklist
 
 ### Core Functionality
+
 - [x] Invoice creation (merchant)
 - [x] PTB building (facilitator)
 - [x] PTB verification (widget)
@@ -439,6 +467,7 @@ docs: add comprehensive E2E flow documentation
 - [x] Receipt display (widget)
 
 ### Security
+
 - [x] Multi-layer validation
 - [x] Attack scenario testing
 - [x] Buyer identity validation
@@ -448,6 +477,7 @@ docs: add comprehensive E2E flow documentation
 - [x] Unauthorized transfer detection
 
 ### Testing
+
 - [x] Move contract tests (20)
 - [x] TypeScript tests (77)
 - [x] Security tests (13)
@@ -455,6 +485,7 @@ docs: add comprehensive E2E flow documentation
 - [x] Integration tests (6)
 
 ### Documentation
+
 - [x] Security model
 - [x] E2E flow
 - [x] API reference
@@ -462,6 +493,7 @@ docs: add comprehensive E2E flow documentation
 - [x] Production considerations
 
 ### Performance
+
 - [x] Optimistic mode (<50ms)
 - [x] Pessimistic mode (<1s)
 - [x] Gas sponsorship
@@ -474,16 +506,19 @@ docs: add comprehensive E2E flow documentation
 ### Technical Insights
 
 1. **`&mut Coin<T>` is Critical**
+
    - Prevents front-running attacks
    - Ensures atomic execution
    - Eliminates orphaned coins
 
 2. **Transaction Kind Bytes**
+
    - Enables sponsored transactions
    - Separates signing from gas payment
    - Allows dual signatures
 
 3. **Client-Side Verification**
+
    - Essential for buyer security
    - Catches malicious facilitators
    - Validates before signing
@@ -498,11 +533,13 @@ docs: add comprehensive E2E flow documentation
 ### Development Process
 
 1. **Test-First Approach**
+
    - Move tests before implementation
    - Security tests for attack scenarios
    - Integration tests for E2E flow
 
 2. **Documentation-Driven**
+
    - Document security model first
    - Explain design decisions
    - Capture architectural rationale
@@ -553,6 +590,7 @@ docs: add comprehensive E2E flow documentation
 ## 🙏 Acknowledgments
 
 **Technologies Used:**
+
 - Sui blockchain
 - Move language
 - TypeScript
@@ -562,6 +600,7 @@ docs: add comprehensive E2E flow documentation
 - CAIP standards
 
 **Inspiration:**
+
 - PayAI (Solana facilitator)
 - HTTP 402 Payment Required
 - Circle CCTP
@@ -571,6 +610,6 @@ docs: add comprehensive E2E flow documentation
 
 **Status:** ✅ **PRODUCTION READY**  
 **Date:** February 3, 2026  
-**Version:** 1.0.0  
+**Version:** 1.0.0
 
 **Ready for ETHGlobal HackMoney Demo!** 🚀

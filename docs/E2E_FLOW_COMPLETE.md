@@ -89,6 +89,7 @@ The complete end-to-end payment flow is **fully implemented and working**:
 **Action:** Merchant creates and signs invoice JWT
 
 **Invoice Structure:**
+
 ```json
 {
   "network": "sui:testnet",
@@ -115,6 +116,7 @@ The complete end-to-end payment flow is **fully implemented and working**:
 **File:** `facilitator/src/controllers/build-ptb.ts`
 
 **Input:**
+
 ```json
 {
   "buyerAddress": "0xBuyer...",
@@ -123,6 +125,7 @@ The complete end-to-end payment flow is **fully implemented and working**:
 ```
 
 **Action:**
+
 1. Decode and validate invoice JWT
 2. Parse CAIP fields (network, assetType, payTo)
 3. Fetch buyer's coin (USDC or SUI)
@@ -130,6 +133,7 @@ The complete end-to-end payment flow is **fully implemented and working**:
 5. Return **transaction kind bytes** (no gas data)
 
 **Output:**
+
 ```json
 {
   "transactionKindBytes": [0, 0, 4, ...],
@@ -142,17 +146,18 @@ The complete end-to-end payment flow is **fully implemented and working**:
 ```
 
 **PTB Structure:**
+
 ```typescript
 tx.moveCall({
   target: `${packageId}::payment::settle_payment`,
   typeArguments: [coinType],
   arguments: [
-    tx.object(buyerCoin),      // Buyer's coin (original)
-    tx.pure.address(buyer),     // Buyer address
-    tx.pure.u64(amount),        // Payment amount
-    tx.pure.address(merchant),  // Merchant address
-    tx.pure.u64(fee),           // Facilitator fee
-    tx.pure.vector('u8', paymentId),
+    tx.object(buyerCoin), // Buyer's coin (original)
+    tx.pure.address(buyer), // Buyer address
+    tx.pure.u64(amount), // Payment amount
+    tx.pure.address(merchant), // Merchant address
+    tx.pure.u64(fee), // Facilitator fee
+    tx.pure.vector("u8", paymentId),
     tx.object(CLOCK_OBJECT_ID),
   ],
 });
@@ -165,6 +170,7 @@ tx.moveCall({
 **File:** `widget/src/lib/verifier.ts`
 
 **Action:**
+
 1. Parse PTB bytes
 2. Check for `settle_payment` Move call
 3. Validate merchant address matches invoice
@@ -175,6 +181,7 @@ tx.moveCall({
 8. Validate invoice not expired
 
 **Verification Logic:**
+
 ```typescript
 const result = await verifyPaymentPTB(ptbBytes, invoice, invoiceJWT);
 
@@ -184,6 +191,7 @@ if (!result.pass) {
 ```
 
 **Security Checks:**
+
 - ✅ Merchant address correct
 - ✅ Amount correct
 - ✅ Fee correct
@@ -198,13 +206,15 @@ if (!result.pass) {
 **File:** `widget/src/components/PaymentPage.tsx` (line 158)
 
 **Action:**
+
 1. Reconstruct transaction from kind bytes
 2. Set sender (buyer address)
 3. Sign with wallet (Enoki zkLogin or Demo Keypair)
 
 **Code:**
+
 ```typescript
-const { Transaction } = await import('@mysten/sui/transactions');
+const { Transaction } = await import("@mysten/sui/transactions");
 const tx = Transaction.fromKind(ptbBytes);
 tx.setSender(address);
 
@@ -212,6 +222,7 @@ const { signature, bytes } = await signTransaction(tx);
 ```
 
 **Output:**
+
 - Buyer signature (base64)
 - Transaction bytes
 
@@ -224,6 +235,7 @@ const { signature, bytes } = await signTransaction(tx);
 **File:** `facilitator/src/controllers/submit-payment.ts`
 
 **Input:**
+
 ```json
 {
   "invoiceJWT": "eyJhbGci...",
@@ -235,6 +247,7 @@ const { signature, bytes } = await signTransaction(tx);
 ```
 
 **Action:**
+
 1. Reconstruct transaction from kind bytes
 2. Add gas sponsorship (facilitator pays gas)
 3. Build full transaction bytes
@@ -242,6 +255,7 @@ const { signature, bytes } = await signTransaction(tx);
 5. Submit to Sui blockchain
 
 **Gas Sponsorship:**
+
 ```typescript
 tx.setSender(buyerAddress);
 tx.setGasOwner(facilitatorAddress);
@@ -250,6 +264,7 @@ tx.setGasBudget(10000000);
 ```
 
 **Dual Signatures:**
+
 ```typescript
 const signatures = [buyerSignature, facilitatorSignature];
 
@@ -268,12 +283,14 @@ await client.executeTransaction({
 **Latency:** ~10-50ms
 
 **Flow:**
+
 1. Validate PTB
 2. Calculate digest (deterministic hash)
 3. **Return "safe to deliver" IMMEDIATELY**
 4. Submit to blockchain in background (async)
 
 **Response:**
+
 ```json
 {
   "success": true,
@@ -296,6 +313,7 @@ await client.executeTransaction({
 **Latency:** ~150-800ms (testnet), ~20-50ms (localnet)
 
 **Flow:**
+
 1. Validate PTB
 2. Submit to blockchain (blocking)
 3. **Wait for finality**
@@ -303,6 +321,7 @@ await client.executeTransaction({
 5. Return "safe to deliver" with receipt
 
 **Response:**
+
 ```json
 {
   "success": true,
@@ -334,11 +353,13 @@ await client.executeTransaction({
 **Function:** `settle_payment<T>`
 
 **Validation:**
+
 1. ✅ Payment ID not empty
 2. ✅ `ctx.sender() == buyer` (prevents facilitator lying)
 3. ✅ Buyer has sufficient balance (automatic via `&mut Coin<T>`)
 
 **Execution:**
+
 1. Split merchant payment from buyer's coin
 2. Transfer to merchant
 3. Split facilitator fee from buyer's coin
@@ -346,6 +367,7 @@ await client.executeTransaction({
 5. Emit `PaymentReceipt` event
 
 **Code:**
+
 ```move
 // Validate buyer identity
 let actual_buyer = ctx.sender();
@@ -376,6 +398,7 @@ event::emit(PaymentReceipt { ... });
 **File:** `widget/src/components/PaymentPage.tsx` (line 436)
 
 **Display:**
+
 ```
 🎉 Payment Successful!
 
@@ -387,6 +410,7 @@ Receipt
 ```
 
 **Actions:**
+
 - Show transaction digest
 - Link to block explorer
 - Redirect to merchant (with digest)
@@ -399,6 +423,7 @@ Receipt
 ### POST /build-ptb
 
 **Request:**
+
 ```json
 {
   "buyerAddress": "0xBuyer...",
@@ -407,6 +432,7 @@ Receipt
 ```
 
 **Response:**
+
 ```json
 {
   "transactionKindBytes": [0, 0, 4, ...],
@@ -423,6 +449,7 @@ Receipt
 ### POST /submit-payment
 
 **Request:**
+
 ```json
 {
   "invoiceJWT": "eyJhbGci...",
@@ -434,6 +461,7 @@ Receipt
 ```
 
 **Response (Optimistic):**
+
 ```json
 {
   "success": true,
@@ -448,6 +476,7 @@ Receipt
 ```
 
 **Response (Pessimistic):**
+
 ```json
 {
   "success": true,
@@ -475,6 +504,7 @@ Receipt
 **File:** `widget/src/__tests__/PaymentPage.test.ts`
 
 **Coverage:** 31 tests passing
+
 - Invoice parsing
 - PTB building
 - PTB verification
@@ -485,6 +515,7 @@ Receipt
 ### Facilitator Tests
 
 **Files:**
+
 - `facilitator/src/__tests__/health.test.ts`
 - `facilitator/src/__tests__/balance.test.ts`
 - `facilitator/src/__tests__/fund.test.ts`
@@ -494,6 +525,7 @@ Receipt
 **File:** `move/payment/tests/payment_tests.move`
 
 **Coverage:** 20 tests passing
+
 - Buyer validation
 - Amount/fee handling
 - Balance checks
@@ -507,6 +539,7 @@ Receipt
 ### Optimistic Mode
 
 **Total Latency:** ~45ms
+
 - Validate: ~15ms
 - Calculate digest: ~5ms
 - HTTP response: ~25ms
@@ -519,6 +552,7 @@ Receipt
 ### Pessimistic Mode
 
 **Total Latency:** ~680ms (testnet)
+
 - Validate: ~15ms
 - Submit + finality: ~650ms
 - Extract receipt: ~10ms
@@ -535,6 +569,7 @@ Receipt
 **Required:** Facilitator MUST sponsor transactions
 
 **Why:**
+
 - Buyer shouldn't pay gas fees
 - Facilitator receives fee to cover gas
 - Move contract gets facilitator from `ctx.sponsor()`
@@ -546,11 +581,13 @@ Receipt
 ### Error Handling
 
 **Optimistic Mode:**
+
 - If transaction fails after "safe to deliver"
 - Facilitator must compensate merchant
 - Logged as "FACILITATOR LIABILITY"
 
 **Pessimistic Mode:**
+
 - Transaction confirmed before "safe to deliver"
 - Zero risk for merchant
 - No compensation needed
@@ -560,6 +597,7 @@ Receipt
 ### Security
 
 **Multi-Layer Validation:**
+
 1. ✅ Merchant signs invoice (JWT)
 2. ✅ Facilitator builds PTB (matches invoice)
 3. ✅ Widget verifies PTB (validates terms)
@@ -573,21 +611,26 @@ Receipt
 ## Summary
 
 **✅ Complete E2E Flow Implemented:**
+
 - Invoice creation → PTB building → Verification → Signing → Submission → Settlement → Receipt
 
 **✅ Both Settlement Modes:**
+
 - Optimistic (fast, ~45ms)
 - Pessimistic (guaranteed, ~680ms)
 
 **✅ Sponsored Transactions:**
+
 - Facilitator pays gas
 - Dual signatures (buyer + facilitator)
 
 **✅ On-Chain Verification:**
+
 - Receipt events extracted
 - Payment confirmed on-chain
 
 **✅ Comprehensive Testing:**
+
 - 77 TypeScript tests passing
 - 20 Move tests passing
 

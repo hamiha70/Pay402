@@ -560,6 +560,8 @@ return {
 
 **CRITICAL ARCHITECTURAL DECISION:** How long does the user wait after signing?
 
+> **⚠️ Localnet Testing Note:** Both modes appear similar on localnet (~20-150ms) due to instant finality. The true difference (optimistic: ~100ms, wait: ~700ms) only shows on testnet/mainnet where checkpoint consensus takes ~400-800ms.
+
 #### Mode 1: Optimistic Settlement (Recommended for UX)
 
 **Flow:**
@@ -583,8 +585,9 @@ return {
 
 **Latency:**
 
-- User experience: ~500ms (sign → redirect)
-- Actual finality: 1-3 seconds (user doesn't wait)
+- **Testnet/Mainnet**: ~50-100ms (submit + return digest)
+- **Localnet**: ~20-150ms (instant finality, SDK always waits)
+- Actual finality: ~400-800ms checkpoint (happens in background)
 
 **Implementation:**
 
@@ -630,8 +633,9 @@ async function verifyPayment(txDigest: string) {
 
 **Latency:**
 
-- User experience: 1-3 seconds (sign → wait → redirect)
-- Actual finality: 1-3 seconds (user waits for it)
+- **Testnet/Mainnet**: ~500-1000ms (submit + wait for checkpoint)
+- **Localnet**: ~20-150ms (instant finality)
+- User waits for full confirmation before redirect
 
 **Implementation:**
 

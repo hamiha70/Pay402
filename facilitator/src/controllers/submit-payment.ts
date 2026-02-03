@@ -9,7 +9,7 @@ interface SubmitPaymentRequest {
     transactionBytes: string | number[] | Uint8Array;  // base64 string, array, or Uint8Array
     signature: string;                                  // base64 encoded signature
   };
-  settlementMode?: 'optimistic' | 'wait';  // Default: optimistic
+  settlementMode?: 'optimistic' | 'pessimistic';  // Default: optimistic
 }
 
 interface ReceiptEvent {

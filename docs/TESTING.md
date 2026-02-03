@@ -114,17 +114,18 @@ sui move test test_settle_payment
 Test individual functions in isolation.
 
 **Example:**
-```typescript
-import { describe, it, expect } from 'vitest';
 
-describe('Transaction Kind Build', () => {
-  it('should build transaction kind without gas data', async () => {
+```typescript
+import { describe, it, expect } from "vitest";
+
+describe("Transaction Kind Build", () => {
+  it("should build transaction kind without gas data", async () => {
     const tx = new Transaction();
     // ... add transaction logic
-    
-    const kindBytes = await tx.build({ 
-      client, 
-      onlyTransactionKind: true 
+
+    const kindBytes = await tx.build({
+      client,
+      onlyTransactionKind: true,
     });
 
     expect(kindBytes).toBeInstanceOf(Uint8Array);
@@ -138,19 +139,18 @@ describe('Transaction Kind Build', () => {
 Test API endpoints and multi-component flows.
 
 **Example:**
-```typescript
-import { describe, it, expect } from 'vitest';
-import request from 'supertest';
-import app from '../app';
 
-describe('POST /build-ptb', () => {
-  it('should return transaction kind bytes', async () => {
-    const response = await request(app)
-      .post('/build-ptb')
-      .send({
-        buyerAddress: '0x123...',
-        invoiceJWT: 'eyJ...',
-      });
+```typescript
+import { describe, it, expect } from "vitest";
+import request from "supertest";
+import app from "../app";
+
+describe("POST /build-ptb", () => {
+  it("should return transaction kind bytes", async () => {
+    const response = await request(app).post("/build-ptb").send({
+      buyerAddress: "0x123...",
+      invoiceJWT: "eyJ...",
+    });
 
     expect(response.status).toBe(200);
     expect(response.body.transactionKindBytes).toBeTruthy();
@@ -163,6 +163,7 @@ describe('POST /build-ptb', () => {
 Test complete user journeys (shell scripts with browser automation).
 
 **Example:**
+
 ```bash
 # scripts/test-ptb-build.sh
 bash scripts/test-ptb-build.sh  # Fast (~150ms)
@@ -178,11 +179,13 @@ bash scripts/test-browser-e2e.sh  # Slower (~5-10s)
 ### Test File Naming
 
 ✅ **Good:**
+
 - `sponsored-transactions.test.ts`
 - `api-integration.test.ts`
 - `PaymentPage.test.ts`
 
 ❌ **Bad:**
+
 - `sponsored-transactions.spec.ts` (use `.test.ts`)
 - `test-api.ts` (wrong naming pattern)
 - `SponsoredTransactions.test.ts` (no PascalCase for test files)
@@ -190,19 +193,21 @@ bash scripts/test-browser-e2e.sh  # Slower (~5-10s)
 ### Import Pattern
 
 ✅ **Always use Vitest:**
+
 ```typescript
-import { describe, it, expect, beforeAll, afterEach } from 'vitest';
+import { describe, it, expect, beforeAll, afterEach } from "vitest";
 ```
 
 ❌ **Never use Jest:**
+
 ```typescript
-import { describe, it, expect } from '@jest/globals'; // WRONG!
+import { describe, it, expect } from "@jest/globals"; // WRONG!
 ```
 
 ### Test Structure
 
 ```typescript
-describe('Feature Name', () => {
+describe("Feature Name", () => {
   // Setup
   beforeAll(async () => {
     // Runs once before all tests
@@ -213,22 +218,22 @@ describe('Feature Name', () => {
   });
 
   // Test suites
-  describe('Specific Functionality', () => {
-    it('should do something specific', () => {
+  describe("Specific Functionality", () => {
+    it("should do something specific", () => {
       // Arrange
-      const input = 'test';
-      
+      const input = "test";
+
       // Act
       const result = doSomething(input);
-      
+
       // Assert
-      expect(result).toBe('expected');
+      expect(result).toBe("expected");
     });
 
-    it('should handle error cases', () => {
+    it("should handle error cases", () => {
       expect(() => {
         doSomethingThatThrows();
-      }).toThrow('Expected error message');
+      }).toThrow("Expected error message");
     });
   });
 });
@@ -254,6 +259,7 @@ npm run test:coverage
 ### View Coverage Report
 
 After running coverage:
+
 ```bash
 # Open HTML report
 open coverage/index.html  # macOS
@@ -271,8 +277,8 @@ xdg-open coverage/index.html  # Linux
 export default defineConfig({
   test: {
     globals: true,
-    environment: 'node',  // Node.js environment
-    setupFiles: ['./src/__tests__/setup.ts'],
+    environment: "node", // Node.js environment
+    setupFiles: ["./src/__tests__/setup.ts"],
     coverage: {
       thresholds: {
         lines: 70,
@@ -292,8 +298,8 @@ export default defineConfig({
 export default defineConfig({
   test: {
     globals: true,
-    environment: 'jsdom',  // Browser environment
-    setupFiles: ['./src/__tests__/setup.ts'],
+    environment: "jsdom", // Browser environment
+    setupFiles: ["./src/__tests__/setup.ts"],
     coverage: {
       thresholds: {
         lines: 70,
@@ -313,39 +319,39 @@ export default defineConfig({
 ### Testing Async Functions
 
 ```typescript
-it('should handle async operations', async () => {
+it("should handle async operations", async () => {
   const result = await asyncFunction();
-  expect(result).toBe('success');
+  expect(result).toBe("success");
 });
 ```
 
 ### Testing Errors
 
 ```typescript
-it('should throw on invalid input', () => {
+it("should throw on invalid input", () => {
   expect(() => {
-    validateInput('');
-  }).toThrow('Input required');
+    validateInput("");
+  }).toThrow("Input required");
 });
 
 // For async errors
-it('should reject promise on error', async () => {
+it("should reject promise on error", async () => {
   await expect(async () => {
     await asyncFunctionThatFails();
-  }).rejects.toThrow('Error message');
+  }).rejects.toThrow("Error message");
 });
 ```
 
 ### Mocking
 
 ```typescript
-import { vi } from 'vitest';
+import { vi } from "vitest";
 
-it('should call dependency', () => {
+it("should call dependency", () => {
   const mockFn = vi.fn();
   doSomething(mockFn);
-  
-  expect(mockFn).toHaveBeenCalledWith('expected-arg');
+
+  expect(mockFn).toHaveBeenCalledWith("expected-arg");
   expect(mockFn).toHaveBeenCalledTimes(1);
 });
 ```
@@ -353,15 +359,15 @@ it('should call dependency', () => {
 ### Testing API Endpoints
 
 ```typescript
-import request from 'supertest';
+import request from "supertest";
 
-it('should return 400 on missing fields', async () => {
+it("should return 400 on missing fields", async () => {
   const response = await request(app)
-    .post('/endpoint')
-    .send({ incomplete: 'data' });
+    .post("/endpoint")
+    .send({ incomplete: "data" });
 
   expect(response.status).toBe(400);
-  expect(response.body.error).toContain('Missing required fields');
+  expect(response.body.error).toContain("Missing required fields");
 });
 ```
 
@@ -388,6 +394,7 @@ npm run test:ui
 ```
 
 Opens browser interface with:
+
 - Test results
 - Console logs
 - Stack traces
@@ -396,9 +403,9 @@ Opens browser interface with:
 ### 4. Add Debug Logs
 
 ```typescript
-it('should process correctly', () => {
+it("should process correctly", () => {
   const data = processData(input);
-  console.log('Processed:', data);  // Visible in test output
+  console.log("Processed:", data); // Visible in test output
   expect(data).toBeTruthy();
 });
 ```
@@ -471,6 +478,7 @@ Before committing:
 **Error:** `Cannot find module '@mysten/sui'`
 
 **Fix:** Add to vitest.config.ts:
+
 ```typescript
 test: {
   deps: {
@@ -484,8 +492,9 @@ test: {
 **Error:** Test timeout after 5000ms
 
 **Fix:** Increase timeout:
+
 ```typescript
-it('slow test', async () => {
+it("slow test", async () => {
   // Do slow thing
 }, 10000); // 10 second timeout
 ```
@@ -493,6 +502,7 @@ it('slow test', async () => {
 ### Coverage Not Generated
 
 **Fix:** Install coverage provider:
+
 ```bash
 npm install -D @vitest/coverage-v8
 ```
@@ -500,8 +510,9 @@ npm install -D @vitest/coverage-v8
 ### Mock Not Working
 
 **Fix:** Ensure using Vitest's `vi`:
+
 ```typescript
-import { vi } from 'vitest';
+import { vi } from "vitest";
 
 const mockFn = vi.fn();
 ```

@@ -12,18 +12,21 @@
 **ALWAYS USE VITEST** - No Jest, no other test frameworks
 
 **Test Locations:**
+
 - Move: `move/payment/tests/payment_tests.move` → `sui move test`
 - Facilitator: `src/__tests__/*.test.ts` → `npm test` (vitest, Node.js env)
 - Widget: `src/__tests__/*.test.ts` → `npm test` (vitest, jsdom env)
 - Integration: `scripts/test-*.sh` (end-to-end with all services)
 
 **Test Commands:**
+
 - `npm test` - Run all tests once
 - `npm run test:watch` - Watch mode (TDD)
 - `npm run test:ui` - Visual UI for debugging
 - `npm run test:coverage` - Coverage report (70% minimum)
 
 **Test Structure:**
+
 - Unit tests: Test individual functions/components
 - Integration tests: Test API endpoints and flows
 - E2E tests: Test complete user journeys with browser automation

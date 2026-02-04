@@ -73,9 +73,16 @@
 - Node.js-only: `Buffer`, `fs`, `path`, `process.env` (use config instead)
 - `atob()`/`btoa()` - use polyfill or `Buffer.from(str, 'base64')` for Node.js
 
-**Shared Code Location:** `widget/src/lib/` (used by both widget and facilitator tests)
+**Shared Code Locations:**
+- `widget/src/lib/` - Browser-compatible payment logic (used by widget UI and facilitator e2e tests)
+- `facilitator/src/utils/` - Node.js utilities that can be reused across backend services
 
-**Why:** Widget UI and facilitator e2e tests must use IDENTICAL logic to ensure tests predict production behavior. Any divergence = false confidence.
+**Critical Shared Utilities:**
+- `facilitator/src/utils/digest.ts` - Transaction digest calculation (getTransactionDigest)
+  - Used by: facilitator backend (optimistic mode), e2e tests, any client needing digest
+  - NEVER duplicate digest logic - always import from this module
+
+**Why:** Widget UI and facilitator e2e tests must use IDENTICAL logic to ensure tests predict production behavior. Any divergence = false confidence. Backend utilities must be centralized to avoid implementation drift.
 
 ## Directory Structure
 

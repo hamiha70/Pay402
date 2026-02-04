@@ -1,23 +1,7 @@
 import { Request, Response } from 'express';
 import { getSuiClient } from '../sui.js';
 import { logger } from '../utils/logger.js';
-import { toBase58 } from '@mysten/bcs';
-import { messageWithIntent, IntentScope } from '@mysten/sui/cryptography';
-import { blake2b } from '@noble/hashes/blake2b';
-
-// Calculate transaction digest from bytes
-// Digest = base58(blake2b256(IntentMessage(TransactionData, transactionBytes)))
-// This matches Sui's digest calculation: intent message + blake2b + base58
-function getDigestFromBytes(bytes: Uint8Array): string {
-  // Create intent message (3-byte intent + transaction bytes)
-  const intentMessage = messageWithIntent(IntentScope.TransactionData, bytes);
-  
-  // Hash with Blake2b-256 (32-byte output)
-  const hash = blake2b(intentMessage, { dkLen: 32 });
-  
-  // Encode as Base58 (Sui's digest format)
-  return toBase58(hash);
-}
+import { getTransactionDigest } from '../utils/digest.js';
 
 interface SubmitPaymentRequest {
   invoiceJWT: string;
@@ -142,7 +126,7 @@ export async function submitPaymentController(req: Request, res: Response): Prom
       
       // Step 2: Calculate digest IMMEDIATELY (deterministic hash)
       // Digest = hash(transactionBytes) - no blockchain needed!
-      const digest = getDigestFromBytes(txBytes);
+      const digest = getTransactionDigest(txBytes);
       
       // Step 3: Return "safe to deliver" IMMEDIATELY after validation
       // Submit happens in background (non-blocking)

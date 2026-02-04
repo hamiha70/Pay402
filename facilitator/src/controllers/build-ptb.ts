@@ -234,24 +234,45 @@ export async function buildPTBController(req: Request, res: Response): Promise<v
       ],
     });
     
-    // Build ONLY the transaction kind (no gas data)
-    // Gas will be added by facilitator during submission (sponsored transaction)
-    // This is the correct pattern for sponsored transactions on SUI
-    logger.info('Building transaction kind for sponsored transaction');
+    // Add gas sponsorship (facilitator pays gas)
+    const { Ed25519Keypair } = await import('@mysten/sui/keypairs/ed25519');
+    const facilitatorKeypair = Ed25519Keypair.fromSecretKey(config.facilitatorPrivateKey);
+    const facilitatorAddress = facilitatorKeypair.getPublicKey().toSuiAddress();
     
-    const kindBytes = await tx.build({ 
-      client, 
-      onlyTransactionKind: true  // Critical: excludes gas data
+    // Get facilitator's gas coins
+    const gasCoins = await client.listCoins({
+      owner: facilitatorAddress,
+      coinType: '0x2::sui::SUI',
     });
     
-    // Return transaction kind bytes for buyer to sign
-    // Buyer will reconstruct full transaction with setSender()
-    // Facilitator will add gas sponsorship during submission
-    logger.info('Transaction kind built successfully', { kindBytesLength: kindBytes.length });
+    if (!gasCoins.objects || gasCoins.objects.length === 0) {
+      throw new Error('Facilitator has no SUI for gas sponsorship');
+    }
+    
+    // Set gas payment (facilitator sponsors)
+    tx.setGasOwner(facilitatorAddress);
+    tx.setGasPayment([{
+      objectId: gasCoins.objects[0].objectId,
+      version: gasCoins.objects[0].version,
+      digest: gasCoins.objects[0].digest,
+    }]);
+    tx.setGasBudget(10000000); // 0.01 SUI
+    
+    logger.info('Building complete transaction with gas sponsorship for buyer to sign');
+    
+    // Build FULL transaction bytes (with gas sponsorship)
+    // Buyer will sign these exact bytes
+    const txBytes = await tx.build({ client });
+    
+    logger.info('Transaction built successfully', { 
+      txBytesLength: txBytes.length,
+      facilitator: facilitatorAddress,
+      gasCoin: gasCoins.objects[0].objectId,
+    });
     logger.info('=== BUILD PTB REQUEST SUCCESS ===');
     
     res.json({
-      transactionKindBytes: Array.from(kindBytes),  // Only the tx kind, no gas data
+      transactionBytes: Array.from(txBytes),  // Full transaction with gas sponsorship
       invoice: {
         resource: invoice.resource,
         amount: invoice.amount,

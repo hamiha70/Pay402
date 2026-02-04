@@ -18,8 +18,8 @@ function getDigestFromBytes(bytes: Uint8Array): string {
 interface SubmitPaymentRequest {
   invoiceJWT: string;
   buyerAddress: string;
-  transactionKindBytes: number[] | Uint8Array;  // Transaction kind (no gas data)
-  buyerSignature: string;                        // Buyer's signature
+  transactionBytes: number[] | Uint8Array;       // Full transaction bytes (with gas sponsorship)
+  buyerSignature: string;                        // Buyer's signature on those bytes
   settlementMode?: 'optimistic' | 'pessimistic'; // Default: optimistic
 }
 
@@ -56,7 +56,7 @@ export async function submitPaymentController(req: Request, res: Response): Prom
     const {
       invoiceJWT,
       buyerAddress,
-      transactionKindBytes,
+      transactionBytes,
       buyerSignature,
       settlementMode = 'optimistic', // Default to optimistic
     } = req.body as SubmitPaymentRequest;
@@ -65,68 +65,32 @@ export async function submitPaymentController(req: Request, res: Response): Prom
       buyerAddress, 
       mode: settlementMode,
       hasJWT: !!invoiceJWT,
-      hasKindBytes: !!transactionKindBytes,
+      hasTxBytes: !!transactionBytes,
       hasBuyerSig: !!buyerSignature,
     });
     
     // Validate required fields
-    if (!buyerAddress || !transactionKindBytes || !buyerSignature) {
+    if (!buyerAddress || !transactionBytes || !buyerSignature) {
       res.status(400).json({
         error: 'Missing required fields',
-        required: ['buyerAddress', 'transactionKindBytes', 'buyerSignature'],
+        required: ['buyerAddress', 'transactionBytes', 'buyerSignature'],
       });
       return;
     }
     
     const client = getSuiClient();
     const { Ed25519Keypair } = await import('@mysten/sui/keypairs/ed25519');
-    const { Transaction } = await import('@mysten/sui/transactions');
     const config = await import('../config.js').then(m => m.config);
     
-    // Convert kind bytes to Uint8Array
-    const kindBytes = Array.isArray(transactionKindBytes) 
-      ? new Uint8Array(transactionKindBytes) 
-      : transactionKindBytes;
+    // Convert transaction bytes to Uint8Array
+    const txBytes = Array.isArray(transactionBytes) 
+      ? new Uint8Array(transactionBytes) 
+      : transactionBytes;
     
-    logger.info('Reconstructing transaction with gas sponsorship');
+    logger.info('Using pre-built transaction bytes from build-ptb (already includes gas sponsorship)');
     
-    // Reconstruct transaction from kind bytes
-    const tx = Transaction.fromKind(kindBytes);
-    tx.setSender(buyerAddress);
-    
-    // Add gas sponsorship (facilitator pays gas)
+    // Facilitator signs the same transaction bytes that buyer signed
     const facilitatorKeypair = Ed25519Keypair.fromSecretKey(config.facilitatorPrivateKey);
-    const facilitatorAddress = facilitatorKeypair.getPublicKey().toSuiAddress();
-    
-    // Get facilitator's gas coins
-    const gasCoins = await client.listCoins({
-      owner: facilitatorAddress,
-      coinType: '0x2::sui::SUI',
-    });
-    
-    if (!gasCoins.objects || gasCoins.objects.length === 0) {
-      throw new Error('Facilitator has no SUI for gas sponsorship');
-    }
-    
-    // Set gas payment (facilitator sponsors)
-    tx.setGasOwner(facilitatorAddress);
-    tx.setGasPayment([{
-      objectId: gasCoins.objects[0].objectId,
-      version: gasCoins.objects[0].version,
-      digest: gasCoins.objects[0].digest,
-    }]);
-    tx.setGasBudget(10000000); // 0.01 SUI
-    
-    logger.info('Gas sponsorship configured', {
-      facilitator: facilitatorAddress,
-      gasCoin: gasCoins.objects[0].objectId,
-      buyer: buyerAddress,
-    });
-    
-    // Build full transaction bytes
-    const txBytes = await tx.build({ client });
-    
-    // Facilitator signs the transaction
     const facilitatorSignature = await facilitatorKeypair.signTransaction(txBytes);
     
     // Dual signatures: buyer + facilitator
@@ -135,6 +99,11 @@ export async function submitPaymentController(req: Request, res: Response): Prom
     logger.info('Transaction data BEFORE execute', {
       txBytesLength: txBytes.length,
       txBytesType: txBytes.constructor.name,
+      txBytesPreview: Buffer.from(txBytes).toString('base64').substring(0, 50) + '...',
+      buyerSignatureLength: buyerSignature.length,
+      buyerSignaturePreview: buyerSignature.substring(0, 20) + '...',
+      facilitatorSignatureLength: facilitatorSignature.signature.length,
+      facilitatorSignaturePreview: facilitatorSignature.signature.substring(0, 20) + '...',
       signaturesArray: signatures,
       signaturesLength: signatures.length,
       signaturesIsDefined: signatures !== undefined,

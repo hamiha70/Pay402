@@ -13,19 +13,23 @@ The E2E payment flow is **production-ready** for optimistic settlement mode.
 ### ✅ Passing Tests (5/6)
 
 1. **Build PTB from Invoice JWT** ✅
+
    - Facilitator correctly builds unsigned PTB
    - Returns transaction kind bytes
    - Invoice data properly extracted
 
 2. **Invalid Buyer Address Rejection** ✅
+
    - Correctly rejects malformed addresses
    - Proper error handling
 
 3. **Expired Invoice Rejection** ✅
+
    - Validates invoice expiry timestamps
    - Rejects expired invoices
 
 4. **Optimistic Mode Payment** ✅ **[PRIMARY USE CASE]**
+
    - **FULLY WORKING END-TO-END!**
    - Latency: ~708ms
    - Returns transaction digest immediately
@@ -73,6 +77,7 @@ The E2E payment flow is **production-ready** for optimistic settlement mode.
 ```
 
 **Latency Breakdown:**
+
 - Build PTB: ~80ms
 - Sign transaction: ~50ms
 - Submit to facilitator: ~300ms
@@ -94,11 +99,13 @@ The E2E payment flow is **production-ready** for optimistic settlement mode.
 **Possible Solutions:**
 
 1. **Use Sui's Intent Signing** (recommended)
+
    - Sign the transaction intent, not the full bytes
    - Sui SDK may have `signTransactionIntent()` method
    - Need to investigate Sui SDK v2.x API
 
 2. **Two-Phase Signing**
+
    - Facilitator builds complete transaction (with sponsored gas)
    - Sends full transaction bytes to buyer
    - Buyer signs those exact bytes
@@ -121,6 +128,7 @@ The E2E payment flow is **production-ready** for optimistic settlement mode.
 **Network:** localnet
 
 **Function Signature:**
+
 ```move
 public entry fun settle_payment<T>(
     buyer_coin: &mut Coin<T>,
@@ -135,6 +143,7 @@ public entry fun settle_payment<T>(
 ```
 
 **Validations:**
+
 - ✅ `ctx.sender() == buyer` (prevents facilitator lying about buyer)
 - ✅ `ctx.sponsor()` provides facilitator address (gas payer)
 - ✅ Payment ID not empty
@@ -145,12 +154,14 @@ public entry fun settle_payment<T>(
 ## Performance
 
 ### Optimistic Mode
+
 - **HTTP Latency:** ~45-708ms
 - **User Experience:** Instant (content delivered immediately)
 - **Settlement:** Background (~650ms)
 - **Risk:** Facilitator liability if settlement fails
 
 ### Pessimistic Mode (when fixed)
+
 - **HTTP Latency:** ~680ms (testnet), ~20-50ms (localnet)
 - **User Experience:** Slower but guaranteed
 - **Settlement:** Blocking (waits for finality)
@@ -163,12 +174,14 @@ public entry fun settle_payment<T>(
 ### ✅ Ready for Production
 
 **Optimistic Mode:**
+
 - Fully functional end-to-end
 - Fast user experience
 - Tested on localnet
 - Ready for testnet/mainnet deployment
 
 **Components:**
+
 - ✅ Move contract deployed and tested
 - ✅ Facilitator backend working
 - ✅ PTB builder correct
@@ -181,11 +194,13 @@ public entry fun settle_payment<T>(
 ### ⚠️ Known Limitations
 
 1. **Pessimistic Mode Not Working**
+
    - Sui sponsored transaction signature issue
    - Needs deeper investigation of Sui SDK
    - Optimistic mode is recommended alternative
 
 2. **Single Coin Requirement**
+
    - Buyer needs one coin with sufficient balance
    - Coin merging not yet implemented
    - Use fresh address or merge coins manually
@@ -202,11 +217,13 @@ public entry fun settle_payment<T>(
 ### Immediate (for Demo)
 
 1. **Test on Testnet**
+
    - Redeploy Move contract to testnet
    - Update `.env` with new package ID
    - Test with real testnet SUI/USDC
 
 2. **Widget Integration**
+
    - Ensure widget uses optimistic mode by default
    - Add toggle for pessimistic mode (when fixed)
    - Test full merchant → widget → payment flow
@@ -219,11 +236,13 @@ public entry fun settle_payment<T>(
 ### Future Improvements
 
 1. **Fix Pessimistic Mode**
+
    - Research Sui SDK intent signing
    - Implement proper sponsored transaction pattern
    - Add comprehensive tests
 
 2. **Coin Merging**
+
    - Implement automatic coin merging
    - Handle multiple small coins
    - Optimize gas costs
@@ -240,6 +259,7 @@ public entry fun settle_payment<T>(
 **The E2E payment flow is WORKING!** 🎉
 
 Optimistic mode (the primary use case) is fully functional with:
+
 - ✅ Fast user experience (~708ms)
 - ✅ Instant content delivery
 - ✅ Background settlement

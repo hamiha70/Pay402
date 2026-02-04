@@ -86,9 +86,9 @@ describe('End-to-End Payment Flow', () => {
       expect(response.ok).toBe(true);
       
       const data = await response.json();
-      expect(data.transactionKindBytes).toBeDefined();
-      expect(Array.isArray(data.transactionKindBytes)).toBe(true);
-      expect(data.transactionKindBytes.length).toBeGreaterThan(0);
+      expect(data.transactionBytes).toBeDefined();
+      expect(Array.isArray(data.transactionBytes)).toBe(true);
+      expect(data.transactionBytes.length).toBeGreaterThan(0);
       expect(data.invoice).toBeDefined();
       expect(data.invoice.amount).toBeDefined();
     });
@@ -136,18 +136,9 @@ describe('End-to-End Payment Flow', () => {
       });
       
       const buildData = await buildResponse.json();
-      const kindBytes = new Uint8Array(buildData.transactionKindBytes);
+      const txBytes = new Uint8Array(buildData.transactionBytes);
       
-      // Reconstruct transaction for buyer to sign (sponsored transaction flow)
-      const { Transaction } = await import('@mysten/sui/transactions');
-      const { getSuiClient } = await import('../sui.js');
-      const client = getSuiClient();
-      
-      const tx = Transaction.fromKind(kindBytes);
-      tx.setSender(buyerAddress);
-      
-      // Build transaction for buyer to sign
-      const txBytes = await tx.build({ client });
+      // Sign the pre-built transaction (already includes gas sponsorship)
       const { signature } = await buyerKeypair.signTransaction(txBytes);
       
       // Submit (optimistic mode) with sponsored transaction format
@@ -157,7 +148,7 @@ describe('End-to-End Payment Flow', () => {
         body: JSON.stringify({
           invoiceJWT,
           buyerAddress,
-          transactionKindBytes: Array.from(kindBytes),
+          transactionBytes: Array.from(txBytes),
           buyerSignature: signature,
           settlementMode: 'optimistic',
         }),
@@ -198,20 +189,10 @@ describe('End-to-End Payment Flow', () => {
       });
       
       const buildData = await buildResponse.json();
-      const kindBytes = new Uint8Array(buildData.transactionKindBytes);
+      const txBytes = new Uint8Array(buildData.transactionBytes);
       
-      // Reconstruct transaction for buyer to sign (sponsored transaction flow)
-      const { Transaction } = await import('@mysten/sui/transactions');
-      const { getSuiClient } = await import('../sui.js');
-      const client = getSuiClient();
-      
-      const tx = Transaction.fromKind(kindBytes);
-      tx.setSender(buyerAddress);
-      
-      // Build transaction for buyer to sign
-      const txBytesToSign = await tx.build({ client });
-      const signatureData = await buyerKeypair.signTransaction(txBytesToSign);
-      const signature = signatureData.signature;
+      // Sign the pre-built transaction (already includes gas sponsorship)
+      const { signature } = await buyerKeypair.signTransaction(txBytes);
       
       console.log('🔐 Buyer signature info:', {
         buyerAddress,
@@ -226,7 +207,7 @@ describe('End-to-End Payment Flow', () => {
         body: JSON.stringify({
           invoiceJWT,
           buyerAddress,
-          transactionKindBytes: Array.from(kindBytes),
+          transactionBytes: Array.from(txBytes),
           buyerSignature: signature,
           settlementMode: 'pessimistic',
         }),
@@ -277,12 +258,9 @@ describe('End-to-End Payment Flow', () => {
         });
         
         const buildData = await buildResp.json();
-        const kindBytes = new Uint8Array(buildData.transactionKindBytes);
+        const txBytes = new Uint8Array(buildData.transactionBytes);
         
-        // Sign transaction
-        const tx = Transaction.fromKind(kindBytes);
-        tx.setSender(buyerAddress);
-        const txBytes = await tx.build({ client });
+        // Sign the pre-built transaction
         const { signature } = await buyerKeypair.signTransaction(txBytes);
         
         // Submit with sponsored transaction format
@@ -292,7 +270,7 @@ describe('End-to-End Payment Flow', () => {
           body: JSON.stringify({
             invoiceJWT,
             buyerAddress,
-            transactionKindBytes: Array.from(kindBytes),
+            transactionBytes: Array.from(txBytes),
             buyerSignature: signature,
             settlementMode: mode,
           }),

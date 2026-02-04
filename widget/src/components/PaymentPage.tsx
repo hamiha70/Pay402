@@ -204,7 +204,7 @@ export default function PaymentPage({ invoiceJWT: propInvoiceJWT }: PaymentPageP
             value={invoiceJWT}
             onChange={(e) => setInvoiceJWT(e.target.value)}
             placeholder="eyJhbGciOiJFZERTQSJ9..."
-            rows={6}
+            rows={12}
             className="invoice-input"
           />
           <button

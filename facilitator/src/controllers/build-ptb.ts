@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import { Transaction } from '@mysten/sui/transactions';
 import { getSuiClient } from '../sui.js';
 import { config, CLOCK_OBJECT_ID } from '../config.js';
+import { validatePaymentCoin } from '../config/networks.js';
 import { logger } from '../utils/logger.js';
 import { jwtVerify } from 'jose';
 import { extractSuiValues, parseCAIP2, parseCAIP19, parseCAIP10 } from '../utils/caip.js';
@@ -103,6 +104,26 @@ export async function buildPTBController(req: Request, res: Response): Promise<v
       res.status(400).json({
         error: 'Invoice expired',
         expiredAt: new Date(invoice.exp * 1000).toISOString(),
+      });
+      return;
+    }
+    
+    // ===  CRITICAL: Validate payment coin type ===
+    // Prevents SUI payments on testnet to avoid gas drainage
+    try {
+      validatePaymentCoin(invoice.coinType, config.suiNetwork);
+      logger.info('Payment coin validated', { 
+        coinType: invoice.coinType, 
+        network: config.suiNetwork 
+      });
+    } catch (validationError) {
+      logger.error('Payment coin validation failed', validationError);
+      res.status(400).json({
+        error: 'Invalid payment coin',
+        details: validationError instanceof Error ? validationError.message : String(validationError),
+        coinType: invoice.coinType,
+        network: config.suiNetwork,
+        expectedCoinType: config.paymentCoinType,
       });
       return;
     }

@@ -102,9 +102,29 @@ export async function fundController(req: Request, res: Response) {
 
   } catch (error) {
     console.error('Fund error:', error);
+    
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    
+    // Check if error is due to insufficient facilitator gas
+    if (errorMessage.includes('insufficient') && errorMessage.includes('gas')) {
+      res.status(503).json({
+        error: 'Service Temporarily Unavailable',
+        code: 'FACILITATOR_OUT_OF_GAS',
+        details: 'Facilitator has insufficient SUI for gas. Please try again later or contact support.',
+        instructions: {
+          manual: 'Run: sui client faucet --address ' + config.facilitatorAddress,
+          support: 'If issue persists, please contact the hackathon team.',
+        },
+        timestamp: new Date().toISOString(),
+      });
+      return;
+    }
+    
+    // Generic error response
     res.status(500).json({
       error: 'Failed to fund wallet',
-      details: error instanceof Error ? error.message : String(error),
+      details: errorMessage,
+      timestamp: new Date().toISOString(),
     });
   }
 }

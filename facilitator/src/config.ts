@@ -1,12 +1,26 @@
 import dotenv from 'dotenv';
+import { Ed25519Keypair } from '@mysten/sui/keypairs/ed25519';
 
 dotenv.config();
+
+// Derive facilitator address from private key
+function getFacilitatorAddress(): string {
+  try {
+    const privateKey = process.env.FACILITATOR_PRIVATE_KEY;
+    if (!privateKey) return '';
+    const keypair = Ed25519Keypair.fromSecretKey(privateKey);
+    return keypair.getPublicKey().toSuiAddress();
+  } catch {
+    return '';
+  }
+}
 
 export const config = {
   port: parseInt(process.env.PORT || '3001', 10),
   suiNetwork: process.env.SUI_NETWORK || 'testnet',
   packageId: process.env.PACKAGE_ID || '',
   facilitatorPrivateKey: process.env.FACILITATOR_PRIVATE_KEY || '',
+  facilitatorAddress: getFacilitatorAddress(),
   facilitatorFee: process.env.FACILITATOR_FEE || '10000', // 0.01 USDC (6 decimals)
 } as const;
 

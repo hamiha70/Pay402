@@ -93,6 +93,14 @@ describe('End-to-End Payment Flow', () => {
 
   describe('Step 1: Build PTB', () => {
     it('should build unsigned PTB from invoice JWT', async () => {
+      // Ensure buyer has coins for PTB building (coin selection)
+      await fetch(`${FACILITATOR_URL}/fund`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ address: buyerAddress, sessionId: `build_${Date.now()}` }),
+      });
+      await new Promise(resolve => setTimeout(resolve, 3000));
+      
       const response = await fetch(`${FACILITATOR_URL}/build-ptb`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },

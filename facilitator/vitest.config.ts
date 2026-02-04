@@ -7,6 +7,14 @@ export default defineConfig({
     environment: 'node',
     setupFiles: ['./src/__tests__/setup.ts'],
     testTimeout: 30000, // 30s timeout for E2E tests (funding + transaction)
+    // CRITICAL: Run tests sequentially to avoid blockchain state conflicts
+    // Parallel execution causes race conditions with shared facilitator gas coins
+    pool: 'forks',
+    poolOptions: {
+      forks: {
+        singleFork: true, // All tests in single process (sequential)
+      },
+    },
     coverage: {
       provider: 'v8',
       reporter: ['text', 'json', 'html'],

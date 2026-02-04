@@ -1,5 +1,6 @@
 import dotenv from 'dotenv';
 import { Ed25519Keypair } from '@mysten/sui/keypairs/ed25519';
+import { getNetworkConfig } from './config/networks.js';
 
 dotenv.config();
 
@@ -15,24 +16,34 @@ function getFacilitatorAddress(): string {
   }
 }
 
+// Get network configuration
+const networkConfig = getNetworkConfig();
+
 export const config = {
   port: parseInt(process.env.PORT || '3001', 10),
-  suiNetwork: process.env.SUI_NETWORK || 'testnet',
+  suiNetwork: process.env.SUI_NETWORK || 'localnet',
+  suiRpcUrl: process.env.SUI_RPC_URL || networkConfig.rpcUrl,
   packageId: process.env.PACKAGE_ID || '',
   facilitatorPrivateKey: process.env.FACILITATOR_PRIVATE_KEY || '',
   facilitatorAddress: getFacilitatorAddress(),
-  facilitatorFee: process.env.FACILITATOR_FEE || '10000', // 0.01 USDC (6 decimals)
+  facilitatorFee: process.env.FACILITATOR_FEE || '500000', // 0.50 USDC (6 decimals)
+  
+  // Network-specific configuration
+  network: networkConfig,
+  paymentCoinType: networkConfig.paymentCoin.type,
+  gasCoinType: networkConfig.gasCoin.type,
+  
+  // Legacy config values for backwards compatibility (tests)
+  faucetMinBalance: '1000000000', // 1 SUI
+  faucetFundAmount: '5000000000', // 5 SUI
 } as const;
 
 // SUI constants
 export const CLOCK_OBJECT_ID = '0x0000000000000000000000000000000000000000000000000000000000000006';
 
-// Coin type constants (testnet)
-// CRITICAL: SUI is ONLY for gas, never for payments on testnet!
+// Export for backwards compatibility
+export const DEFAULT_PAYMENT_COIN_TYPE = networkConfig.paymentCoin.type;
 export const COIN_TYPES = {
-  SUI: '0x2::sui::SUI',  // ⚠️ GAS ONLY - Do not use for payments on testnet
-  USDC: '0xa1ec7fc00a6f40db9693ad1415d0c193ad3906494428cf252621037bd7117e29::usdc::USDC',  // ✅ DEFAULT for payments
+  SUI: networkConfig.gasCoin.type,
+  USDC: networkConfig.paymentCoin.type,
 } as const;
-
-// Default coin type for payments (USDC on testnet)
-export const DEFAULT_PAYMENT_COIN_TYPE = COIN_TYPES.USDC;

@@ -5,23 +5,16 @@ import { config } from './config.js';
 let client: SuiGrpcClient | null = null;
 let keypair: Ed25519Keypair | null = null;
 
-// Network URL mapping
-const NETWORK_URLS = {
-  mainnet: 'https://fullnode.mainnet.sui.io:443',
-  testnet: 'https://fullnode.testnet.sui.io:443',
-  devnet: 'https://fullnode.devnet.sui.io:443',
-  localnet: 'http://127.0.0.1:9000',
-} as const;
-
 /**
  * Initialize SUI client (singleton)
+ * Uses network configuration from config/networks.ts
  */
 export function getSuiClient(): SuiGrpcClient {
   if (!client) {
-    const network = config.suiNetwork as keyof typeof NETWORK_URLS;
+    const network = config.suiNetwork as 'mainnet' | 'testnet' | 'devnet' | 'localnet';
     client = new SuiGrpcClient({
       network: network === 'localnet' ? 'testnet' : network,
-      baseUrl: NETWORK_URLS[network],
+      baseUrl: config.suiRpcUrl,
     });
   }
   return client;

@@ -1,6 +1,9 @@
 import { describe, it, expect, beforeAll } from 'vitest';
 import { Ed25519Keypair } from '@mysten/sui/keypairs/ed25519';
 import { execSync } from 'child_process';
+import { getSuiClient } from '../sui.js';
+import { config } from '../config.js';
+import type { SuiGrpcClient } from '@mysten/sui/client';
 
 /**
  * End-to-End Payment Flow Tests
@@ -10,13 +13,24 @@ import { execSync } from 'child_process';
  * 2. Build PTB via facilitator
  * 3. Sign PTB with buyer keypair
  * 4. Submit payment (optimistic & pessimistic modes)
- * 5. Verify on-chain settlement
+ * 5. Verify on-chain settlement WITH BALANCE CHECKS
  */
+
+// Helper: Get MockUSDC balance for an address
+async function getUSDCBalance(client: SuiGrpcClient, address: string, coinType: string): Promise<number> {
+  const balanceResp = await client.getBalance({ owner: address, coinType });
+  // SuiGrpcClient returns: { balance: { coinType, coinObjectCount, totalBalance, lockedBalance } }
+  return parseInt(balanceResp.balance?.totalBalance || '0');
+}
 
 describe('End-to-End Payment Flow', () => {
   let buyerAddress: string;
   let buyerKeypair: Ed25519Keypair;
   let invoiceJWT: string;
+  let suiClient: SuiGrpcClient;
+  let merchantAddress: string;
+  let facilitatorAddress: string;
+  let mockUSDCType: string;
   
   const FACILITATOR_URL = 'http://localhost:3001';
   const MERCHANT_URL = 'http://localhost:3002';
@@ -27,9 +41,15 @@ describe('End-to-End Payment Flow', () => {
     buyerKeypair = new Ed25519Keypair();
     buyerAddress = buyerKeypair.getPublicKey().toSuiAddress();
     
+    // Initialize SUI client and addresses for balance verification
+    suiClient = getSuiClient();
+    facilitatorAddress = config.facilitatorAddress;
+    mockUSDCType = config.paymentCoinType;
+    
     console.log('🔑 Test Setup:');
     console.log('  Buyer address:', buyerAddress);
     console.log('  Facilitator will sponsor gas (different address)');
+    console.log('  MockUSDC type:', mockUSDCType);
     
     // Fund buyer with USDC for payment
     const sessionId = `test-${Date.now()}`;
@@ -59,6 +79,15 @@ describe('End-to-End Payment Flow', () => {
     invoiceJWT = invoiceData.invoice;
     
     expect(invoiceJWT).toBeDefined();
+    
+    // Decode JWT to get merchant address and payment amount
+    const payload = JSON.parse(Buffer.from(invoiceJWT.split('.')[1], 'base64').toString());
+    merchantAddress = payload.merchantRecipient;
+    
+    console.log('✅ Invoice received from merchant');
+    console.log('  Merchant address:', merchantAddress);
+    console.log('  Payment amount:', payload.amount, '(', parseInt(payload.amount) / 1_000_000, 'USDC)');
+    console.log('  Facilitator fee:', payload.facilitatorFee, '(', parseInt(payload.facilitatorFee) / 1_000_000, 'USDC)');
   });
 
   describe('Step 1: Build PTB', () => {
@@ -125,7 +154,19 @@ describe('End-to-End Payment Flow', () => {
 
   describe('Step 2: Submit Payment (Optimistic Mode)', () => {
     // Move contract issue fixed - settle_payment is now an entry function
-    it('should submit payment and return digest immediately', async () => {
+    it('should submit payment and return digest immediately + VERIFY BALANCES', async () => {
+      // ═══════════════════════════════════════════════════
+      // PHASE 1: Get balances BEFORE payment
+      // ═══════════════════════════════════════════════════
+      const buyerBalanceBefore = await getUSDCBalance(suiClient, buyerAddress, mockUSDCType);
+      const merchantBalanceBefore = await getUSDCBalance(suiClient, merchantAddress, mockUSDCType);
+      const facilitatorBalanceBefore = await getUSDCBalance(suiClient, facilitatorAddress, mockUSDCType);
+      
+      console.log('\n💰 Balances BEFORE payment:');
+      console.log(`  Buyer:       ${(buyerBalanceBefore / 1_000_000).toFixed(2)} USDC`);
+      console.log(`  Merchant:    ${(merchantBalanceBefore / 1_000_000).toFixed(2)} USDC`);
+      console.log(`  Facilitator: ${(facilitatorBalanceBefore / 1_000_000).toFixed(2)} USDC`);
+      
       const startTime = Date.now();
       
       // Build PTB (returns transaction kind bytes)
@@ -170,15 +211,64 @@ describe('End-to-End Payment Flow', () => {
       // Optimistic should be reasonably fast (<5s including network, localnet can be slow)
       expect(clientLatency).toBeLessThan(5000);
       
-      console.log(`✅ Optimistic mode completed`);
+      console.log(`\n✅ Optimistic mode completed`);
       console.log(`  Client latency: ${clientLatency}ms`);
       console.log(`  Digest: ${submitData.digest}`);
+      
+      // ═══════════════════════════════════════════════════
+      // PHASE 2: Wait for finality & check balances AFTER
+      // ═══════════════════════════════════════════════════
+      console.log('\n⏳ Waiting for transaction finality...');
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      
+      const buyerBalanceAfter = await getUSDCBalance(suiClient, buyerAddress, mockUSDCType);
+      const merchantBalanceAfter = await getUSDCBalance(suiClient, merchantAddress, mockUSDCType);
+      const facilitatorBalanceAfter = await getUSDCBalance(suiClient, facilitatorAddress, mockUSDCType);
+      
+      console.log('\n💰 Balances AFTER payment:');
+      console.log(`  Buyer:       ${(buyerBalanceAfter / 1_000_000).toFixed(2)} USDC`);
+      console.log(`  Merchant:    ${(merchantBalanceAfter / 1_000_000).toFixed(2)} USDC`);
+      console.log(`  Facilitator: ${(facilitatorBalanceAfter / 1_000_000).toFixed(2)} USDC`);
+      
+      // ═══════════════════════════════════════════════════
+      // PHASE 3: CRITICAL VERIFICATION - Check exact deltas
+      // ═══════════════════════════════════════════════════
+      const PAYMENT_AMOUNT = 10_000_000;  // 10.00 USDC (from merchant config)
+      const FACILITATOR_FEE = 500_000;     // 0.50 USDC (from merchant config)
+      
+      const buyerDelta = buyerBalanceBefore - buyerBalanceAfter;
+      const merchantDelta = merchantBalanceAfter - merchantBalanceBefore;
+      const facilitatorDelta = facilitatorBalanceAfter - facilitatorBalanceBefore;
+      
+      console.log('\n📊 Balance deltas (actual vs expected):');
+      console.log(`  Buyer paid:          ${(buyerDelta / 1_000_000).toFixed(2)} USDC (expected: ${((PAYMENT_AMOUNT + FACILITATOR_FEE) / 1_000_000).toFixed(2)})`);
+      console.log(`  Merchant received:   ${(merchantDelta / 1_000_000).toFixed(2)} USDC (expected: ${(PAYMENT_AMOUNT / 1_000_000).toFixed(2)})`);
+      console.log(`  Facilitator received: ${(facilitatorDelta / 1_000_000).toFixed(2)} USDC (expected: ${(FACILITATOR_FEE / 1_000_000).toFixed(2)})`);
+      
+      // CRITICAL: Verify exact amounts match fee model
+      expect(buyerDelta).toBe(PAYMENT_AMOUNT + FACILITATOR_FEE);
+      expect(merchantDelta).toBe(PAYMENT_AMOUNT);
+      expect(facilitatorDelta).toBe(FACILITATOR_FEE);
+      
+      console.log('\n✅ BALANCE VERIFICATION PASSED!');
     });
   });
 
   describe('Step 3: Submit Payment (Pessimistic Mode)', () => {
     // Move contract issue fixed - settle_payment is now an entry function
-    it('should submit payment and block until finality', async () => {
+    it('should submit payment and block until finality + VERIFY BALANCES', async () => {
+      // ═══════════════════════════════════════════════════
+      // PHASE 1: Get balances BEFORE payment
+      // ═══════════════════════════════════════════════════
+      const buyerBalanceBefore = await getUSDCBalance(suiClient, buyerAddress, mockUSDCType);
+      const merchantBalanceBefore = await getUSDCBalance(suiClient, merchantAddress, mockUSDCType);
+      const facilitatorBalanceBefore = await getUSDCBalance(suiClient, facilitatorAddress, mockUSDCType);
+      
+      console.log('\n💰 Balances BEFORE payment:');
+      console.log(`  Buyer:       ${(buyerBalanceBefore / 1_000_000).toFixed(2)} USDC`);
+      console.log(`  Merchant:    ${(merchantBalanceBefore / 1_000_000).toFixed(2)} USDC`);
+      console.log(`  Facilitator: ${(facilitatorBalanceBefore / 1_000_000).toFixed(2)} USDC`);
+      
       const startTime = Date.now();
       
       // Build PTB (returns transaction kind bytes)
@@ -194,7 +284,7 @@ describe('End-to-End Payment Flow', () => {
       // Sign the pre-built transaction (already includes gas sponsorship)
       const { signature } = await buyerKeypair.signTransaction(txBytes);
       
-      console.log('🔐 Buyer signature info:', {
+      console.log('\n🔐 Buyer signature info:', {
         buyerAddress,
         signatureLength: signature.length,
         signaturePreview: signature.substring(0, 20) + '...',
@@ -230,10 +320,44 @@ describe('End-to-End Payment Flow', () => {
       // Note: On fast localnet, finality can be < 500ms
       expect(clientLatency).toBeGreaterThan(100); // At least 100ms
       
-      console.log(`✅ Pessimistic mode completed`);
+      console.log(`\n✅ Pessimistic mode completed`);
       console.log(`  Client latency: ${clientLatency}ms`);
       console.log(`  Digest: ${submitData.digest}`);
       console.log(`  Receipt: ${submitData.receipt ? 'included' : 'not included'}`);
+      
+      // ═══════════════════════════════════════════════════
+      // PHASE 2: Get balances AFTER (pessimistic waits for finality)
+      // ═══════════════════════════════════════════════════
+      const buyerBalanceAfter = await getUSDCBalance(suiClient, buyerAddress, mockUSDCType);
+      const merchantBalanceAfter = await getUSDCBalance(suiClient, merchantAddress, mockUSDCType);
+      const facilitatorBalanceAfter = await getUSDCBalance(suiClient, facilitatorAddress, mockUSDCType);
+      
+      console.log('\n💰 Balances AFTER payment:');
+      console.log(`  Buyer:       ${(buyerBalanceAfter / 1_000_000).toFixed(2)} USDC`);
+      console.log(`  Merchant:    ${(merchantBalanceAfter / 1_000_000).toFixed(2)} USDC`);
+      console.log(`  Facilitator: ${(facilitatorBalanceAfter / 1_000_000).toFixed(2)} USDC`);
+      
+      // ═══════════════════════════════════════════════════
+      // PHASE 3: CRITICAL VERIFICATION - Check exact deltas
+      // ═══════════════════════════════════════════════════
+      const PAYMENT_AMOUNT = 10_000_000;  // 10.00 USDC (from merchant config)
+      const FACILITATOR_FEE = 500_000;     // 0.50 USDC (from merchant config)
+      
+      const buyerDelta = buyerBalanceBefore - buyerBalanceAfter;
+      const merchantDelta = merchantBalanceAfter - merchantBalanceBefore;
+      const facilitatorDelta = facilitatorBalanceAfter - facilitatorBalanceBefore;
+      
+      console.log('\n📊 Balance deltas (actual vs expected):');
+      console.log(`  Buyer paid:          ${(buyerDelta / 1_000_000).toFixed(2)} USDC (expected: ${((PAYMENT_AMOUNT + FACILITATOR_FEE) / 1_000_000).toFixed(2)})`);
+      console.log(`  Merchant received:   ${(merchantDelta / 1_000_000).toFixed(2)} USDC (expected: ${(PAYMENT_AMOUNT / 1_000_000).toFixed(2)})`);
+      console.log(`  Facilitator received: ${(facilitatorDelta / 1_000_000).toFixed(2)} USDC (expected: ${(FACILITATOR_FEE / 1_000_000).toFixed(2)})`);
+      
+      // CRITICAL: Verify exact amounts match fee model
+      expect(buyerDelta).toBe(PAYMENT_AMOUNT + FACILITATOR_FEE);
+      expect(merchantDelta).toBe(PAYMENT_AMOUNT);
+      expect(facilitatorDelta).toBe(FACILITATOR_FEE);
+      
+      console.log('\n✅ BALANCE VERIFICATION PASSED!');
     });
   });
 

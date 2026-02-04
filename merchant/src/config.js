@@ -3,7 +3,12 @@
  */
 
 import dotenv from 'dotenv';
+import { getNetworkConfig, getPaymentCoinType } from './config/networks.js';
+
 dotenv.config();
+
+// Get network configuration
+const networkConfig = getNetworkConfig();
 
 export const config = {
   // Server
@@ -15,15 +20,16 @@ export const config = {
   merchantPrivateKey: process.env.MERCHANT_PRIVATE_KEY,
   
   // Pricing
-  resourcePrice: process.env.RESOURCE_PRICE || '100000', // 0.1 USDC
+  resourcePrice: process.env.RESOURCE_PRICE || '10000000', // 10.00 USDC (6 decimals)
   
   // Facilitator
   facilitatorAddress: process.env.FACILITATOR_ADDRESS,
-  facilitatorFee: process.env.FACILITATOR_FEE || '10000', // 0.01 USDC
+  facilitatorFee: process.env.FACILITATOR_FEE || '500000', // 0.50 USDC (6 decimals)
   
-  // SUI
+  // Network
   suiNetwork: process.env.SUI_NETWORK || 'localnet',
-  coinType: process.env.COIN_TYPE || '0x2::sui::SUI',
+  coinType: process.env.COIN_TYPE || getPaymentCoinType(), // Auto-detect from network
+  network: networkConfig,
   
   // Invoice
   invoiceExpirySeconds: parseInt(process.env.INVOICE_EXPIRY_SECONDS || '3600', 10),

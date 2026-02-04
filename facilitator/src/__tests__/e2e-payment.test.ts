@@ -25,9 +25,13 @@ async function getUSDCBalance(client: SuiGrpcClient, address: string, coinType: 
 }
 
 describe('End-to-End Payment Flow', () => {
-  let buyerAddress: string;
-  let buyerKeypair: Ed25519Keypair;
-  let invoiceJWT: string;
+  // ════════════════════════════════════════════════════════════════
+  // CRITICAL: NO GLOBAL BUYER STATE - TRUE TEST ISOLATION
+  // Each test MUST create its own dedicated buyer to avoid:
+  // - Coin conflicts (spent coins from previous tests)
+  // - Race conditions (parallel test execution)
+  // - Order dependencies (tests passing only in specific order)
+  // ════════════════════════════════════════════════════════════════
   let suiClient: SuiGrpcClient;
   let merchantAddress: string;
   let facilitatorAddress: string;
@@ -37,76 +41,71 @@ describe('End-to-End Payment Flow', () => {
   const MERCHANT_URL = 'http://localhost:3002';
 
   beforeAll(async () => {
-    // CRITICAL: Buyer MUST be different from facilitator for sponsored transactions
-    // Generate a unique buyer keypair for testing
-    buyerKeypair = new Ed25519Keypair();
-    buyerAddress = buyerKeypair.getPublicKey().toSuiAddress();
-    
-    // Initialize SUI client and addresses for balance verification
+    // Initialize ONLY shared infrastructure (SUI client, addresses)
+    // NO buyer creation - each test creates its own for TRUE ISOLATION
     suiClient = getSuiClient();
     facilitatorAddress = config.facilitatorAddress;
     mockUSDCType = config.paymentCoinType;
     
-    console.log('🔑 Test Setup:');
-    console.log('  Buyer address:', buyerAddress);
-    console.log('  Facilitator will sponsor gas (different address)');
-    console.log('  MockUSDC type:', mockUSDCType);
+    console.log('═══════════════════════════════════════════════');
+    console.log('🔑 Test Suite Setup (SHARED INFRASTRUCTURE ONLY)');
+    console.log('═══════════════════════════════════════════════');
+    console.log('  Facilitator:', facilitatorAddress.substring(0, 20) + '...');
+    console.log('  MockUSDC:', mockUSDCType.substring(0, 40) + '...');
+    console.log('  ⚠️  Each test creates its own buyer (ISOLATION)');
     
-    // Fund buyer with USDC for payment
-    const sessionId = `test-${Date.now()}`;
-    const fundResponse = await fetch(`${FACILITATOR_URL}/fund`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        address: buyerAddress,
-        sessionId: sessionId,
-      }),
-    });
-    
-    if (!fundResponse.ok) {
-      const errorText = await fundResponse.text();
-      throw new Error(`Fund failed: ${errorText}`);
-    }
-    
-    console.log('✅ Buyer funded with USDC');
-    const fundData = await fundResponse.json();
-    console.log('Fund response:', fundData);
-    // Fund endpoint may return different success indicators
-    expect(fundResponse.ok).toBe(true);
-    
-    // Get invoice from merchant
+    // Get merchant address from a sample invoice (doesn't change per test)
     const invoiceResponse = await fetch(`${MERCHANT_URL}/api/premium-data`);
     const invoiceData = await invoiceResponse.json();
-    invoiceJWT = invoiceData.invoice;
-    
-    expect(invoiceJWT).toBeDefined();
-    
-    // Decode JWT to get merchant address and payment amount
-    const payload = JSON.parse(Buffer.from(invoiceJWT.split('.')[1], 'base64').toString());
+    const sampleJWT = invoiceData.invoice;
+    const payload = JSON.parse(Buffer.from(sampleJWT.split('.')[1], 'base64').toString());
     merchantAddress = payload.merchantRecipient;
     
-    console.log('✅ Invoice received from merchant');
-    console.log('  Merchant address:', merchantAddress);
-    console.log('  Payment amount:', payload.amount, '(', parseInt(payload.amount) / 1_000_000, 'USDC)');
-    console.log('  Facilitator fee:', payload.facilitatorFee, '(', parseInt(payload.facilitatorFee) / 1_000_000, 'USDC)');
+    console.log('  Merchant:', merchantAddress.substring(0, 20) + '...');
+    console.log('  Payment Amount:', (parseInt(payload.amount) / 1_000_000).toFixed(2), 'USDC');
+    console.log('  Facilitator Fee:', (parseInt(payload.facilitatorFee) / 1_000_000).toFixed(2), 'USDC');
+    console.log('═══════════════════════════════════════════════\n');
   });
 
   describe('Step 1: Build PTB', () => {
     it('should build unsigned PTB from invoice JWT', async () => {
-      // Ensure buyer has coins for PTB building (coin selection)
-      await fetch(`${FACILITATOR_URL}/fund`, {
+      // ═══════════════════════════════════════════════════
+      // Create DEDICATED buyer for THIS test (complete isolation)
+      // ═══════════════════════════════════════════════════
+      const { Ed25519Keypair } = await import('@mysten/sui/keypairs/ed25519');
+      const testBuyerKeypair = new Ed25519Keypair();
+      const testBuyerAddress = testBuyerKeypair.getPublicKey().toSuiAddress();
+      console.log('👤 Created dedicated buyer for Build PTB test:', testBuyerAddress.substring(0, 20) + '...');
+      
+      // Get fresh invoice for THIS test
+      const invoiceResponse = await fetch(`${MERCHANT_URL}/api/premium-data`);
+      const invoiceData = await invoiceResponse.json();
+      const testInvoiceJWT = invoiceData.invoice;
+      
+      // Fund this test's buyer
+      const fundResp = await fetch(`${FACILITATOR_URL}/fund`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ address: buyerAddress, sessionId: `build_${Date.now()}` }),
+        body: JSON.stringify({ address: testBuyerAddress, sessionId: `build_${Date.now()}` }),
       });
-      await new Promise(resolve => setTimeout(resolve, 3000));
+      expect(fundResp.ok).toBe(true);
+      console.log('🏦 Funded test buyer with USDC');
       
+      // Wait for funding transaction to finalize
+      await new Promise(resolve => setTimeout(resolve, 4000));
+      
+      // Verify buyer has coins
+      const preBalance = await getUSDCBalance(suiClient, testBuyerAddress, mockUSDCType);
+      console.log('💰 Test buyer balance after funding:', (preBalance / 1_000_000).toFixed(2), 'USDC');
+      expect(preBalance).toBeGreaterThan(0);
+      
+      // Build PTB with this test's buyer
       const response = await fetch(`${FACILITATOR_URL}/build-ptb`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          buyerAddress,
-          invoiceJWT,
+          buyerAddress: testBuyerAddress,
+          invoiceJWT: testInvoiceJWT,
         }),
       });
       
@@ -129,15 +128,22 @@ describe('End-to-End Payment Flow', () => {
       expect(data.transactionBytes.length).toBeGreaterThan(0);
       expect(data.invoice).toBeDefined();
       expect(data.invoice.amount).toBeDefined();
+      
+      console.log('✅ PTB built successfully for dedicated buyer\n');
     });
 
     it('should fail with invalid buyer address', async () => {
+      // Get fresh invoice
+      const invoiceResponse = await fetch(`${MERCHANT_URL}/api/premium-data`);
+      const invoiceData = await invoiceResponse.json();
+      const testInvoiceJWT = invoiceData.invoice;
+      
       const response = await fetch(`${FACILITATOR_URL}/build-ptb`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           buyerAddress: '0xinvalid',
-          invoiceJWT,
+          invoiceJWT: testInvoiceJWT,
         }),
       });
       
@@ -145,6 +151,11 @@ describe('End-to-End Payment Flow', () => {
     });
 
     it('should fail with expired invoice', async () => {
+      // Create dedicated buyer for this negative test
+      const { Ed25519Keypair } = await import('@mysten/sui/keypairs/ed25519');
+      const testBuyerKeypair = new Ed25519Keypair();
+      const testBuyerAddress = testBuyerKeypair.getPublicKey().toSuiAddress();
+      
       // Create expired invoice (exp in past)
       const expiredJWT = 'eyJhbGciOiJFZERTQSIsInR5cCI6IkpXVCJ9.eyJleHAiOjEwMDAwMDAwMDB9.invalid';
       
@@ -152,7 +163,7 @@ describe('End-to-End Payment Flow', () => {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          buyerAddress,
+          buyerAddress: testBuyerAddress,
           invoiceJWT: expiredJWT,
         }),
       });
@@ -199,7 +210,7 @@ describe('End-to-End Payment Flow', () => {
       // ═══════════════════════════════════════════════════
       // PHASE 1: Get balances BEFORE payment
       // ═══════════════════════════════════════════════════
-      const buyerBalanceBefore = await getUSDCBalance(suiClient, buyerAddress, mockUSDCType);
+      const buyerBalanceBefore = await getUSDCBalance(suiClient, testBuyerAddress, mockUSDCType);
       const merchantBalanceBefore = await getUSDCBalance(suiClient, merchantAddress, mockUSDCType);
       const facilitatorBalanceBefore = await getUSDCBalance(suiClient, facilitatorAddress, mockUSDCType);
       
@@ -214,14 +225,14 @@ describe('End-to-End Payment Flow', () => {
       const buildResponse = await fetch(`${FACILITATOR_URL}/build-ptb`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ buyerAddress, invoiceJWT: testInvoiceJWT }),
+        body: JSON.stringify({ buyerAddress: testBuyerAddress, invoiceJWT: testInvoiceJWT }),
       });
       
       const buildData = await buildResponse.json();
       const txBytes = new Uint8Array(buildData.transactionBytes);
       
       // Sign the pre-built transaction (already includes gas sponsorship)
-      const { signature } = await buyerKeypair.signTransaction(txBytes);
+      const { signature } = await testBuyerKeypair.signTransaction(txBytes);
       
       // Submit (optimistic mode) with sponsored transaction format
       const submitResponse = await fetch(`${FACILITATOR_URL}/submit-payment`, {
@@ -262,7 +273,7 @@ describe('End-to-End Payment Flow', () => {
       console.log('\n⏳ Waiting for transaction finality...');
       await new Promise(resolve => setTimeout(resolve, 2000));
       
-      const buyerBalanceAfter = await getUSDCBalance(suiClient, buyerAddress, mockUSDCType);
+      const buyerBalanceAfter = await getUSDCBalance(suiClient, testBuyerAddress, mockUSDCType);
       const merchantBalanceAfter = await getUSDCBalance(suiClient, merchantAddress, mockUSDCType);
       const facilitatorBalanceAfter = await getUSDCBalance(suiClient, facilitatorAddress, mockUSDCType);
       
@@ -489,11 +500,34 @@ describe('End-to-End Payment Flow', () => {
     it('should demonstrate latency difference between modes', async () => {
       const results: { mode: string; latency: number }[] = [];
       
+      // ═══════════════════════════════════════════════════
+      // Create DEDICATED buyer for THIS test (complete isolation)
+      // ═══════════════════════════════════════════════════
+      const { Ed25519Keypair } = await import('@mysten/sui/keypairs/ed25519');
+      const testBuyerKeypair = new Ed25519Keypair();
+      const testBuyerAddress = testBuyerKeypair.getPublicKey().toSuiAddress();
+      console.log('👤 Created dedicated buyer for latency test:', testBuyerAddress.substring(0, 20) + '...');
+      
+      // Fund this test's buyer ONCE (will be used for both optimistic + pessimistic)
+      const fundResp = await fetch(`${FACILITATOR_URL}/fund`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ address: testBuyerAddress, sessionId: `latency_${Date.now()}` }),
+      });
+      expect(fundResp.ok).toBe(true);
+      console.log('🏦 Funded latency test buyer with USDC');
+      
+      // Wait for funding + verify balance
+      await new Promise(resolve => setTimeout(resolve, 4000));
+      const preBalance = await getUSDCBalance(suiClient, testBuyerAddress, mockUSDCType);
+      console.log('💰 Latency test buyer balance:', (preBalance / 1_000_000).toFixed(2), 'USDC');
+      expect(preBalance).toBeGreaterThan(0);
+      
       // Test both modes with FRESH invoices
       for (let i = 0; i < 2; i++) {
         const mode = i === 0 ? 'optimistic' : 'pessimistic';
         
-        // Get fresh invoice for each test
+        // Get fresh invoice for each mode
         const freshResp = await fetch(`${MERCHANT_URL}/api/premium-data`);
         const freshData = await freshResp.json();
         const testInvoice = freshData.invoice;
@@ -504,14 +538,14 @@ describe('End-to-End Payment Flow', () => {
         const buildResp = await fetch(`${FACILITATOR_URL}/build-ptb`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ buyerAddress, invoiceJWT: testInvoice }),
+          body: JSON.stringify({ buyerAddress: testBuyerAddress, invoiceJWT: testInvoice }),
         });
         
         const buildData = await buildResp.json();
         const txBytes = new Uint8Array(buildData.transactionBytes);
         
         // Sign the pre-built transaction
-        const { signature } = await buyerKeypair.signTransaction(txBytes);
+        const { signature } = await testBuyerKeypair.signTransaction(txBytes);
         
         // Submit with sponsored transaction format
         const submitResp = await fetch(`${FACILITATOR_URL}/submit-payment`, {
@@ -519,7 +553,7 @@ describe('End-to-End Payment Flow', () => {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             invoiceJWT: testInvoice,
-            buyerAddress,
+            buyerAddress: testBuyerAddress,
             transactionBytes: Array.from(txBytes),
             buyerSignature: signature,
             settlementMode: mode,
@@ -530,6 +564,12 @@ describe('End-to-End Payment Flow', () => {
         results.push({ mode, latency });
         
         await submitResp.json();
+        
+        // Wait between mode tests to avoid coin conflicts
+        if (i === 0) {
+          console.log('  ⏳ Waiting 2s between optimistic and pessimistic...');
+          await new Promise(resolve => setTimeout(resolve, 2000));
+        }
       }
       
       const optimisticLatency = results[0].latency;

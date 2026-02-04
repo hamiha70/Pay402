@@ -244,59 +244,65 @@ export default function PaymentPage({ invoiceJWT: propInvoiceJWT }: PaymentPageP
           <div className="invoice-details">
             <h3>Invoice Details</h3>
             <div className="detail-row">
-              <span>Resource:</span>
+              <span><strong>Resource:</strong></span>
               <code>{invoice.resource}</code>
             </div>
             {invoice.description && (
               <div className="detail-row">
-                <span>Description:</span>
+                <span><strong>Description:</strong></span>
                 <span>{invoice.description}</span>
-              </div>
-            )}
-            {merchantAddr && (
-              <div className="detail-row">
-                <span>Merchant Address:</span>
-                <code>{merchantAddr.substring(0, 20)}...</code>
               </div>
             )}
             {invoice.network && (
               <div className="detail-row">
-                <span>Network:</span>
+                <span><strong>Network:</strong></span>
                 <code>{invoice.network}</code>
+              </div>
+            )}
+            {merchantAddr && (
+              <div className="detail-row">
+                <span><strong>Merchant Address:</strong></span>
+                <code style={{fontSize: '0.7em', wordBreak: 'break-all'}}>{merchantAddr}</code>
               </div>
             )}
             {invoice.assetType && (
               <div className="detail-row">
-                <span>Asset Type:</span>
-                <code style={{fontSize: '0.75em'}}>{invoice.assetType}</code>
+                <span><strong>Asset Type:</strong></span>
+                <code style={{fontSize: '0.65em', wordBreak: 'break-all'}}>{invoice.assetType}</code>
               </div>
             )}
             {invoice.payTo && (
               <div className="detail-row">
-                <span>Pay To:</span>
-                <code>{invoice.payTo.substring(0, 24)}...</code>
+                <span><strong>Pay To (CAIP-10):</strong></span>
+                <code style={{fontSize: '0.65em', wordBreak: 'break-all'}}>{invoice.payTo}</code>
               </div>
             )}
             {invoice.paymentId && (
               <div className="detail-row">
-                <span>Payment ID:</span>
-                <code>{invoice.paymentId}</code>
+                <span><strong>Payment ID:</strong></span>
+                <code style={{fontSize: '0.8em'}}>{invoice.paymentId}</code>
               </div>
             )}
+            
+            <div style={{height: '1px', background: '#d1d5db', margin: '15px 0'}}></div>
+            
             <div className="detail-row">
-              <span>Payment Amount:</span>
-              <strong>{merchantAmount.toFixed(2)} {coinName}</strong>
+              <span><strong>Merchant Amount:</strong></span>
+              <strong style={{color: '#10b981'}}>{merchantAmount.toFixed(2)} {coinName}</strong>
             </div>
             <div className="detail-row">
-              <span>Facilitator Fee:</span>
-              <span>{feeAmount.toFixed(2)} {coinName}</span>
+              <span><strong>Facilitator Fee:</strong></span>
+              <span style={{color: '#6b7280'}}>{feeAmount.toFixed(2)} {coinName}</span>
             </div>
             <div className="detail-row total">
-              <span>Total Amount:</span>
-              <strong>{totalAmount.toFixed(2)} {coinName}</strong>
+              <span><strong>Total Amount:</strong></span>
+              <strong style={{fontSize: '1.2em', color: '#1f2937'}}>{totalAmount.toFixed(2)} {coinName}</strong>
             </div>
+            
+            <div style={{height: '1px', background: '#d1d5db', margin: '15px 0'}}></div>
+            
             <div className="detail-row">
-              <span>Expires:</span>
+              <span><strong>Expires:</strong></span>
               <span>{new Date(invoice.expiry * 1000).toLocaleString()}</span>
             </div>
             <div className="demo-highlight">
@@ -308,16 +314,16 @@ export default function PaymentPage({ invoiceJWT: propInvoiceJWT }: PaymentPageP
           <div className="balance-info">
             <h3>Your Balance</h3>
             <div className="balance-row">
-              <span>{coinName}:</span>
-              <strong>{relevantBalance} {coinName}</strong>
+              <span><strong>USDC:</strong></span>
+              <strong>{balance.usdc} USDC</strong>
             </div>
             <div className="balance-row">
-              <span>SUI (for gas):</span>
+              <span><strong>SUI (for gas):</strong></span>
               <strong>{balance.sui} SUI</strong>
             </div>
-            <div className="balance-row">
-              <span>Address:</span>
-              <code>{address?.substring(0, 20)}...</code>
+            <div className="balance-row" style={{flexDirection: 'column', alignItems: 'flex-start', gap: '5px'}}>
+              <span><strong>Address:</strong></span>
+              <code style={{fontSize: '0.7em', wordBreak: 'break-all', width: '100%'}}>{address}</code>
             </div>
           </div>
 

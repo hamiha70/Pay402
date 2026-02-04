@@ -22,7 +22,7 @@ interface PaymentPageProps {
 }
 
 export default function PaymentPage({ invoiceJWT: propInvoiceJWT }: PaymentPageProps) {
-  const { isConnected, address, signIn, signTransaction, authMethod } = useAuth();
+  const { isConnected, address, signIn, signTransaction, signTransactionBytes, authMethod } = useAuth();
   const { balanceInfo, fundWallet } = useBalance(address);
 
   // Extract balance with defaults
@@ -129,13 +129,13 @@ export default function PaymentPage({ invoiceJWT: propInvoiceJWT }: PaymentPageP
     const startTime = Date.now();
 
     try {
-      // Reconstruct transaction from kind bytes
-      const { Transaction } = await import('@mysten/sui/transactions');
-      const tx = Transaction.fromKind(ptbBytes);
-      tx.setSender(address);
+      // Gas-sponsored pattern: Sign the FULL transaction bytes directly
+      // (Facilitator already built the complete transaction with gas sponsorship)
+      if (!signTransactionBytes) {
+        throw new Error('Current auth method does not support signing pre-built transactions');
+      }
       
-      // Sign transaction (buyer signature)
-      const { signature } = await signTransaction(tx);
+      const { signature } = await signTransactionBytes(ptbBytes);
       
       console.log('✍️ Buyer signed transaction');
       console.log('  Sender:', address);
@@ -177,6 +177,10 @@ export default function PaymentPage({ invoiceJWT: propInvoiceJWT }: PaymentPageP
         }, 2000);
       }
     } catch (err) {
+      console.error('💥 Payment submission error:', err);
+      console.error('  Error type:', err?.constructor?.name);
+      console.error('  Error message:', err instanceof Error ? err.message : String(err));
+      console.error('  Full error object:', JSON.stringify(err, Object.getOwnPropertyNames(err), 2));
       setError(`Payment failed: ${err instanceof Error ? err.message : String(err)}`);
       setStep('error');
     }

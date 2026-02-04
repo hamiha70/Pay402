@@ -24,6 +24,12 @@ export interface AuthProvider {
     signature: string;
     transactionBytes: string;
   }>;
+  
+  /** Sign pre-built transaction bytes (for gas-sponsored transactions) */
+  signTransactionBytes?: (txBytes: Uint8Array) => Promise<{
+    signature: string;
+    bytes: Uint8Array;
+  }>;
 }
 
 /**

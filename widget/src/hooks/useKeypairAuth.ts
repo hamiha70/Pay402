@@ -70,6 +70,21 @@ export function useKeypairAuth(): AuthProvider {
     };
   }, [keypair]);
 
+  // Sign pre-built transaction bytes (for gas-sponsored transactions)
+  const signTransactionBytes = useCallback(async (txBytes: Uint8Array) => {
+    if (!keypair) {
+      throw new Error('Not connected');
+    }
+
+    // Sign the pre-built bytes directly
+    const signature = await keypair.signTransaction(txBytes);
+
+    return {
+      signature: signature.signature,
+      bytes: txBytes,
+    };
+  }, [keypair]);
+
   return {
     isConnected,
     address,
@@ -77,5 +92,6 @@ export function useKeypairAuth(): AuthProvider {
     signIn,
     signOut,
     signTransaction,
+    signTransactionBytes,  // For gas-sponsored transactions
   };
 }

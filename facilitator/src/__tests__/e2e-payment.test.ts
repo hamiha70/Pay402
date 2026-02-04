@@ -422,15 +422,10 @@ describe('End-to-End Payment Flow', () => {
       
       const startTime = Date.now();
       
-      // Build PTB (returns transaction kind bytes)
-      const buildResponse = await fetch(`${FACILITATOR_URL}/build-ptb`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ buyerAddress: testBuyerAddress, invoiceJWT: testInvoiceJWT }),
-      });
-      
-      const buildData = await buildResponse.json();
-      const txBytes = new Uint8Array(buildData.transactionBytes);
+      // Build PTB using shared client library (same code as widget!)
+      const clientConfig = { facilitatorUrl: FACILITATOR_URL };
+      const { kindBytes } = await buildPTB(clientConfig, testInvoiceJWT, testBuyerAddress);
+      const txBytes = kindBytes;
       
       // Sign the pre-built transaction (already includes gas sponsorship)
       const { signature } = await testBuyerKeypair.signTransaction(txBytes);

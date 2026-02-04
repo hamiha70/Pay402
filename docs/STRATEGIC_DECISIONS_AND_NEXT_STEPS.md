@@ -231,20 +231,33 @@ if (network === "testnet" && coinType === "0x2::sui::SUI") {
 }
 ```
 
-#### Implementation Tasks (UPDATED PRIORITY):
+#### Implementation Tasks (COMPLETED):
 
 1. ✅ **Deploy MockUSDC on localnet** (COMPLETED)
-   - Package: `0x34f1b450e7815b8b95df68cb6bfd81bbaf42607acf1f345bcb4a2fc732ca648b`
-   - Coin Type: `0x34f1b450e7815b8b95df68cb6bfd81bbaf42607acf1f345bcb4a2fc732ca648b::mock_usdc::MOCK_USDC`
+   - Systematic deployment via `scripts/deploy-mock-usdc.sh`
+   - Auto-configures `.env` files
    - ⚠️ **CRITICAL CLARIFICATION**: Facilitator NEVER needs USDC upfront (only receives fees from payments)
    - Mint to buyer/merchant test addresses only
-2. **Create network config files** (1 hour) - NEXT
-3. **Update facilitator to use config** (2 hours)
-4. **Update widget to use config** (1 hour)
-5. **Update merchant to issue USDC invoices** (1 hour)
-6. **Add coin type validation** (1 hour)
-7. **Test full flow with MockUSDC + BALANCE VERIFICATION** (2 hours)
-8. **Deploy to testnet with real USDC** (2 hours)
+2. ✅ **Create network config files** (COMPLETED)
+   - `facilitator/src/config/networks.ts` - Network-aware configuration
+   - `merchant/src/config/networks.js` - Merchant network config
+3. ✅ **Update facilitator to use config** (COMPLETED)
+   - Uses `getNetworkConfig()` for RPC, coin types, validation
+   - Mints MockUSDC via `fund` endpoint
+4. ✅ **Update widget to use config** (COMPLETED)
+   - Network-aware faucet button text
+   - Shows "Get Test USDC" on localnet
+5. ✅ **Update merchant to issue USDC invoices** (COMPLETED)
+   - Auto-detects coin type from network config
+   - 10 USDC payment + 0.5 USDC fee
+6. ✅ **Add coin type validation** (COMPLETED)
+   - Blocks SUI payments on testnet
+   - Validates MockUSDC on localnet, real USDC on testnet
+7. ✅ **Test full flow with MockUSDC + BALANCE VERIFICATION** (COMPLETED) 🎉
+   - E2E tests verify exact balance deltas
+   - Buyer pays 10.50, Merchant gets 10.00, Facilitator gets 0.50
+   - MCP browser demo validated end-to-end
+8. ⏸️ **Deploy to testnet with real USDC** (Phase 2)
 
 **Total: ~13 hours**
 

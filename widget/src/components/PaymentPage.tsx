@@ -38,6 +38,14 @@ export default function PaymentPage({ invoiceJWT: propInvoiceJWT }: PaymentPageP
   const [error, setError] = useState<string>('');
   const [settlementMode, setSettlementMode] = useState<'optimistic' | 'pessimistic'>('optimistic');
 
+  // Helper: Get coin name from coinType
+  const getCoinName = (coinType: string): string => {
+    if (coinType.includes('::sui::SUI')) return 'SUI';
+    if (coinType.includes('::mock_usdc::MOCK_USDC')) return 'USDC'; // MockUSDC on localnet
+    if (coinType.includes('::usdc::USDC')) return 'USDC'; // Real USDC on testnet
+    return 'tokens'; // Fallback
+  };
+
   // Parse invoice JWT
   const parseInvoice = () => {
     try {
@@ -304,9 +312,9 @@ export default function PaymentPage({ invoiceJWT: propInvoiceJWT }: PaymentPageP
 
           {balance.sui < totalAmount && (
             <div className="warning">
-              ⚠️ Insufficient balance. You need {(totalAmount - balance.sui).toFixed(4)} more SUI.
+              ⚠️ Insufficient balance. You need {(totalAmount - balance.sui).toFixed(4)} more {getCoinName(invoice.coinType)}.
               <button onClick={() => fundWallet()} className="btn-secondary">
-                Get Test SUI
+                Get Test {getCoinName(invoice.coinType)}
               </button>
             </div>
           )}

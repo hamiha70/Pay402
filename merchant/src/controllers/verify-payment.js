@@ -165,7 +165,7 @@ export function verifyPaymentController(req, res) {
         <strong>✅ Payment Verified Successfully!</strong>
         <p style="margin: 5px 0 0 0; font-size: 0.875rem;">
           Settlement Mode: <strong>${mode || 'optimistic'}</strong>
-          ${timeDelta !== null ? `<br>Time to access content: <strong>${timeDelta}ms</strong> ${mode === 'optimistic' ? '⚡' : '🔒'}` : ''}
+          ${totalTime !== null ? `<br>Payment Time: <strong>${totalTime}ms</strong> ${mode === 'optimistic' ? '⚡' : '🔒'}` : ''}
         </p>
       </div>
 
@@ -204,27 +204,19 @@ export function verifyPaymentController(req, res) {
       </div>
     </div>
 
-    ${timeDelta !== null || totalTime !== null ? `
+    ${totalTime !== null ? `
     <div class="timing-popup">
       <h4>⏱️ Payment Flow Timing</h4>
-      ${totalTime !== null ? `
       <div class="metric">
         <span class="metric-label">Total (invoice→payment):</span>
         <span class="metric-value">${totalTime}ms</span>
       </div>
-      ` : ''}
-      ${timeDelta !== null ? `
-      <div class="metric">
-        <span class="metric-label">Auto-redirect delay:</span>
-        <span class="metric-value">${timeDelta}ms</span>
-      </div>
-      <div class="metric">
-        <span class="metric-label" style="font-size: 0.65rem; opacity: 0.7;">Note: Includes 2s UI delay</span>
-      </div>
-      ` : ''}
       <div class="metric">
         <span class="metric-label">Settlement mode:</span>
-        <span class="metric-value">${mode || 'optimistic'}</span>
+        <span class="metric-value">${mode === 'optimistic' ? 'Optimistic ⚡' : 'Pessimistic 🔒'}</span>
+      </div>
+      <div class="metric">
+        <span class="metric-label" style="font-size: 0.7rem; opacity: 0.7;">User clicked to access content</span>
       </div>
     </div>
     ` : ''}

@@ -39,6 +39,7 @@ export default function PaymentPage({ invoiceJWT: propInvoiceJWT }: PaymentPageP
   const [invoiceTime] = useState<number>(Date.now());  // Track when invoice was first loaded
   const [error, setError] = useState<string>('');
   const [settlementMode, setSettlementMode] = useState<'optimistic' | 'pessimistic'>('optimistic');
+  const [receiptData, setReceiptData] = useState<any>(null);  // Store receipt/event data
 
   // Helper: Get coin name from coinType
   const getCoinName = (coinType: string): string => {
@@ -166,27 +167,8 @@ export default function PaymentPage({ invoiceJWT: propInvoiceJWT }: PaymentPageP
       const completionTime = Date.now();
       setPaymentId(data.digest);
       setPaymentTime(completionTime);  // Capture payment completion time
+      setReceiptData(data.receipt);  // Store receipt for display
       setStep('success');
-      
-      // Redirect back to merchant with payment details
-      if (invoice?.redirectUrl) {
-        const redirectUrl = new URL(invoice.redirectUrl);
-        redirectUrl.searchParams.set('digest', data.digest);
-        redirectUrl.searchParams.set('paymentId', data.digest);
-        redirectUrl.searchParams.set('mode', mode);
-        redirectUrl.searchParams.set('paymentTime', completionTime.toString());
-        redirectUrl.searchParams.set('invoiceTime', invoiceTime.toString());
-        // Extract network from invoice (e.g., "sui:localnet" -> "localnet")
-        const network = invoice.network?.split(':')[1] || 'localnet';
-        redirectUrl.searchParams.set('network', network);
-        
-        // Redirect after 2 seconds to let user see success message
-        setTimeout(() => {
-          const accessTime = Date.now();
-          redirectUrl.searchParams.set('accessTime', accessTime.toString());
-          window.location.href = redirectUrl.toString();
-        }, 2000);
-      }
     } catch (err) {
       console.error('💥 Payment submission error:', err);
       console.error('  Error type:', err?.constructor?.name);
@@ -470,35 +452,135 @@ export default function PaymentPage({ invoiceJWT: propInvoiceJWT }: PaymentPageP
     );
   }
 
-  if (step === 'success') {
+  if (step === 'success' && invoice) {
+    const network = invoice.network?.split(':')[1] || 'localnet';
+    let explorerLink = null;
+    if (network === 'mainnet') {
+      explorerLink = `https://suivision.xyz/txblock/${paymentId}`;
+    } else if (network === 'testnet') {
+      explorerLink = `https://testnet.suivision.xyz/txblock/${paymentId}`;
+    }
+    
+    const cliCommand = `sui client transaction ${paymentId}`;
+    const actualPaymentTime = paymentTime && invoiceTime ? paymentTime - invoiceTime : null;
+
     return (
       <div className="payment-page">
         <div className="card success">
           <h1>🎉 Payment Successful!</h1>
           
+          <div className="success-banner" style={{
+            background: '#d1fae5',
+            border: '2px solid #10b981',
+            borderRadius: '8px',
+            padding: '15px',
+            marginBottom: '20px'
+          }}>
+            <strong>✅ Payment Verified Successfully!</strong>
+            <p style={{margin: '5px 0 0 0', fontSize: '0.875rem'}}>
+              Settlement Mode: <strong>{settlementMode}</strong>
+              {actualPaymentTime && ` • Time: ${actualPaymentTime}ms ⚡`}
+            </p>
+          </div>
+          
           <div className="receipt">
-            <h3>Receipt</h3>
+            <h3>📝 Transaction Receipt</h3>
             <div className="detail-row">
-              <span>Transaction:</span>
-              <code>{paymentId.substring(0, 32)}...</code>
+              <span>Transaction Hash:</span>
+              {explorerLink ? (
+                <a href={explorerLink} target="_blank" rel="noopener noreferrer" style={{
+                  color: '#3b82f6',
+                  textDecoration: 'none',
+                  fontWeight: 600
+                }}>
+                  <code style={{cursor: 'pointer', color: '#3b82f6'}}>{paymentId}</code>
+                </a>
+              ) : (
+                <code>{paymentId}</code>
+              )}
             </div>
+            
+            {network === 'localnet' && (
+              <div style={{
+                background: '#f3f4f6',
+                border: '1px solid #d1d5db',
+                borderRadius: '6px',
+                padding: '10px',
+                marginTop: '10px',
+                fontSize: '0.85rem'
+              }}>
+                <div style={{marginBottom: '5px', color: '#6b7280'}}>
+                  💡 Localnet: View transaction details using CLI
+                </div>
+                <code style={{
+                  background: '#1e293b',
+                  color: '#e2e8f0',
+                  padding: '8px',
+                  borderRadius: '4px',
+                  display: 'block',
+                  fontSize: '0.8rem',
+                  fontFamily: 'monospace'
+                }}>
+                  {cliCommand}
+                </code>
+                <button
+                  onClick={() => {
+                    navigator.clipboard.writeText(cliCommand);
+                    alert('CLI command copied to clipboard!');
+                  }}
+                  style={{
+                    marginTop: '8px',
+                    padding: '6px 12px',
+                    background: '#10b981',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '4px',
+                    cursor: 'pointer',
+                    fontSize: '0.8rem'
+                  }}
+                >
+                  📋 Copy Command
+                </button>
+              </div>
+            )}
+            
+            {receiptData && (
+              <div style={{marginTop: '15px'}}>
+                <div className="detail-row">
+                  <span>Merchant Amount:</span>
+                  <strong>{receiptData.merchantAmount || 'N/A'}</strong>
+                </div>
+                <div className="detail-row">
+                  <span>Facilitator Fee:</span>
+                  <span>{receiptData.facilitatorFee || 'N/A'}</span>
+                </div>
+                {receiptData.invoiceHash && (
+                  <div className="detail-row">
+                    <span>Invoice Hash:</span>
+                    <code style={{fontSize: '0.75em'}}>{receiptData.invoiceHash.substring(0, 32)}...</code>
+                  </div>
+                )}
+              </div>
+            )}
+            
             <div className="detail-row">
               <span>Status:</span>
-              <strong className="success-text">Confirmed</strong>
+              <strong className="success-text">✅ Confirmed</strong>
             </div>
           </div>
 
-          <p>You can now access the protected resource.</p>
+          <p style={{marginTop: '20px'}}>You can now access the protected resource.</p>
 
           <button
             onClick={() => {
               const accessTime = Date.now();
-              const url = `http://localhost:3002/api/verify-payment?paymentId=${paymentId}&mode=${settlementMode}&paymentTime=${paymentTime}&accessTime=${accessTime}`;
+              const redirectUrl = invoice.redirectUrl || 'http://localhost:3002/api/verify-payment';
+              const url = `${redirectUrl}?paymentId=${paymentId}&mode=${settlementMode}&paymentTime=${paymentTime}&accessTime=${accessTime}&invoiceTime=${invoiceTime}&network=${network}`;
               window.open(url, '_blank');
             }}
             className="btn-primary"
           >
-            Access Content
+            🎁 Access Premium Content
           </button>
 
           <button
@@ -510,6 +592,7 @@ export default function PaymentPage({ invoiceJWT: propInvoiceJWT }: PaymentPageP
               setVerificationResult(null);
               setPaymentId('');
               setPaymentTime(null);
+              setReceiptData(null);
             }}
             className="btn-secondary"
           >

@@ -270,7 +270,7 @@ export default function PaymentPage({ invoiceJWT: propInvoiceJWT }: PaymentPageP
             )}
             {merchantAddr && (
               <div className="detail-row">
-                <span>Merchant:</span>
+                <span>Merchant Address:</span>
                 <code>{merchantAddr.substring(0, 20)}...</code>
               </div>
             )}
@@ -299,7 +299,7 @@ export default function PaymentPage({ invoiceJWT: propInvoiceJWT }: PaymentPageP
               </div>
             )}
             <div className="detail-row">
-              <span>Payment:</span>
+              <span>Payment Amount:</span>
               <strong>{merchantAmount.toFixed(2)} {coinName}</strong>
             </div>
             <div className="detail-row">
@@ -307,7 +307,7 @@ export default function PaymentPage({ invoiceJWT: propInvoiceJWT }: PaymentPageP
               <span>{feeAmount.toFixed(2)} {coinName}</span>
             </div>
             <div className="detail-row total">
-              <span>Total:</span>
+              <span>Total Amount:</span>
               <strong>{totalAmount.toFixed(2)} {coinName}</strong>
             </div>
             <div className="detail-row">
@@ -377,7 +377,7 @@ export default function PaymentPage({ invoiceJWT: propInvoiceJWT }: PaymentPageP
           <div className="verification-result">
             <h3>Security Checks</h3>
             <div className="check-item">
-              ✅ Merchant recipient verified
+              ✅ Merchant address verified
             </div>
             <div className="check-item">
               ✅ Payment amount verified
@@ -395,7 +395,7 @@ export default function PaymentPage({ invoiceJWT: propInvoiceJWT }: PaymentPageP
 
           <div className="info-box">
             <strong>Invoice Hash:</strong>
-            <code>{verificationResult.details.invoiceHash?.substring(0, 32)}...</code>
+            <code style={{color: '#1f2937', fontWeight: 600}}>{verificationResult.details.invoiceHash?.substring(0, 32)}...</code>
           </div>
 
           <p>The transaction has been verified. You can safely proceed.</p>

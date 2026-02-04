@@ -112,7 +112,7 @@ export async function submitPaymentController(req: Request, res: Response): Prom
     
     // ===== MODE 1: OPTIMISTIC SETTLEMENT (FAST UX) =====
     if (settlementMode === 'optimistic') {
-      logger.info('Using OPTIMISTIC settlement mode');
+      logger.info('Using OPTIMISTIC settlement mode', { buyerAddress });
       
       // CRITICAL UNDERSTANDING:
       // Both modes do SAME validation + submit
@@ -205,7 +205,7 @@ export async function submitPaymentController(req: Request, res: Response): Prom
     
     // ===== MODE 2: PESSIMISTIC SETTLEMENT (GUARANTEED) =====
     if (settlementMode === 'pessimistic') {
-      logger.info('Using PESSIMISTIC settlement mode');
+      logger.info('Using PESSIMISTIC settlement mode', { buyerAddress });
       
       const submitStart = Date.now();
       

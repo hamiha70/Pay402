@@ -151,10 +151,10 @@ export default function AuthTest() {
       {auth.isConnected && balance.balanceInfo && balance.balanceInfo.sui === 0 && (
         <div className="card">
           <h2>💸 Fund Wallet</h2>
-          <p>Your wallet needs SUI for gas and testing. Let's fund it!</p>
+          <p>Your wallet needs USDC for payments. Let's fund it!</p>
           
           <button onClick={handleFund} disabled={balance.loading}>
-            {balance.loading ? 'Funding...' : '🚀 Fund 10 SUI (Demo Faucet)'}
+            {balance.loading ? 'Funding...' : '🚀 Fund 20 USDC (Demo Faucet)'}
           </button>
 
           {balance.fundingResult && (

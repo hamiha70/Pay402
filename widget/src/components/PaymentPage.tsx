@@ -264,6 +264,10 @@ export default function PaymentPage({ invoiceJWT: propInvoiceJWT }: PaymentPageP
     const totalAmount = (parseInt(invoice.amount) + parseInt(invoice.facilitatorFee)) / 1_000_000;
     const merchantAmount = parseInt(invoice.amount) / 1_000_000;
     const feeAmount = parseInt(invoice.facilitatorFee) / 1_000_000;
+    const coinName = getCoinName(invoice.coinType);
+    
+    // Use USDC balance for USDC payments, SUI balance for SUI payments
+    const relevantBalance = coinName === 'SUI' ? balance.sui : balance.usdc;
 
     return (
       <div className="payment-page">
@@ -282,15 +286,15 @@ export default function PaymentPage({ invoiceJWT: propInvoiceJWT }: PaymentPageP
             </div>
             <div className="detail-row">
               <span>Amount:</span>
-              <strong>{merchantAmount} SUI</strong>
+              <strong>{merchantAmount} {coinName}</strong>
             </div>
             <div className="detail-row">
               <span>Facilitator Fee:</span>
-              <span>{feeAmount} SUI</span>
+              <span>{feeAmount} {coinName}</span>
             </div>
             <div className="detail-row total">
               <span>Total:</span>
-              <strong>{totalAmount} SUI</strong>
+              <strong>{totalAmount} {coinName}</strong>
             </div>
             <div className="detail-row">
               <span>Expires:</span>
@@ -301,7 +305,11 @@ export default function PaymentPage({ invoiceJWT: propInvoiceJWT }: PaymentPageP
           <div className="balance-info">
             <h3>Your Balance</h3>
             <div className="balance-row">
-              <span>SUI:</span>
+              <span>{coinName}:</span>
+              <strong>{relevantBalance} {coinName}</strong>
+            </div>
+            <div className="balance-row">
+              <span>SUI (for gas):</span>
               <strong>{balance.sui} SUI</strong>
             </div>
             <div className="balance-row">
@@ -310,18 +318,18 @@ export default function PaymentPage({ invoiceJWT: propInvoiceJWT }: PaymentPageP
             </div>
           </div>
 
-          {balance.sui < totalAmount && (
+          {relevantBalance < totalAmount && (
             <div className="warning">
-              ⚠️ Insufficient balance. You need {(totalAmount - balance.sui).toFixed(4)} more {getCoinName(invoice.coinType)}.
+              ⚠️ Insufficient balance. You need {(totalAmount - relevantBalance).toFixed(4)} more {coinName}.
               <button onClick={() => fundWallet()} className="btn-secondary">
-                Get Test {getCoinName(invoice.coinType)}
+                Get Test {coinName}
               </button>
             </div>
           )}
 
           <button
             onClick={requestPTB}
-            disabled={balance.sui < totalAmount || balance.loading}
+            disabled={relevantBalance < totalAmount || balance.loading}
             className="btn-primary"
           >
             Continue to Payment

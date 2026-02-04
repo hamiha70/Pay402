@@ -4,6 +4,21 @@ import type { BalanceInfo, FundingResult } from '../types/auth';
 
 const FACILITATOR_URL = import.meta.env.VITE_FACILITATOR_URL || 'http://localhost:3001';
 
+// Get network-specific payment coin type
+function getPaymentCoinType(): string {
+  // Check if we're on testnet or localnet
+  const network = import.meta.env.VITE_SUI_NETWORK || 'localnet';
+  
+  if (network === 'testnet') {
+    // Real Circle USDC on testnet (to be deployed)
+    return '0x...::usdc::USDC'; // TODO: Update when deployed
+  }
+  
+  // MockUSDC on localnet (from deploy script or env)
+  return import.meta.env.VITE_MOCK_USDC_TYPE || 
+         '0x34f1b450e7815b8b95df68cb6bfd81bbaf42607acf1f345bcb4a2fc732ca648b::mock_usdc::MOCK_USDC';
+}
+
 /**
  * Hook for checking balance and funding wallets
  * Works with any auth provider (Enoki or keypair)
@@ -29,22 +44,23 @@ export function useBalance(address: string | null) {
         coinType: '0x2::sui::SUI',
       });
 
-      // Try to get USDC balance (might not exist yet)
+      // Get USDC/MockUSDC balance (payment coin)
       let usdcBalance = 0;
       try {
+        const paymentCoinType = getPaymentCoinType();
         const usdc = await suiClient.getBalance({
           owner: address,
-          coinType: '0x2::sui::SUI', // TODO: Replace with actual USDC coin type
+          coinType: paymentCoinType,
         });
         usdcBalance = parseInt(usdc.totalBalance) / 1_000_000; // 6 decimals
       } catch (e) {
-        console.log('No USDC balance yet');
+        console.log('No USDC balance yet:', e);
       }
 
       const info: BalanceInfo = {
         address,
-        sui: parseInt(suiBalance.totalBalance) / 1_000_000_000, // 9 decimals
-        usdc: usdcBalance,
+        sui: parseInt(suiBalance.totalBalance) / 1_000_000_000, // 9 decimals (for gas display)
+        usdc: usdcBalance, // Payment coin (MockUSDC on localnet, USDC on testnet)
         loading: false,
       };
 

@@ -48,8 +48,8 @@ describe('Minimal Sponsored Transaction Test', () => {
     
     console.log('🏦 Buyer funded with 0.1 SUI');
     
-    // Wait for transaction to settle
-    await new Promise(resolve => setTimeout(resolve, 2000));
+    // Wait for transaction to settle (reduced from 2s with sequential execution)
+    await new Promise(resolve => setTimeout(resolve, 1000));
     
     return { keypair, address };
   }
@@ -69,10 +69,10 @@ describe('Minimal Sponsored Transaction Test', () => {
     console.log('═══════════════════════════════════════════════\n');
   });
   
-  // CRITICAL: Wait between tests to avoid facilitator gas coin conflicts
+  // Sequential execution eliminates need for between-test waits
+  // (Keeping minimal 500ms for safety)
   afterEach(async () => {
-    console.log('⏳ Waiting 3s for facilitator gas coin to finalize...');
-    await new Promise(resolve => setTimeout(resolve, 3000));
+    await new Promise(resolve => setTimeout(resolve, 500));
   });
   
   it('should execute a simple sponsored SUI transfer', async () => {

@@ -91,8 +91,8 @@ describe('End-to-End Payment Flow', () => {
       expect(fundResp.ok).toBe(true);
       console.log('🏦 Funded test buyer with USDC');
       
-      // Wait for funding transaction to finalize
-      await new Promise(resolve => setTimeout(resolve, 4000));
+      // Wait for funding transaction to finalize + coins to be queryable
+      await new Promise(resolve => setTimeout(resolve, 3000));
       
       // Verify buyer has coins
       const preBalance = await getUSDCBalance(suiClient, testBuyerAddress, mockUSDCType);
@@ -271,7 +271,7 @@ describe('End-to-End Payment Flow', () => {
       // PHASE 2: Wait for finality & check balances AFTER
       // ═══════════════════════════════════════════════════
       console.log('\n⏳ Waiting for transaction finality...');
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      await new Promise(resolve => setTimeout(resolve, 1000));
       
       const buyerBalanceAfter = await getUSDCBalance(suiClient, testBuyerAddress, mockUSDCType);
       const merchantBalanceAfter = await getUSDCBalance(suiClient, merchantAddress, mockUSDCType);
@@ -304,10 +304,8 @@ describe('End-to-End Payment Flow', () => {
       
       console.log('\n✅ BALANCE VERIFICATION PASSED!');
       
-      // CRITICAL: Wait for optimistic transaction to FULLY finalize before next test
-      // Otherwise pessimistic test will pick same coin objects that are still in-flight
-      console.log('\n⏳ Waiting 3s for optimistic transaction to finalize...');
-      await new Promise(resolve => setTimeout(resolve, 3000));
+      // Sequential execution + isolated buyers = no wait needed between tests
+      // (Removed 3s wait - each test has its own buyer)
     });
   });
 
@@ -567,8 +565,8 @@ describe('End-to-End Payment Flow', () => {
         
         // Wait between mode tests to avoid coin conflicts
         if (i === 0) {
-          console.log('  ⏳ Waiting 2s between optimistic and pessimistic...');
-          await new Promise(resolve => setTimeout(resolve, 2000));
+          console.log('  ⏳ Waiting 1s between optimistic and pessimistic...');
+          await new Promise(resolve => setTimeout(resolve, 1000));
         }
       }
       

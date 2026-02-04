@@ -30,7 +30,12 @@ export const config = {
   
   // Treasury owner (for minting MockUSDC on localnet)
   // This should be the address that deployed MockUSDC and owns the treasury cap
+  // CRITICAL: Must be separate from facilitator for proper security
   treasuryOwnerPrivateKey: process.env.TREASURY_OWNER_PRIVATE_KEY || process.env.FACILITATOR_PRIVATE_KEY || '',
+  
+  // MockUSDC deployment info (auto-populated by deploy script)
+  mockUsdcPackage: process.env.MOCK_USDC_PACKAGE || '0x34f1b450e7815b8b95df68cb6bfd81bbaf42607acf1f345bcb4a2fc732ca648b',
+  mockUsdcTreasuryCap: process.env.MOCK_USDC_TREASURY_CAP || '0x21aa4203c1f95e3e0584624b274f3e5c630578efaba76bb47d53d5d7421fde11',
   
   // Network-specific configuration
   network: networkConfig,

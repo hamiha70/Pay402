@@ -67,12 +67,12 @@ export async function fundController(req: Request, res: Response) {
     // Fund the wallet with MockUSDC (50 USDC for testing)
     const FUND_AMOUNT = 50_000_000; // 50 USDC (6 decimals)
     
-    // MockUSDC constants (localnet only)
-    const MOCK_USDC_PACKAGE = '0x34f1b450e7815b8b95df68cb6bfd81bbaf42607acf1f345bcb4a2fc732ca648b';
-    const TREASURY_CAP = '0x21aa4203c1f95e3e0584624b274f3e5c630578efaba76bb47d53d5d7421fde11';
+    // MockUSDC constants from config (set by deploy script or .env)
+    const MOCK_USDC_PACKAGE = config.mockUsdcPackage;
+    const TREASURY_CAP = config.mockUsdcTreasuryCap;
 
     // Use treasury owner keypair (the address that deployed MockUSDC)
-    // Falls back to facilitator key if TREASURY_OWNER_PRIVATE_KEY not set
+    // CRITICAL: This must be separate from facilitator for proper security
     const keypair = Ed25519Keypair.fromSecretKey(config.treasuryOwnerPrivateKey!);
 
     const tx = new Transaction();

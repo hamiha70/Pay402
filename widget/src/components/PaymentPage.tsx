@@ -36,6 +36,7 @@ export default function PaymentPage({ invoiceJWT: propInvoiceJWT }: PaymentPageP
   const [verificationResult, setVerificationResult] = useState<any>(null);
   const [paymentId, setPaymentId] = useState<string>('');
   const [paymentTime, setPaymentTime] = useState<number | null>(null);  // Track when payment succeeded
+  const [invoiceTime] = useState<number>(Date.now());  // Track when invoice was first loaded
   const [error, setError] = useState<string>('');
   const [settlementMode, setSettlementMode] = useState<'optimistic' | 'pessimistic'>('optimistic');
 
@@ -162,8 +163,9 @@ export default function PaymentPage({ invoiceJWT: propInvoiceJWT }: PaymentPageP
         console.log('Receipt:', data.receipt);
       }
 
+      const completionTime = Date.now();
       setPaymentId(data.digest);
-      setPaymentTime(Date.now());  // Capture payment completion time
+      setPaymentTime(completionTime);  // Capture payment completion time
       setStep('success');
       
       // Redirect back to merchant with payment details
@@ -172,9 +174,13 @@ export default function PaymentPage({ invoiceJWT: propInvoiceJWT }: PaymentPageP
         redirectUrl.searchParams.set('digest', data.digest);
         redirectUrl.searchParams.set('paymentId', data.digest);
         redirectUrl.searchParams.set('mode', mode);
+        redirectUrl.searchParams.set('paymentTime', completionTime.toString());
+        redirectUrl.searchParams.set('invoiceTime', invoiceTime.toString());
         
         // Redirect after 2 seconds to let user see success message
         setTimeout(() => {
+          const accessTime = Date.now();
+          redirectUrl.searchParams.set('accessTime', accessTime.toString());
           window.location.href = redirectUrl.toString();
         }, 2000);
       }

@@ -7,13 +7,16 @@
 
 export function verifyPaymentController(req, res) {
   try {
-    const { paymentId, digest, mode, paymentTime, accessTime } = req.query;
+    const { paymentId, digest, mode, paymentTime, accessTime, invoiceTime } = req.query;
     const txDigest = paymentId || digest;
     
-    // Calculate timing delta (if provided)
+    // Calculate timing metrics (if provided)
     const paymentTimestamp = paymentTime ? parseInt(paymentTime) : null;
     const accessTimestamp = accessTime ? parseInt(accessTime) : Date.now();
+    const invoiceTimestamp = invoiceTime ? parseInt(invoiceTime) : null;
+    
     const timeDelta = paymentTimestamp ? accessTimestamp - paymentTimestamp : null;
+    const totalTime = invoiceTimestamp && paymentTimestamp ? paymentTimestamp - invoiceTimestamp : null;
 
     if (!txDigest) {
       res.status(400).json({
@@ -108,6 +111,38 @@ export function verifyPaymentController(req, res) {
       padding: 2px 6px;
       border-radius: 4px;
       font-size: 0.875rem;
+      color: #1f2937;
+      font-weight: 500;
+    }
+    .timing-popup {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      background: white;
+      border: 2px solid #10b981;
+      border-radius: 8px;
+      padding: 12px 16px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+      font-size: 0.75rem;
+      max-width: 300px;
+    }
+    .timing-popup h4 {
+      margin: 0 0 8px 0;
+      font-size: 0.8rem;
+      color: #059669;
+    }
+    .timing-popup .metric {
+      display: flex;
+      justify-content: space-between;
+      margin: 4px 0;
+      color: #374151;
+    }
+    .timing-popup .metric-label {
+      color: #6b7280;
+    }
+    .timing-popup .metric-value {
+      font-weight: 600;
+      color: #1f2937;
     }
   </style>
 </head>
@@ -155,6 +190,28 @@ export function verifyPaymentController(req, res) {
         <p>Generated: ${premiumContent.timestamp}</p>
       </div>
     </div>
+
+    ${timeDelta !== null || totalTime !== null ? `
+    <div class="timing-popup">
+      <h4>⏱️ Payment Flow Timing</h4>
+      ${totalTime !== null ? `
+      <div class="metric">
+        <span class="metric-label">Total (invoice→payment):</span>
+        <span class="metric-value">${totalTime}ms</span>
+      </div>
+      ` : ''}
+      ${timeDelta !== null ? `
+      <div class="metric">
+        <span class="metric-label">Payment→Content:</span>
+        <span class="metric-value">${timeDelta}ms</span>
+      </div>
+      ` : ''}
+      <div class="metric">
+        <span class="metric-label">Settlement mode:</span>
+        <span class="metric-value">${mode || 'optimistic'}</span>
+      </div>
+    </div>
+    ` : ''}
   </div>
 </body>
 </html>

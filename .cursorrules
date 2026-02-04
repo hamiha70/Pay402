@@ -61,6 +61,7 @@
 **CRITICAL PRINCIPLE:** Write code that runs in BOTH Node.js AND browser environments
 
 **✅ ALLOWED (Universal APIs):**
+
 - `fetch()` (native in Node.js 18+, browsers)
 - `FormData`, `Headers`, `Request`, `Response` (native in both)
 - `URL`, `URLSearchParams` (standard in both)
@@ -69,15 +70,18 @@
 - ESM imports: `import/export` (NOT CommonJS `require()`)
 
 **❌ FORBIDDEN in shared code:**
+
 - Browser-only: `window`, `document`, `localStorage`, `navigator`
 - Node.js-only: `Buffer`, `fs`, `path`, `process.env` (use config instead)
 - `atob()`/`btoa()` - use polyfill or `Buffer.from(str, 'base64')` for Node.js
 
 **Shared Code Locations:**
+
 - `widget/src/lib/` - Browser-compatible payment logic (used by widget UI and facilitator e2e tests)
 - `facilitator/src/utils/` - Node.js utilities that can be reused across backend services
 
 **Critical Shared Utilities:**
+
 - `facilitator/src/utils/digest.ts` - Transaction digest calculation (getTransactionDigest)
   - Used by: facilitator backend (optimistic mode), e2e tests, any client needing digest
   - NEVER duplicate digest logic - always import from this module

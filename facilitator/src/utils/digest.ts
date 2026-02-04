@@ -1,6 +1,6 @@
 import { toBase58 } from '@mysten/bcs';
 import { messageWithIntent } from '@mysten/sui/cryptography';
-import { blake2b } from '@noble/hashes/blake2';
+import { blake2b } from '@noble/hashes/blake2.js';
 
 /**
  * Calculate Sui transaction digest from transaction bytes

@@ -278,16 +278,10 @@ describe('End-to-End Payment Flow', () => {
       // Build PTB using shared client library (same code as widget!)
       const clientConfig = { facilitatorUrl: FACILITATOR_URL };
       const { kindBytes } = await buildPTB(clientConfig, testInvoiceJWT, testBuyerAddress);
-      console.log('✅ Built PTB using shared client library');
       
-      // TEMPORARY: Still fetch transactionBytes for signing (will migrate fully to kindBytes next)
-      const buildResponse = await fetch(`${FACILITATOR_URL}/build-ptb`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ buyerAddress: testBuyerAddress, invoiceJWT: testInvoiceJWT }),
-      });
-      const buildData = await buildResponse.json();
-      const txBytes = new Uint8Array(buildData.transactionBytes);
+      // For now, kindBytes are actually full transactionBytes (facilitator hasn't switched to onlyTransactionKind yet)
+      // So we can sign them directly
+      const txBytes = kindBytes;
       
       // Sign the pre-built transaction (already includes gas sponsorship)
       const { signature } = await testBuyerKeypair.signTransaction(txBytes);

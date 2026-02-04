@@ -292,8 +292,10 @@ export async function buildPTBController(req: Request, res: Response): Promise<v
     });
     logger.info('=== BUILD PTB REQUEST SUCCESS ===');
     
+    // Return BOTH formats during transition (backward compatibility)
     res.json({
-      transactionBytes: Array.from(txBytes),  // Full transaction with gas sponsorship
+      transactionBytes: Array.from(txBytes),  // DEPRECATED: Full transaction with gas (for old clients)
+      transactionKindBytes: Array.from(txBytes), // NEW: Will be kind bytes once we switch to onlyTransactionKind
       invoice: {
         resource: invoice.resource,
         amount: invoice.amount,

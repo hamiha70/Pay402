@@ -72,6 +72,17 @@ describe('End-to-End Payment Flow', () => {
         }),
       });
       
+      // Better error logging
+      if (!response.ok) {
+        const errorData = await response.json();
+        console.error('❌ Build PTB failed:', {
+          status: response.status,
+          error: errorData.error,
+          details: errorData.details,
+          hint: errorData.hint,
+        });
+      }
+      
       expect(response.ok).toBe(true);
       
       const data = await response.json();

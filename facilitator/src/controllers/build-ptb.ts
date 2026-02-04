@@ -230,11 +230,7 @@ export async function buildPTBController(req: Request, res: Response): Promise<v
         tx.pure.address(invoice.merchantRecipient), // merchant: address
         tx.pure.u64(feeBigInt),                    // facilitator_fee: u64
         tx.pure.vector('u8', paymentIdBytes),      // payment_id: vector<u8>
-        tx.sharedObjectRef({                       // clock: &Clock (immutable shared object)
-          objectId: CLOCK_OBJECT_ID,
-          initialSharedVersion: 1,
-          mutable: false,
-        }),
+        tx.object(CLOCK_OBJECT_ID),                // clock: &Clock (shared immutable object)
       ],
     });
     
@@ -286,6 +282,14 @@ export async function buildPTBController(req: Request, res: Response): Promise<v
     } else if (errorMessage.includes('Invalid coin type')) {
       userFriendlyError = 'Invalid coin type in invoice';
       hint = 'The coin type specified in the invoice may not exist on this network.';
+    } else if (errorMessage.includes('Mutable parameter') || errorMessage.includes('immutable parameter')) {
+      userFriendlyError = 'Transaction parameter mutability mismatch';
+      hint = 'The Move contract expects different parameter mutability. ' +
+             'This is likely a bug in the PTB builder. Check Clock parameter and coin references.';
+      logger.error('MUTABILITY ERROR DETAILS:', {
+        errorMessage,
+        stack: err instanceof Error ? err.stack : undefined,
+      });
     }
     
     res.status(500).json({

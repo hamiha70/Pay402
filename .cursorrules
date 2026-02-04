@@ -56,6 +56,27 @@
 **Testing:** Vitest ONLY (never Jest, Mocha, or others)
 ❌ NO Bull queue, NO @x402/fetch package, ❌ NO Jest
 
+## Code Architecture: Isomorphic JavaScript
+
+**CRITICAL PRINCIPLE:** Write code that runs in BOTH Node.js AND browser environments
+
+**✅ ALLOWED (Universal APIs):**
+- `fetch()` (native in Node.js 18+, browsers)
+- `FormData`, `Headers`, `Request`, `Response` (native in both)
+- `URL`, `URLSearchParams` (standard in both)
+- `Uint8Array`, `Array`, `Object`, `Map`, `Set` (standard JavaScript)
+- `@mysten/sui` SDK (works in both environments)
+- ESM imports: `import/export` (NOT CommonJS `require()`)
+
+**❌ FORBIDDEN in shared code:**
+- Browser-only: `window`, `document`, `localStorage`, `navigator`
+- Node.js-only: `Buffer`, `fs`, `path`, `process.env` (use config instead)
+- `atob()`/`btoa()` - use polyfill or `Buffer.from(str, 'base64')` for Node.js
+
+**Shared Code Location:** `widget/src/lib/` (used by both widget and facilitator tests)
+
+**Why:** Widget UI and facilitator e2e tests must use IDENTICAL logic to ensure tests predict production behavior. Any divergence = false confidence.
+
 ## Directory Structure
 
 **Move:** move/payment/ (NOT contracts/)

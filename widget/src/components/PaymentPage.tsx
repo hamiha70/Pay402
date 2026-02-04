@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useAuth } from '../hooks/useAuth';
 import { useBalance } from '../hooks/useBalance';
-import { buildPTB, verifyPTB, signPTB, submitPayment } from '../lib/pay402-client';
+import { buildPTB, verifyPTB, submitPayment as submitPaymentAPI } from '../lib/pay402-client';
 import type { InvoiceJWT } from '../lib/verifier';
 
 /**
@@ -97,43 +97,15 @@ export default function PaymentPage({ invoiceJWT: propInvoiceJWT }: PaymentPageP
     setError('');
 
     try {
-      const response = await fetch('http://localhost:3001/build-ptb', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          buyerAddress: address,
-          invoiceJWT,
-        }),
-      });
-
-      if (!response.ok) {
-        const error = await response.json();
-        
-        // Provide helpful error messages for common issues
-        let errorMessage = error.error || 'Failed to build PTB';
-        
-        if (error.details?.includes('insufficient SUI balance') || 
-            error.details?.includes('gas selection')) {
-          errorMessage = 'Insufficient SUI for gas. This is a known issue - gas sponsorship coming soon!';
-        } else if (error.details?.includes('No coins found')) {
-          errorMessage = 'No coins found for your address. Please fund your wallet first.';
-        } else if (error.error === 'No single coin with sufficient balance') {
-          errorMessage = 'Need to merge coins (not yet implemented). Use an address with a single large coin.';
-        }
-        
-        throw new Error(errorMessage);
-      }
-
-      const data = await response.json();
+      // Use shared client library (same code as e2e tests!)
+      const config = { facilitatorUrl: 'http://localhost:3001' };
       
-      // Facilitator returns transaction KIND bytes (no gas data)
-      // This is the sponsored transaction pattern
-      const kindBytesArray = new Uint8Array(data.transactionKindBytes);
-      
-      setPtbBytes(kindBytesArray);
+      // Build PTB
+      const { kindBytes } = await buildPTB(config, invoiceJWT, address);
+      setPtbBytes(kindBytes);
 
-      // Verify PTB client-side
-      const result = await verifyPaymentPTB(kindBytesArray, invoice, invoiceJWT);
+      // Verify PTB client-side (CRITICAL security step)
+      const result = await verifyPTB(kindBytes, invoice, invoiceJWT);
       setVerificationResult(result);
 
       if (!result.pass) {
@@ -157,37 +129,27 @@ export default function PaymentPage({ invoiceJWT: propInvoiceJWT }: PaymentPageP
     const startTime = Date.now();
 
     try {
-      // Reconstruct transaction from kind bytes (sponsored transaction pattern)
+      // Reconstruct transaction from kind bytes
       const { Transaction } = await import('@mysten/sui/transactions');
       const tx = Transaction.fromKind(ptbBytes);
       tx.setSender(address);
       
       // Sign transaction (buyer signature)
-      const { signature, bytes: transactionBytes } = await signTransaction(tx);
+      const { signature } = await signTransaction(tx);
       
       console.log('✍️ Buyer signed transaction');
       console.log('  Sender:', address);
       console.log('  Signature length:', signature.length);
 
-      // Submit to facilitator (facilitator will add gas sponsorship & submit)
-      const response = await fetch('http://localhost:3001/submit-payment', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          invoiceJWT,
-          buyerAddress: address,
-          transactionKindBytes: Array.from(ptbBytes), // Original kind bytes
-          buyerSignature: signature,                   // Buyer's signature
-          settlementMode: mode,                        // 'optimistic' or 'pessimistic'
-        }),
+      // Submit payment using shared client library (same code as e2e tests!)
+      const config = { facilitatorUrl: 'http://localhost:3001' };
+      const data = await submitPaymentAPI(config, {
+        invoiceJWT,
+        buyerAddress: address,
+        transactionKindBytes: ptbBytes,
+        buyerSignature: signature,
+        settlementMode: mode,
       });
-
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || 'Payment submission failed');
-      }
-
-      const data = await response.json();
       const clientLatency = Date.now() - startTime;
       
       console.log(`💳 Payment submitted (${mode} mode)`);

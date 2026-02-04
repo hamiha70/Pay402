@@ -14,11 +14,25 @@ import { Transaction } from '@mysten/sui/transactions';
 import { extractSuiValues, parseCAIP2, parseCAIP19, parseCAIP10 } from './caip.js';
 
 /**
+ * Isomorphic atob polyfill (works in both browser and Node.js)
+ * Browser: uses native atob()
+ * Node.js: uses Buffer.from()
+ */
+const atobPolyfill = typeof atob !== 'undefined'
+  ? atob
+  : (str: string) => {
+      if (typeof Buffer !== 'undefined') {
+        return Buffer.from(str, 'base64').toString('binary');
+      }
+      throw new Error('No base64 decode available (missing atob and Buffer)');
+    };
+
+/**
  * Browser-compatible base64 to hex conversion
- * (Buffer is Node.js only, not available in browsers)
+ * (Now isomorphic - works in both browser and Node.js)
  */
 function base64ToHex(base64: string): string {
-  const binary = atob(base64);
+  const binary = atobPolyfill(base64);
   let hex = '';
   for (let i = 0; i < binary.length; i++) {
     const byte = binary.charCodeAt(i).toString(16).padStart(2, '0');
@@ -28,10 +42,11 @@ function base64ToHex(base64: string): string {
 }
 
 /**
- * Browser-compatible base64 to Uint8Array conversion
+ * Isomorphic base64 to Uint8Array conversion
+ * (Works in both browser and Node.js)
  */
 function base64ToBytes(base64: string): Uint8Array {
-  const binary = atob(base64);
+  const binary = atobPolyfill(base64);
   const bytes = new Uint8Array(binary.length);
   for (let i = 0; i < binary.length; i++) {
     bytes[i] = binary.charCodeAt(i);

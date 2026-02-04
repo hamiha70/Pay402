@@ -233,13 +233,17 @@ if (network === "testnet" && coinType === "0x2::sui::SUI") {
 
 #### Implementation Tasks (UPDATED PRIORITY):
 
-1. **Deploy MockUSDC on localnet** (3 hours) - DO FIRST
-2. **Create network config files** (1 hour)
+1. ✅ **Deploy MockUSDC on localnet** (COMPLETED)
+   - Package: `0x34f1b450e7815b8b95df68cb6bfd81bbaf42607acf1f345bcb4a2fc732ca648b`
+   - Coin Type: `0x34f1b450e7815b8b95df68cb6bfd81bbaf42607acf1f345bcb4a2fc732ca648b::mock_usdc::MOCK_USDC`
+   - ⚠️ **CRITICAL CLARIFICATION**: Facilitator NEVER needs USDC upfront (only receives fees from payments)
+   - Mint to buyer/merchant test addresses only
+2. **Create network config files** (1 hour) - NEXT
 3. **Update facilitator to use config** (2 hours)
 4. **Update widget to use config** (1 hour)
 5. **Update merchant to issue USDC invoices** (1 hour)
 6. **Add coin type validation** (1 hour)
-7. **Test full flow with MockUSDC** (2 hours)
+7. **Test full flow with MockUSDC + BALANCE VERIFICATION** (2 hours)
 8. **Deploy to testnet with real USDC** (2 hours)
 
 **Total: ~13 hours**
@@ -330,7 +334,7 @@ async function verifySettlement(digest: string, invoiceJWT: string) {
   // 1. Get transaction details
   const tx = await client.getTransaction({
     digest,
-    options: { showEvents: true, showEffects: true },
+    options: { showEvents: true, showEffects: true, showBalanceChanges: true },
   });
 
   // 2. Find ReceiptEmitted event
@@ -351,7 +355,25 @@ async function verifySettlement(digest: string, invoiceJWT: string) {
   assert(receipt.amount === invoice.amount);
   assert(receipt.payment_id === invoice.nonce);
 
-  // 4. Store for audit trail
+  // 4. **CRITICAL: Verify USDC balance changes**
+  const balanceChanges = tx.balanceChanges || [];
+  const usdcChanges = balanceChanges.filter(bc => 
+    bc.coinType.includes("::usdc::") || bc.coinType.includes("::mock_usdc::")
+  );
+  
+  // Verify buyer paid (negative balance)
+  const buyerChange = usdcChanges.find(bc => bc.owner.AddressOwner === buyerAddress);
+  assert(buyerChange && parseInt(buyerChange.amount) === -(invoice.amount + invoice.facilitatorFee));
+  
+  // Verify merchant received (positive balance)
+  const merchantChange = usdcChanges.find(bc => bc.owner.AddressOwner === invoice.merchantRecipient);
+  assert(merchantChange && parseInt(merchantChange.amount) === invoice.amount);
+  
+  // Verify facilitator received fee (positive balance)
+  const facilitatorChange = usdcChanges.find(bc => bc.owner.AddressOwner === facilitatorAddress);
+  assert(facilitatorChange && parseInt(facilitatorChange.amount) === invoice.facilitatorFee);
+
+  // 5. Store for audit trail
   await storeReceipt({
     digest,
     invoiceId: invoice.nonce,
@@ -361,13 +383,23 @@ async function verifySettlement(digest: string, invoiceJWT: string) {
     facilitatorFee: receipt.facilitator_fee,
     timestamp: receipt.timestamp,
     settlementMode: mode,
+    balanceChanges: {
+      buyer: buyerChange.amount,
+      merchant: merchantChange.amount,
+      facilitator: facilitatorChange.amount,
+    },
   });
 
-  // 5. Return verification proof
+  // 6. Return verification proof
   return {
     verified: true,
     digest,
     receipt,
+    balanceChanges: {
+      buyer: buyerChange.amount,
+      merchant: merchantChange.amount,
+      facilitator: facilitatorChange.amount,
+    },
     auditTrail: `/receipts/${invoice.nonce}`,
   };
 }

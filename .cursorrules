@@ -4,8 +4,10 @@
 
 - Do work directly, commit with detailed message
 - NO analysis/audit/plan/status markdown files
+- NO progress tracking docs (use git commits instead)
 - Present findings in chat, not files
 - DELETE temporary docs after user reads them
+- Progress tracking: git commits (history) + strategic plan (high-level) + code comments (details)
 
 ## Testing Standards
 

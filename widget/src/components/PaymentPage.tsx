@@ -254,10 +254,40 @@ export default function PaymentPage({ invoiceJWT: propInvoiceJWT }: PaymentPageP
               <span>Resource:</span>
               <code>{invoice.resource}</code>
             </div>
+            {invoice.description && (
+              <div className="detail-row">
+                <span>Description:</span>
+                <span>{invoice.description}</span>
+              </div>
+            )}
             <div className="detail-row">
               <span>Merchant:</span>
               <code>{invoice.merchantRecipient.substring(0, 20)}...</code>
             </div>
+            {invoice.network && (
+              <div className="detail-row">
+                <span>Network:</span>
+                <code>{invoice.network}</code>
+              </div>
+            )}
+            {invoice.assetType && (
+              <div className="detail-row">
+                <span>Asset Type:</span>
+                <code style={{fontSize: '0.75em'}}>{invoice.assetType}</code>
+              </div>
+            )}
+            {invoice.payTo && (
+              <div className="detail-row">
+                <span>Pay To:</span>
+                <code>{invoice.payTo.substring(0, 24)}...</code>
+              </div>
+            )}
+            {invoice.paymentId && (
+              <div className="detail-row">
+                <span>Payment ID:</span>
+                <code>{invoice.paymentId}</code>
+              </div>
+            )}
             <div className="detail-row">
               <span>Payment:</span>
               <strong>{merchantAmount.toFixed(2)} {coinName}</strong>

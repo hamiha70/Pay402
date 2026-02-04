@@ -2,16 +2,20 @@ import { Request, Response } from 'express';
 import { getSuiClient } from '../sui.js';
 import { logger } from '../utils/logger.js';
 import { toBase58 } from '@mysten/bcs';
-import { createHash } from 'crypto';
+import { messageWithIntent, IntentScope } from '@mysten/sui/cryptography';
+import { blake2b } from '@noble/hashes/blake2b';
 
 // Calculate transaction digest from bytes
-// Digest = base58(blake2b("TransactionData::" + transactionBytes))
+// Digest = base58(blake2b256(IntentMessage(TransactionData, transactionBytes)))
+// This matches Sui's digest calculation: intent message + blake2b + base58
 function getDigestFromBytes(bytes: Uint8Array): string {
-  const typeTag = new TextEncoder().encode('TransactionData::');
-  const data = new Uint8Array(typeTag.length + bytes.length);
-  data.set(typeTag);
-  data.set(bytes, typeTag.length);
-  const hash = createHash('blake2b512').update(data).digest().slice(0, 32);
+  // Create intent message (3-byte intent + transaction bytes)
+  const intentMessage = messageWithIntent(IntentScope.TransactionData, bytes);
+  
+  // Hash with Blake2b-256 (32-byte output)
+  const hash = blake2b(intentMessage, { dkLen: 32 });
+  
+  // Encode as Base58 (Sui's digest format)
   return toBase58(hash);
 }
 

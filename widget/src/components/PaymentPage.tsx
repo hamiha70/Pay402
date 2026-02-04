@@ -508,8 +508,8 @@ export default function PaymentPage({ invoiceJWT: propInvoiceJWT }: PaymentPageP
             
             {network === 'localnet' && (
               <div style={{
-                background: '#f3f4f6',
-                border: '1px solid #d1d5db',
+                background: settlementMode === 'optimistic' ? '#fef3c7' : '#f3f4f6',
+                border: `1px solid ${settlementMode === 'optimistic' ? '#f59e0b' : '#d1d5db'}`,
                 borderRadius: '6px',
                 padding: '10px',
                 marginTop: '10px',
@@ -518,6 +518,20 @@ export default function PaymentPage({ invoiceJWT: propInvoiceJWT }: PaymentPageP
                 <div style={{marginBottom: '5px', color: '#6b7280'}}>
                   💡 Localnet: View transaction details using CLI
                 </div>
+                {settlementMode === 'optimistic' && (
+                  <div style={{
+                    marginBottom: '8px',
+                    padding: '6px 8px',
+                    background: '#fef3c7',
+                    border: '1px solid #f59e0b',
+                    borderRadius: '4px',
+                    color: '#92400e',
+                    fontSize: '0.75rem'
+                  }}>
+                    ⚠️ <strong>Optimistic Mode:</strong> Transaction submitted in background. 
+                    Wait a few seconds before running the CLI command.
+                  </div>
+                )}
                 <code style={{
                   background: '#1e293b',
                   color: '#e2e8f0',

@@ -199,7 +199,7 @@ export function verifyPaymentController(req, res) {
               margin-bottom: 8px;
             ">sui client tx-block ${txDigest}</code>
             <button 
-              onclick="navigator.clipboard.writeText('sui client tx-block ${txDigest}').then(() => { this.textContent = '✅ Copied!'; this.style.background = '#10b981'; setTimeout(() => { this.textContent = '📋 Copy Command'; this.style.background = '#10b981'; }, 2000); })"
+              onclick="navigator.clipboard.writeText('sui client tx-block ${txDigest}').then(() => { const orig = this.style.background; this.textContent = '✅ Copied!'; this.style.background = '#059669'; setTimeout(() => { this.textContent = '📋 Copy Command'; this.style.background = orig; }, 2000); })"
               style="
                 padding: 6px 12px;
                 background: #10b981;
@@ -209,6 +209,7 @@ export function verifyPaymentController(req, res) {
                 cursor: pointer;
                 font-size: 0.8rem;
                 font-weight: 600;
+                transition: all 0.2s;
               "
             >📋 Copy Command</button>
           </div>

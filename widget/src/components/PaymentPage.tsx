@@ -544,9 +544,17 @@ export default function PaymentPage({ invoiceJWT: propInvoiceJWT }: PaymentPageP
                   {cliCommand}
                 </code>
                 <button
-                  onClick={() => {
+                  onClick={(e) => {
                     navigator.clipboard.writeText(cliCommand);
-                    alert('CLI command copied to clipboard!');
+                    const btn = e.currentTarget;
+                    const originalText = btn.textContent;
+                    const originalBg = btn.style.background;
+                    btn.textContent = '✅ Copied!';
+                    btn.style.background = '#059669';
+                    setTimeout(() => {
+                      btn.textContent = originalText;
+                      btn.style.background = originalBg;
+                    }, 2000);
                   }}
                   style={{
                     marginTop: '8px',
@@ -556,7 +564,9 @@ export default function PaymentPage({ invoiceJWT: propInvoiceJWT }: PaymentPageP
                     border: 'none',
                     borderRadius: '4px',
                     cursor: 'pointer',
-                    fontSize: '0.8rem'
+                    fontSize: '0.8rem',
+                    fontWeight: 600,
+                    transition: 'all 0.2s'
                   }}
                 >
                   📋 Copy Command

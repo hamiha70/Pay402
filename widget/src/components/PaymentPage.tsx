@@ -285,20 +285,24 @@ export default function PaymentPage({ invoiceJWT: propInvoiceJWT }: PaymentPageP
               <code>{invoice.merchantRecipient.substring(0, 20)}...</code>
             </div>
             <div className="detail-row">
-              <span>Amount:</span>
-              <strong>{merchantAmount} {coinName}</strong>
+              <span>Payment:</span>
+              <strong>{merchantAmount.toFixed(2)} {coinName}</strong>
             </div>
             <div className="detail-row">
               <span>Facilitator Fee:</span>
-              <span>{feeAmount} {coinName}</span>
+              <span>{feeAmount.toFixed(2)} {coinName}</span>
             </div>
             <div className="detail-row total">
               <span>Total:</span>
-              <strong>{totalAmount} {coinName}</strong>
+              <strong>{totalAmount.toFixed(2)} {coinName}</strong>
             </div>
             <div className="detail-row">
               <span>Expires:</span>
               <span>{new Date(invoice.expiry * 1000).toLocaleString()}</span>
+            </div>
+            <div className="demo-highlight">
+              ✨ You only pay in {coinName} <br/>
+              <span style={{fontSize: '0.9em', opacity: 0.8}}>(Facilitator sponsors gas)</span>
             </div>
           </div>
 

@@ -296,22 +296,28 @@ describe('End-to-End Payment Flow', () => {
     // Move contract issue fixed - settle_payment is now an entry function
     it('should submit payment and block until finality + VERIFY BALANCES', async () => {
       // ═══════════════════════════════════════════════════
-      // FUND buyer for THIS test (ensure fresh coins independent of previous tests)
+      // Create DEDICATED buyer for THIS test (complete isolation from optimistic)
       // ═══════════════════════════════════════════════════
+      const { Ed25519Keypair } = await import('@mysten/sui/keypairs/ed25519');
+      const testBuyerKeypair = new Ed25519Keypair();
+      const testBuyerAddress = testBuyerKeypair.getPublicKey().toSuiAddress();
+      console.log('👤 Created dedicated buyer for pessimistic test:', testBuyerAddress.substring(0, 20) + '...');
+      
+      // Fund this test's buyer
       const fundResp = await fetch(`${FACILITATOR_URL}/fund`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ address: buyerAddress, sessionId: `pess_${Date.now()}` }),
+        body: JSON.stringify({ address: testBuyerAddress, sessionId: `pess_${Date.now()}` }),
       });
       const fundData = await fundResp.json();
-      console.log('🏦 Funded buyer for pessimistic test:', fundData.amount, 'USDC');
+      console.log('🏦 Funded test buyer:', fundData.amount, 'USDC');
       
       // CRITICAL: Wait for funding transaction to finalize + coins to be spendable
       await new Promise(resolve => setTimeout(resolve, 4000));
       
       // Verify coins are available
-      const preBalance = await getUSDCBalance(suiClient, buyerAddress, mockUSDCType);
-      console.log('💰 Buyer balance after funding:', (preBalance / 1_000_000).toFixed(2), 'USDC');
+      const preBalance = await getUSDCBalance(suiClient, testBuyerAddress, mockUSDCType);
+      console.log('💰 Test buyer balance after funding:', (preBalance / 1_000_000).toFixed(2), 'USDC');
       expect(preBalance).toBeGreaterThan(0);
       
       // ═══════════════════════════════════════════════════
@@ -324,7 +330,7 @@ describe('End-to-End Payment Flow', () => {
       // ═══════════════════════════════════════════════════
       // PHASE 1: Get balances BEFORE payment
       // ═══════════════════════════════════════════════════
-      const buyerBalanceBefore = await getUSDCBalance(suiClient, buyerAddress, mockUSDCType);
+      const buyerBalanceBefore = await getUSDCBalance(suiClient, testBuyerAddress, mockUSDCType);
       const merchantBalanceBefore = await getUSDCBalance(suiClient, merchantAddress, mockUSDCType);
       const facilitatorBalanceBefore = await getUSDCBalance(suiClient, facilitatorAddress, mockUSDCType);
       
@@ -339,17 +345,17 @@ describe('End-to-End Payment Flow', () => {
       const buildResponse = await fetch(`${FACILITATOR_URL}/build-ptb`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ buyerAddress, invoiceJWT: testInvoiceJWT }),
+        body: JSON.stringify({ buyerAddress: testBuyerAddress, invoiceJWT: testInvoiceJWT }),
       });
       
       const buildData = await buildResponse.json();
       const txBytes = new Uint8Array(buildData.transactionBytes);
       
       // Sign the pre-built transaction (already includes gas sponsorship)
-      const { signature } = await buyerKeypair.signTransaction(txBytes);
+      const { signature } = await testBuyerKeypair.signTransaction(txBytes);
       
       console.log('\n🔐 Buyer signature info:', {
-        buyerAddress,
+        buyerAddress: testBuyerAddress,
         signatureLength: signature.length,
         signaturePreview: signature.substring(0, 20) + '...',
       });
@@ -360,7 +366,7 @@ describe('End-to-End Payment Flow', () => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           invoiceJWT: testInvoiceJWT,
-          buyerAddress,
+          buyerAddress: testBuyerAddress,
           transactionBytes: Array.from(txBytes),
           buyerSignature: signature,
           settlementMode: 'pessimistic',
@@ -395,9 +401,20 @@ describe('End-to-End Payment Flow', () => {
       console.log(`  Receipt: ${submitData.receipt ? 'included' : 'not included'}`);
       
       // ═══════════════════════════════════════════════════
-      // PHASE 2: Get balances AFTER (pessimistic waits for finality)
+      // CRITICAL: Verify transaction ACTUALLY exists on-chain
       // ═══════════════════════════════════════════════════
-      const buyerBalanceAfter = await getUSDCBalance(suiClient, buyerAddress, mockUSDCType);
+      const txResult = await suiClient.getTransaction({ digest: submitData.digest });
+      console.log('🔗 On-chain verification:', {
+        exists: !!txResult,
+        status: txResult.Transaction?.effects?.status?.$kind || 'unknown'
+      });
+      expect(txResult).toBeDefined();
+      expect(txResult.Transaction?.effects?.status?.$kind).toBe('Success');
+      
+      // ═══════════════════════════════════════════════════
+      // PHASE 2: Get balances AFTER (transaction confirmed on-chain)
+      // ═══════════════════════════════════════════════════
+      const buyerBalanceAfter = await getUSDCBalance(suiClient, testBuyerAddress, mockUSDCType);
       const merchantBalanceAfter = await getUSDCBalance(suiClient, merchantAddress, mockUSDCType);
       const facilitatorBalanceAfter = await getUSDCBalance(suiClient, facilitatorAddress, mockUSDCType);
       

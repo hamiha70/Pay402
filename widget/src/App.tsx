@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { SuiClientProvider, WalletProvider } from '@mysten/dapp-kit';
+import { SuiClientProvider } from '@mysten/dapp-kit';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { getFullnodeUrl } from '@mysten/sui/client';
 import PaymentPage from './components/PaymentPage';
@@ -36,9 +36,7 @@ function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <SuiClientProvider networks={networks} defaultNetwork="localnet">
-        <WalletProvider autoConnect>
-          <PaymentPage invoiceJWT={invoiceJWT} />
-        </WalletProvider>
+        <PaymentPage invoiceJWT={invoiceJWT} />
       </SuiClientProvider>
     </QueryClientProvider>
   );

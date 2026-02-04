@@ -168,9 +168,53 @@ export function verifyPaymentController(req, res) {
       </div>
 
       <div class="meta">
-        <p>Transaction: ${explorerLink ? `<a href="${explorerLink}" target="_blank" style="color: #3b82f6; text-decoration: none;"><code style="cursor: pointer;">${txDigest}</code></a>` : `<code>${txDigest}</code>`}</p>
-        ${!explorerLink && suiNetwork === 'localnet' ? '<p style="color: #6b7280; font-size: 0.8rem;">💡 Localnet: No public explorer available. Use <code>sui client transaction ${txDigest}</code> to view details.</p>' : ''}
-        <p>Generated: ${premiumContent.timestamp}</p>
+        <p><strong>Transaction:</strong></p>
+        ${explorerLink ? `
+          <p><a href="${explorerLink}" target="_blank" style="color: #3b82f6; text-decoration: none; font-weight: 600;">
+            <code style="cursor: pointer; background: #f3f4f6; padding: 4px 8px; border-radius: 4px; color: #3b82f6;">${txDigest}</code>
+          </a></p>
+        ` : `
+          <p><code style="background: #f3f4f6; padding: 4px 8px; border-radius: 4px; color: #1f2937; font-weight: 600;">${txDigest}</code></p>
+        `}
+        
+        ${suiNetwork === 'localnet' ? `
+          <div style="
+            background: #fef3c7;
+            border: 1px solid #f59e0b;
+            border-radius: 6px;
+            padding: 12px;
+            margin-top: 12px;
+          ">
+            <p style="margin: 0 0 8px 0; color: #92400e; font-size: 0.85rem; font-weight: 600;">
+              💡 Localnet: View transaction details using CLI
+            </p>
+            <code style="
+              background: #1e293b;
+              color: #e2e8f0;
+              padding: 8px 12px;
+              border-radius: 4px;
+              display: block;
+              font-size: 0.8rem;
+              font-family: monospace;
+              margin-bottom: 8px;
+            ">sui client tx-block ${txDigest}</code>
+            <button 
+              onclick="navigator.clipboard.writeText('sui client tx-block ${txDigest}').then(() => { this.textContent = '✅ Copied!'; this.style.background = '#10b981'; setTimeout(() => { this.textContent = '📋 Copy Command'; this.style.background = '#10b981'; }, 2000); })"
+              style="
+                padding: 6px 12px;
+                background: #10b981;
+                color: white;
+                border: none;
+                border-radius: 4px;
+                cursor: pointer;
+                font-size: 0.8rem;
+                font-weight: 600;
+              "
+            >📋 Copy Command</button>
+          </div>
+        ` : ''}
+        
+        <p style="margin-top: 16px;"><strong>Generated:</strong> ${premiumContent.timestamp}</p>
       </div>
     </div>
 

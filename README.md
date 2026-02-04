@@ -13,6 +13,7 @@
 Pay402 enables **micropayments for API access** using the x402 HTTP status code, with zero-friction onboarding via zkLogin.
 
 **Traditional crypto payments:**
+
 ```
 ❌ Install wallet extension (MetaMask, etc.)
 ❌ Save seed phrase (scary!)
@@ -22,6 +23,7 @@ Pay402 enables **micropayments for API access** using the x402 HTTP status code,
 ```
 
 **Pay402:**
+
 ```
 ✅ Click link
 ✅ Login with Google
@@ -58,31 +60,37 @@ Pay402 enables **micropayments for API access** using the x402 HTTP status code,
 ## Unique Features
 
 ### 1. zkLogin Integration ✨
+
 **Only x402 facilitator with Google → blockchain address**
 
 No other facilitator (Coinbase, PayAI) has this!
 
 ### 2. Embedded Widget 🎨
+
 **Zero user installation**
 
 Like Stripe/PayPal checkout (not a browser extension)
 
 ### 3. Generic Coin Support 💰
+
 **Works with any SUI token**
 
 USDC, SUI, USDT, custom tokens - all supported via `Coin<T>` generics
 
 ### 4. Fixed Fee Model 📊
+
 **$0.01 per transaction** (not percentage-based)
 
 Fair for micropayments, predictable revenue model
 
 ### 5. Anti-Front-Running 🛡️
+
 **Atomic settlement prevents buyer attacks**
 
 Uses `&mut Coin<T>` to lock coins during transaction
 
 ### 6. CCTP-Ready 🌉
+
 **Future cross-chain payments**
 
 Via Circle CCTP to Base, Ethereum, Solana, etc.
@@ -98,8 +106,8 @@ Via Circle CCTP to Base, Ethereum, Solana, etc.
 <script src="https://cdn.pay402.com/widget.js"></script>
 <script>
   Pay402.init({
-    facilitatorUrl: 'https://facilitator.pay402.com',
-    googleClientId: 'YOUR_GOOGLE_CLIENT_ID'
+    facilitatorUrl: "https://facilitator.pay402.com",
+    googleClientId: "YOUR_GOOGLE_CLIENT_ID",
   });
 </script>
 ```
@@ -139,6 +147,7 @@ No wallet, no seed phrases, no crypto knowledge required.
 ```
 
 **Components:**
+
 1. **Move Contract (move/payment/):** Generic `Coin<T>` payment settlement with atomic transfers
 2. **Facilitator API (facilitator/):** PTB construction, gas sponsorship, balance checking
 3. **Merchant Service (merchant/):** Invoice generation (JWT), payment verification, content delivery
@@ -152,28 +161,34 @@ See [ARCHITECTURE.md](docs/architecture/ARCHITECTURE.md) for full details.
 ## Tech Stack
 
 ### Blockchain
+
 - **SUI:** Move language, sub-second finality
 - **USDC:** Native Circle USDC on SUI
 - **zkLogin:** Google OAuth → blockchain address
 
 ### Backend
+
 **Facilitator (facilitator/):**
+
 - **Node.js + Express:** API server
 - **@mysten/sui:** SUI SDK with gRPC client
 - **TypeScript:** Type-safe development
 
 **Merchant (merchant/):**
+
 - **Node.js + Express:** Demo merchant service
 - **jose:** JWT signing with Ed25519
 - **JavaScript:** Lightweight implementation
 
 ### Frontend (Widget)
+
 - **React + Vite:** UI components and dev server
 - **@mysten/enoki:** zkLogin integration
 - **TypeScript:** Type-safe development
 - **Custom PTB Verifier:** Client-side transaction verification
 
 ### Infrastructure
+
 - **Mysten Enoki:** Salt service (zkLogin)
 - **Mysten Prover:** ZK proof generation
 - **Circle Faucet:** Testnet USDC funding
@@ -251,6 +266,7 @@ Pay402/
 ## Development Status
 
 ### ✅ Completed
+
 - [x] Architecture design
 - [x] Technical specifications
 - [x] Component breakdown
@@ -258,6 +274,7 @@ Pay402/
 - [x] Demo flow design
 
 ### 🚧 In Progress (Hackathon)
+
 - [ ] Move contract implementation
 - [ ] Facilitator API development
 - [ ] Widget implementation
@@ -265,6 +282,7 @@ Pay402/
 - [ ] End-to-end testing
 
 ### 📅 Roadmap (Post-Hackathon)
+
 - [ ] CCTP integration (cross-chain)
 - [ ] Payment channels (AI agents)
 - [ ] Merchant dashboard
@@ -276,12 +294,14 @@ Pay402/
 ## Security
 
 ### zkLogin Security
+
 - ✅ Non-custodial (user controls keys)
 - ✅ ZK proofs (hide Google account on-chain)
 - ✅ Salt prevents address enumeration
 - ✅ Ephemeral keypairs (session-only)
 
 ### Payment Security
+
 - ✅ Signature verification (prevent forgery)
 - ✅ Nonce tracking (prevent replay)
 - ✅ Anti-front-running (`&mut Coin<T>`)
@@ -289,6 +309,7 @@ Pay402/
 - ✅ Event logging (permanent audit trail)
 
 ### Infrastructure Security
+
 - ✅ Open-source (full transparency)
 - ✅ Subresource Integrity (CDN verification)
 - ✅ Rate limiting (DDoS protection)
@@ -301,6 +322,7 @@ Pay402/
 **Fixed Fee:** $0.01 per transaction (not percentage-based)
 
 **Rationale:**
+
 - Facilitator cost is fixed (gas ~$0.003 + overhead ~$0.002 = ~$0.005)
 - Revenue should be fixed (infrastructure pricing, not payment processing)
 - Fair for micropayments (10% of $0.10 is acceptable)
@@ -316,6 +338,7 @@ Pay402/
 ## Getting Started
 
 ### Prerequisites
+
 - Node.js 18+
 - SUI CLI + Suibase (for local blockchain)
 - Google OAuth credentials (for zkLogin)
@@ -374,9 +397,11 @@ See [DEVELOPMENT_GUIDE.md](docs/development/DEVELOPMENT_GUIDE.md) for detailed s
 ## Demo
 
 ### Live Demo (Coming Soon)
+
 **URL:** https://demo.pay402.com
 
 ### Video Demo
+
 [Watch on YouTube](https://youtube.com/...) (coming soon)
 
 ### Testing Locally
@@ -398,6 +423,7 @@ open http://localhost:3002
 ## Resources
 
 ### Documentation
+
 - [Documentation Index](DOCS_INDEX.md) - Central navigation hub
 - [Architecture Guide](docs/architecture/ARCHITECTURE.md) - Complete technical design
 - [Development Guide](docs/development/DEVELOPMENT_GUIDE.md) - Setup and build
@@ -405,6 +431,7 @@ open http://localhost:3002
 - [Widget Deployment](docs/deployment/WIDGET_DEPLOYMENT.md) - Production deployment
 
 ### External Links
+
 - **SUI:** https://docs.sui.io/
 - **zkLogin:** https://docs.sui.io/guides/developer/cryptography/zklogin-integration
 - **x402 Protocol:** https://docs.cdp.coinbase.com/x402/
@@ -417,6 +444,7 @@ open http://localhost:3002
 We welcome contributions! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
 
 ### Areas We Need Help
+
 - [ ] Additional token support (beyond USDC)
 - [ ] Mobile SDKs (iOS/Android)
 - [ ] Browser extension (backup option)
@@ -434,6 +462,7 @@ MIT License - see [LICENSE](LICENSE) for details.
 ## Team
 
 **Hackathon Team:**
+
 - Architecture & Smart Contracts
 - Facilitator Backend
 - Widget Frontend

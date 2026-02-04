@@ -71,7 +71,9 @@ export async function fundController(req: Request, res: Response) {
     const MOCK_USDC_PACKAGE = '0x34f1b450e7815b8b95df68cb6bfd81bbaf42607acf1f345bcb4a2fc732ca648b';
     const TREASURY_CAP = '0x21aa4203c1f95e3e0584624b274f3e5c630578efaba76bb47d53d5d7421fde11';
 
-    const keypair = Ed25519Keypair.fromSecretKey(config.facilitatorPrivateKey!);
+    // Use treasury owner keypair (the address that deployed MockUSDC)
+    // Falls back to facilitator key if TREASURY_OWNER_PRIVATE_KEY not set
+    const keypair = Ed25519Keypair.fromSecretKey(config.treasuryOwnerPrivateKey!);
 
     const tx = new Transaction();
     

@@ -28,6 +28,10 @@ export const config = {
   facilitatorAddress: getFacilitatorAddress(),
   facilitatorFee: process.env.FACILITATOR_FEE || '500000', // 0.50 USDC (6 decimals)
   
+  // Treasury owner (for minting MockUSDC on localnet)
+  // This should be the address that deployed MockUSDC and owns the treasury cap
+  treasuryOwnerPrivateKey: process.env.TREASURY_OWNER_PRIVATE_KEY || process.env.FACILITATOR_PRIVATE_KEY || '',
+  
   // Network-specific configuration
   network: networkConfig,
   paymentCoinType: networkConfig.paymentCoin.type,

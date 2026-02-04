@@ -70,25 +70,28 @@ function readU64LE(bytes: Uint8Array): bigint {
 
 /**
  * Invoice JWT structure (signed by merchant)
+ * X-402 V2 compliant with CAIP standards
  */
 export interface InvoiceJWT {
-  // ===== X-402 V2 REQUIRED FIELDS (CAIP Standards) =====
-  network: string;            // CAIP-2: "sui:mainnet" | "sui:testnet" | "sui:devnet"
-  assetType: string;          // CAIP-19: "sui:mainnet/coin:0x2::usdc::USDC"
-  payTo: string;              // CAIP-10: "sui:mainnet:0xMerchant..."
-  paymentId: string;          // Unique payment identifier (same as nonce)
-  description: string;        // Human-readable description
-  
-  // ===== EXISTING FIELDS (Backward Compatible) =====
-  resource: string;           // e.g., "/api/premium-data"
-  amount: string;             // In smallest unit (e.g., "100000" = 0.1 USDC)
-  merchantRecipient: string;  // Merchant's SUI address (extracted from payTo)
-  facilitatorFee: string;     // Facilitator's fee in smallest unit
-  facilitatorRecipient: string; // Facilitator's address
-  coinType: string;           // e.g., "0x2::usdc::USDC" (extracted from assetType)
-  expiry: number;             // Unix timestamp
-  nonce: string;              // Unique per invoice (same as paymentId)
-  redirectUrl?: string;       // Optional: Where to redirect after payment
+  x402Version: number;
+  scheme: string;
+  network: string;
+  assetType: string;
+  payTo: string;
+  paymentId: string;
+  description: string;
+  resource: string;
+  maxAmountRequired: string;
+  maxTimeoutSeconds: number;
+  mimeType: string;
+  facilitatorFee: string;
+  merchantAmount: string;
+  expiry: number;
+  redirectUrl?: string;
+  amount?: string;
+  merchantRecipient?: string;
+  coinType?: string;
+  nonce?: string;
 }
 
 /**
@@ -153,54 +156,19 @@ export async function verifyPaymentPTB(
   invoiceJwt: string
 ): Promise<VerificationResult> {
   try {
-    // Parse and validate CAIP fields if present (X-402 V2)
-    let effectiveCoinType = invoice.coinType;
-    let effectiveMerchant = invoice.merchantRecipient;
+    // Extract CAIP fields (X-402 V2) - these are now the primary fields
+    const suiValues = extractSuiValues({
+      network: invoice.network,
+      assetType: invoice.assetType,
+      payTo: invoice.payTo,
+    });
     
-    if (invoice.network && invoice.assetType && invoice.payTo) {
-      try {
-        const suiValues = extractSuiValues({
-          network: invoice.network,
-          assetType: invoice.assetType,
-          payTo: invoice.payTo,
-        });
-        
-        // Use CAIP-extracted values (overrides legacy fields)
-        effectiveCoinType = suiValues.coinType;
-        effectiveMerchant = suiValues.merchantAddress;
-        
-        // Validate consistency with legacy fields if both present
-        if (invoice.coinType && invoice.coinType !== effectiveCoinType) {
-          return {
-            pass: false,
-            reason: 'CAIP assetType conflicts with legacy coinType',
-            details: {
-              expectedAmount: effectiveCoinType,
-              foundAmount: invoice.coinType,
-            },
-          };
-        }
-        
-        if (invoice.merchantRecipient && invoice.merchantRecipient !== effectiveMerchant) {
-          return {
-            pass: false,
-            reason: 'CAIP payTo conflicts with legacy merchantRecipient',
-            details: {
-              expectedRecipient: effectiveMerchant,
-              foundRecipient: invoice.merchantRecipient,
-            },
-          };
-        }
-      } catch (caipErr) {
-        return {
-          pass: false,
-          reason: 'Invalid CAIP fields in invoice',
-          details: {
-            expectedAmount: caipErr instanceof Error ? caipErr.message : String(caipErr),
-          },
-        };
-      }
-    }
+    const effectiveCoinType = suiValues.coinType;
+    const effectiveMerchant = suiValues.merchantAddress;
+    
+    // Use maxAmountRequired (X-402 v2) or fall back to amount + facilitatorFee (legacy)
+    const expectedMerchantAmount = BigInt(invoice.merchantAmount || invoice.amount || '0');
+    const expectedFacilitatorFee = BigInt(invoice.facilitatorFee || '0');
     
     // Parse PTB
     const tx = Transaction.from(ptbBytes);
@@ -378,12 +346,12 @@ export async function verifyPaymentPTB(
         
         // Validate amount (argument 3)
         const amount = resolveAmount(amountArg);
-        if (amount !== null && amount !== BigInt(invoice.amount)) {
+        if (amount !== null && amount !== expectedMerchantAmount) {
           return {
             pass: false,
             reason: 'Amount mismatch in settle_payment call',
             details: {
-              expectedAmount: invoice.amount,
+              expectedAmount: expectedMerchantAmount.toString(),
               foundAmount: amount.toString(),
             },
           };
@@ -391,12 +359,12 @@ export async function verifyPaymentPTB(
         
         // Validate facilitator fee (argument 5)
         const fee = resolveAmount(feeArg);
-        if (fee !== null && fee !== BigInt(invoice.facilitatorFee)) {
+        if (fee !== null && fee !== expectedFacilitatorFee) {
           return {
             pass: false,
             reason: 'Facilitator fee mismatch in settle_payment call',
             details: {
-              expectedAmount: invoice.facilitatorFee,
+              expectedAmount: expectedFacilitatorFee.toString(),
               foundAmount: fee.toString(),
             },
           };
@@ -432,7 +400,8 @@ export async function verifyPaymentPTB(
       }
 
       // Verify facilitator fee transfer (if fee > 0)
-      if (parseInt(invoice.facilitatorFee) > 0) {
+      // Note: facilitatorRecipient might not be in X-402 v2, only check if present
+      if (expectedFacilitatorFee > 0n && invoice.facilitatorRecipient) {
         const hasFeeTransfer = transferRecipients.some(
           addr => addr === invoice.facilitatorRecipient
         );

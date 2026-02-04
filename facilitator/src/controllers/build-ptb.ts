@@ -13,24 +13,28 @@ interface BuildPTBRequest {
 }
 
 interface InvoicePayload {
-  // X-402 V2 CAIP fields
-  network: string;            // CAIP-2: "sui:mainnet" | "sui:testnet" | "sui:devnet"
-  assetType: string;          // CAIP-19: "sui:mainnet/coin:0x2::usdc::USDC"
-  payTo: string;              // CAIP-10: "sui:mainnet:0xMerchant..."
-  paymentId: string;          // Unique payment identifier
-  description: string;        // Human-readable description
-  
-  // Existing fields (backward compatible)
+  x402Version?: number;
+  scheme?: string;
+  network: string;
+  assetType: string;
+  payTo: string;
+  paymentId: string;
+  description: string;
   resource: string;
-  amount: string;
-  merchantRecipient: string;
+  maxAmountRequired?: string;
+  maxTimeoutSeconds?: number;
+  mimeType?: string;
   facilitatorFee: string;
-  facilitatorRecipient: string;
-  coinType: string;
-  nonce: string;
-  iat: number;
-  exp: number;
+  merchantAmount?: string;
   expiry: number;
+  redirectUrl?: string;
+  amount?: string;
+  merchantRecipient?: string;
+  coinType?: string;
+  nonce?: string;
+  iat?: number;
+  exp?: number;
+  facilitatorRecipient?: string;
 }
 
 /**
@@ -65,31 +69,19 @@ export async function buildPTBController(req: Request, res: Response): Promise<v
       invoice = decoded as InvoicePayload;
       logger.info('JWT decoded successfully', { invoice });
       
-      // Parse CAIP fields if present (X-402 V2)
-      if (invoice.network && invoice.assetType && invoice.payTo) {
-        logger.debug('Parsing X-402 V2 CAIP fields...');
-        try {
-          const suiValues = extractSuiValues({
-            network: invoice.network,
-            assetType: invoice.assetType,
-            payTo: invoice.payTo,
-          });
-          logger.info('CAIP fields parsed', { suiValues });
-          
-          // Use CAIP-extracted values (overrides legacy fields if both present)
-          invoice.coinType = suiValues.coinType;
-          invoice.merchantRecipient = suiValues.merchantAddress;
-        } catch (caipErr) {
-          logger.error('CAIP parsing failed', caipErr);
-          res.status(400).json({
-            error: 'Invalid CAIP fields in invoice',
-            details: caipErr instanceof Error ? caipErr.message : String(caipErr),
-          });
-          return;
-        }
-      } else {
-        logger.debug('No CAIP fields found, using legacy fields');
-      }
+      // Extract CAIP fields (X-402 v2 - required)
+      logger.debug('Parsing X-402 V2 CAIP fields...');
+      const suiValues = extractSuiValues({
+        network: invoice.network,
+        assetType: invoice.assetType,
+        payTo: invoice.payTo,
+      });
+      logger.info('CAIP fields parsed', { suiValues });
+      
+      // Normalize fields: use X-402 v2 names, fallback to legacy
+      invoice.coinType = suiValues.coinType;
+      invoice.merchantRecipient = suiValues.merchantAddress;
+      invoice.amount = invoice.merchantAmount || invoice.amount || '0';
     } catch (err) {
       logger.error('JWT decode failed', err);
       res.status(400).json({

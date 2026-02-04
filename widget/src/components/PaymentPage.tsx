@@ -235,10 +235,18 @@ export default function PaymentPage({ invoiceJWT: propInvoiceJWT }: PaymentPageP
   }
 
   if (step === 'review' && invoice) {
-    const totalAmount = (parseInt(invoice.amount) + parseInt(invoice.facilitatorFee)) / 1_000_000;
-    const merchantAmount = parseInt(invoice.amount) / 1_000_000;
+    // Handle both X-402 v2 (merchantAmount) and legacy (amount) field names
+    const merchantAmountStr = invoice.merchantAmount || invoice.amount || '0';
+    const totalAmount = (parseInt(merchantAmountStr) + parseInt(invoice.facilitatorFee)) / 1_000_000;
+    const merchantAmount = parseInt(merchantAmountStr) / 1_000_000;
     const feeAmount = parseInt(invoice.facilitatorFee) / 1_000_000;
-    const coinName = getCoinName(invoice.coinType);
+    
+    // Extract coin name from assetType (X-402 v2) or coinType (legacy)
+    const coinTypeStr = invoice.assetType || invoice.coinType || '';
+    const coinName = getCoinName(coinTypeStr);
+    
+    // Extract merchant address from payTo (X-402 v2) or merchantRecipient (legacy)
+    const merchantAddr = invoice.payTo?.split(':')[2] || invoice.merchantRecipient || '';
     
     // Use USDC balance for USDC payments, SUI balance for SUI payments
     const relevantBalance = coinName === 'SUI' ? balance.sui : balance.usdc;
@@ -260,10 +268,12 @@ export default function PaymentPage({ invoiceJWT: propInvoiceJWT }: PaymentPageP
                 <span>{invoice.description}</span>
               </div>
             )}
-            <div className="detail-row">
-              <span>Merchant:</span>
-              <code>{invoice.merchantRecipient.substring(0, 20)}...</code>
-            </div>
+            {merchantAddr && (
+              <div className="detail-row">
+                <span>Merchant:</span>
+                <code>{merchantAddr.substring(0, 20)}...</code>
+              </div>
+            )}
             {invoice.network && (
               <div className="detail-row">
                 <span>Network:</span>

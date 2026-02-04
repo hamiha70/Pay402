@@ -35,6 +35,7 @@ export default function PaymentPage({ invoiceJWT: propInvoiceJWT }: PaymentPageP
   const [ptbBytes, setPtbBytes] = useState<Uint8Array | null>(null);
   const [verificationResult, setVerificationResult] = useState<any>(null);
   const [paymentId, setPaymentId] = useState<string>('');
+  const [paymentTime, setPaymentTime] = useState<number | null>(null);  // Track when payment succeeded
   const [error, setError] = useState<string>('');
   const [settlementMode, setSettlementMode] = useState<'optimistic' | 'pessimistic'>('optimistic');
 
@@ -162,6 +163,7 @@ export default function PaymentPage({ invoiceJWT: propInvoiceJWT }: PaymentPageP
       }
 
       setPaymentId(data.digest);
+      setPaymentTime(Date.now());  // Capture payment completion time
       setStep('success');
       
       // Redirect back to merchant with payment details
@@ -440,7 +442,11 @@ export default function PaymentPage({ invoiceJWT: propInvoiceJWT }: PaymentPageP
           <p>You can now access the protected resource.</p>
 
           <button
-            onClick={() => window.open(`http://localhost:3002/api/verify-payment?paymentId=${paymentId}`, '_blank')}
+            onClick={() => {
+              const accessTime = Date.now();
+              const url = `http://localhost:3002/api/verify-payment?paymentId=${paymentId}&mode=${settlementMode}&paymentTime=${paymentTime}&accessTime=${accessTime}`;
+              window.open(url, '_blank');
+            }}
             className="btn-primary"
           >
             Access Content
@@ -454,6 +460,7 @@ export default function PaymentPage({ invoiceJWT: propInvoiceJWT }: PaymentPageP
               setPtbBytes(null);
               setVerificationResult(null);
               setPaymentId('');
+              setPaymentTime(null);
             }}
             className="btn-secondary"
           >

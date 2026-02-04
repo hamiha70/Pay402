@@ -7,8 +7,13 @@
 
 export function verifyPaymentController(req, res) {
   try {
-    const { paymentId, digest, mode } = req.query;
+    const { paymentId, digest, mode, paymentTime, accessTime } = req.query;
     const txDigest = paymentId || digest;
+    
+    // Calculate timing delta (if provided)
+    const paymentTimestamp = paymentTime ? parseInt(paymentTime) : null;
+    const accessTimestamp = accessTime ? parseInt(accessTime) : Date.now();
+    const timeDelta = paymentTimestamp ? accessTimestamp - paymentTimestamp : null;
 
     if (!txDigest) {
       res.status(400).json({
@@ -113,6 +118,7 @@ export function verifyPaymentController(req, res) {
         <strong>✅ Payment Verified Successfully!</strong>
         <p style="margin: 5px 0 0 0; font-size: 0.875rem;">
           Settlement Mode: <strong>${mode || 'optimistic'}</strong>
+          ${timeDelta !== null ? `<br>Time to access content: <strong>${timeDelta}ms</strong> ${mode === 'optimistic' ? '⚡ (Instant!)' : '🔒 (Blockchain confirmed)'}` : ''}
         </p>
       </div>
 

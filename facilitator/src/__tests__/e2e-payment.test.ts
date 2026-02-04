@@ -157,14 +157,29 @@ describe('End-to-End Payment Flow', () => {
     // Move contract issue fixed - settle_payment is now an entry function
     it('should submit payment and return digest immediately + VERIFY BALANCES', async () => {
       // ═══════════════════════════════════════════════════
-      // FUND buyer for THIS test (ensure fresh coins)
+      // Create DEDICATED buyer for THIS test (complete isolation)
       // ═══════════════════════════════════════════════════
-      await fetch(`${FACILITATOR_URL}/fund`, {
+      const { Ed25519Keypair } = await import('@mysten/sui/keypairs/ed25519');
+      const testBuyerKeypair = new Ed25519Keypair();
+      const testBuyerAddress = testBuyerKeypair.getPublicKey().toSuiAddress();
+      console.log('👤 Created dedicated buyer for optimistic test:', testBuyerAddress.substring(0, 20) + '...');
+      
+      // Fund this test's buyer
+      const fundResp = await fetch(`${FACILITATOR_URL}/fund`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ address: buyerAddress, sessionId: `opt_${Date.now()}` }),
+        body: JSON.stringify({ address: testBuyerAddress, sessionId: `opt_${Date.now()}` }),
       });
-      await new Promise(resolve => setTimeout(resolve, 3000)); // Wait for funding to finalize on-chain
+      const fundData = await fundResp.json();
+      console.log('🏦 Funded test buyer:', fundData.amount, 'USDC');
+      
+      // CRITICAL: Wait for funding transaction to finalize + coins to be spendable
+      await new Promise(resolve => setTimeout(resolve, 4000));
+      
+      // Verify coins are available
+      const preBalance = await getUSDCBalance(suiClient, testBuyerAddress, mockUSDCType);
+      console.log('💰 Test buyer balance after funding:', (preBalance / 1_000_000).toFixed(2), 'USDC');
+      expect(preBalance).toBeGreaterThan(0);
       
       // ═══════════════════════════════════════════════════
       // Get FRESH invoice for this test (avoid duplicate nonce)
@@ -206,7 +221,7 @@ describe('End-to-End Payment Flow', () => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           invoiceJWT: testInvoiceJWT,
-          buyerAddress,
+          buyerAddress: testBuyerAddress,
           transactionBytes: Array.from(txBytes),
           buyerSignature: signature,
           settlementMode: 'optimistic',
@@ -269,6 +284,11 @@ describe('End-to-End Payment Flow', () => {
       expect(facilitatorDelta).toBe(FACILITATOR_FEE);
       
       console.log('\n✅ BALANCE VERIFICATION PASSED!');
+      
+      // CRITICAL: Wait for optimistic transaction to FULLY finalize before next test
+      // Otherwise pessimistic test will pick same coin objects that are still in-flight
+      console.log('\n⏳ Waiting 3s for optimistic transaction to finalize...');
+      await new Promise(resolve => setTimeout(resolve, 3000));
     });
   });
 
@@ -278,12 +298,21 @@ describe('End-to-End Payment Flow', () => {
       // ═══════════════════════════════════════════════════
       // FUND buyer for THIS test (ensure fresh coins independent of previous tests)
       // ═══════════════════════════════════════════════════
-      await fetch(`${FACILITATOR_URL}/fund`, {
+      const fundResp = await fetch(`${FACILITATOR_URL}/fund`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ address: buyerAddress, sessionId: `pess_${Date.now()}` }),
       });
-      await new Promise(resolve => setTimeout(resolve, 3000)); // Wait for funding to finalize on-chain
+      const fundData = await fundResp.json();
+      console.log('🏦 Funded buyer for pessimistic test:', fundData.amount, 'USDC');
+      
+      // CRITICAL: Wait for funding transaction to finalize + coins to be spendable
+      await new Promise(resolve => setTimeout(resolve, 4000));
+      
+      // Verify coins are available
+      const preBalance = await getUSDCBalance(suiClient, buyerAddress, mockUSDCType);
+      console.log('💰 Buyer balance after funding:', (preBalance / 1_000_000).toFixed(2), 'USDC');
+      expect(preBalance).toBeGreaterThan(0);
       
       // ═══════════════════════════════════════════════════
       // Get FRESH invoice for this test (avoid duplicate nonce)

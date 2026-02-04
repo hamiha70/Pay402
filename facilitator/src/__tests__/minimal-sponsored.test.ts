@@ -8,42 +8,34 @@
  * with facilitator sponsoring the gas.
  */
 
-import { describe, it, expect, beforeAll } from 'vitest';
+import { describe, it, expect, beforeAll, afterEach } from 'vitest';
 import { Ed25519Keypair } from '@mysten/sui/keypairs/ed25519';
 import { Transaction } from '@mysten/sui/transactions';
 import { getSuiClient } from '../sui.js';
 import { config } from '../config.js';
 
 describe('Minimal Sponsored Transaction Test', () => {
-  let buyerKeypair: Ed25519Keypair;
+  // ═══════════════════════════════════════════════════════════
+  // CRITICAL: NO GLOBAL BUYER STATE - TRUE TEST ISOLATION
+  // Each test creates its own dedicated buyer to avoid coin conflicts
+  // ═══════════════════════════════════════════════════════════
   let facilitatorKeypair: Ed25519Keypair;
   let merchantAddress: string;
-  let buyerAddress: string;
   let facilitatorAddress: string;
   
   const client = getSuiClient();
   
-  beforeAll(async () => {
-    // Use actual facilitator key from config
-    facilitatorKeypair = Ed25519Keypair.fromSecretKey(config.facilitatorPrivateKey);
-    facilitatorAddress = facilitatorKeypair.getPublicKey().toSuiAddress();
+  // Helper: Create and fund a dedicated buyer for a test
+  async function createAndFundBuyer(): Promise<{ keypair: Ed25519Keypair; address: string }> {
+    const keypair = new Ed25519Keypair();
+    const address = keypair.getPublicKey().toSuiAddress();
     
-    // Create a different buyer keypair (generate new one)
-    buyerKeypair = new Ed25519Keypair();
-    buyerAddress = buyerKeypair.getPublicKey().toSuiAddress();
+    console.log('👤 Created dedicated buyer:', address.substring(0, 20) + '...');
     
-    // Use facilitator as merchant for simplicity (we're just testing sponsored tx)
-    merchantAddress = facilitatorAddress;
-    
-    console.log('Buyer address:', buyerAddress);
-    console.log('Facilitator address:', facilitatorAddress);
-    console.log('Merchant address:', merchantAddress);
-    
-    // Fund buyer with SUI from facilitator (for testing)
-    console.log('Funding buyer with SUI...');
+    // Fund buyer with SUI from facilitator
     const fundTx = new Transaction();
     const [coin] = fundTx.splitCoins(fundTx.gas, [100000000]); // 0.1 SUI
-    fundTx.transferObjects([coin], buyerAddress);
+    fundTx.transferObjects([coin], address);
     
     const fundResult = await client.signAndExecuteTransaction({
       signer: facilitatorKeypair,
@@ -54,13 +46,39 @@ describe('Minimal Sponsored Transaction Test', () => {
       throw new Error('Failed to fund buyer: ' + JSON.stringify(fundResult.FailedTransaction));
     }
     
-    console.log('✅ Buyer funded with SUI');
+    console.log('🏦 Buyer funded with 0.1 SUI');
     
-    // Wait a bit for the transaction to settle
-    await new Promise(resolve => setTimeout(resolve, 1000));
+    // Wait for transaction to settle
+    await new Promise(resolve => setTimeout(resolve, 2000));
+    
+    return { keypair, address };
+  }
+  
+  beforeAll(async () => {
+    // Initialize ONLY shared infrastructure
+    facilitatorKeypair = Ed25519Keypair.fromSecretKey(config.facilitatorPrivateKey);
+    facilitatorAddress = facilitatorKeypair.getPublicKey().toSuiAddress();
+    merchantAddress = facilitatorAddress; // Use facilitator as merchant for simplicity
+    
+    console.log('═══════════════════════════════════════════════');
+    console.log('🔑 Minimal Sponsored TX Test Setup');
+    console.log('═══════════════════════════════════════════════');
+    console.log('  Facilitator:', facilitatorAddress.substring(0, 20) + '...');
+    console.log('  Merchant:', merchantAddress.substring(0, 20) + '...');
+    console.log('  ⚠️  Each test creates its own buyer (ISOLATION)');
+    console.log('═══════════════════════════════════════════════\n');
+  });
+  
+  // CRITICAL: Wait between tests to avoid facilitator gas coin conflicts
+  afterEach(async () => {
+    console.log('⏳ Waiting 3s for facilitator gas coin to finalize...');
+    await new Promise(resolve => setTimeout(resolve, 3000));
   });
   
   it('should execute a simple sponsored SUI transfer', async () => {
+    // Create dedicated buyer for THIS test
+    const { keypair: buyerKeypair, address: buyerAddress } = await createAndFundBuyer();
+    
     // Step 1: Get buyer's SUI coins
     const buyerCoins = await client.listCoins({
       owner: buyerAddress,
@@ -143,6 +161,9 @@ describe('Minimal Sponsored Transaction Test', () => {
   });
   
   it('should fail if only buyer signs (no sponsor signature)', async () => {
+    // Create dedicated buyer for THIS test
+    const { keypair: buyerKeypair, address: buyerAddress } = await createAndFundBuyer();
+    
     const buyerCoins = await client.listCoins({
       owner: buyerAddress,
       coinType: '0x2::sui::SUI',
@@ -153,17 +174,8 @@ describe('Minimal Sponsored Transaction Test', () => {
     tx.transferObjects([coin], merchantAddress);
     tx.setSender(buyerAddress);
     
-    const facilitatorCoins = await client.listCoins({
-      owner: facilitatorAddress,
-      coinType: '0x2::sui::SUI',
-    });
-    
+    // Let Sui SDK select an available gas coin (avoids coin conflicts between tests)
     tx.setGasOwner(facilitatorAddress);
-    tx.setGasPayment([{
-      objectId: facilitatorCoins.objects[0].objectId,
-      version: facilitatorCoins.objects[0].version,
-      digest: facilitatorCoins.objects[0].digest,
-    }]);
     tx.setGasBudget(10000000);
     
     const txBytes = await tx.build({ client });
@@ -179,6 +191,9 @@ describe('Minimal Sponsored Transaction Test', () => {
   });
   
   it('should fail if only facilitator signs (no buyer signature)', async () => {
+    // Create dedicated buyer for THIS test
+    const { keypair: buyerKeypair, address: buyerAddress } = await createAndFundBuyer();
+    
     const buyerCoins = await client.listCoins({
       owner: buyerAddress,
       coinType: '0x2::sui::SUI',
@@ -189,17 +204,8 @@ describe('Minimal Sponsored Transaction Test', () => {
     tx.transferObjects([coin], merchantAddress);
     tx.setSender(buyerAddress);
     
-    const facilitatorCoins = await client.listCoins({
-      owner: facilitatorAddress,
-      coinType: '0x2::sui::SUI',
-    });
-    
+    // Let Sui SDK select an available gas coin (avoids coin conflicts between tests)
     tx.setGasOwner(facilitatorAddress);
-    tx.setGasPayment([{
-      objectId: facilitatorCoins.objects[0].objectId,
-      version: facilitatorCoins.objects[0].version,
-      digest: facilitatorCoins.objects[0].digest,
-    }]);
     tx.setGasBudget(10000000);
     
     const txBytes = await tx.build({ client });
@@ -215,6 +221,9 @@ describe('Minimal Sponsored Transaction Test', () => {
   });
   
   it('should work with signatures in reverse order', async () => {
+    // Create dedicated buyer for THIS test
+    const { keypair: buyerKeypair, address: buyerAddress } = await createAndFundBuyer();
+    
     const buyerCoins = await client.listCoins({
       owner: buyerAddress,
       coinType: '0x2::sui::SUI',
@@ -225,17 +234,8 @@ describe('Minimal Sponsored Transaction Test', () => {
     tx.transferObjects([coin], merchantAddress);
     tx.setSender(buyerAddress);
     
-    const facilitatorCoins = await client.listCoins({
-      owner: facilitatorAddress,
-      coinType: '0x2::sui::SUI',
-    });
-    
+    // Let Sui SDK select an available gas coin (avoids coin conflicts between tests)
     tx.setGasOwner(facilitatorAddress);
-    tx.setGasPayment([{
-      objectId: facilitatorCoins.objects[0].objectId,
-      version: facilitatorCoins.objects[0].version,
-      digest: facilitatorCoins.objects[0].digest,
-    }]);
     tx.setGasBudget(10000000);
     
     const txBytes = await tx.build({ client });

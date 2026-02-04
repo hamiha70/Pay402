@@ -157,6 +157,16 @@ describe('End-to-End Payment Flow', () => {
     // Move contract issue fixed - settle_payment is now an entry function
     it('should submit payment and return digest immediately + VERIFY BALANCES', async () => {
       // ═══════════════════════════════════════════════════
+      // FUND buyer for THIS test (ensure fresh coins)
+      // ═══════════════════════════════════════════════════
+      await fetch(`${FACILITATOR_URL}/fund`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ address: buyerAddress, sessionId: `opt_${Date.now()}` }),
+      });
+      await new Promise(resolve => setTimeout(resolve, 3000)); // Wait for funding to finalize on-chain
+      
+      // ═══════════════════════════════════════════════════
       // Get FRESH invoice for this test (avoid duplicate nonce)
       // ═══════════════════════════════════════════════════
       const freshInvoiceResp = await fetch(`${MERCHANT_URL}/api/premium-data`);
@@ -263,10 +273,18 @@ describe('End-to-End Payment Flow', () => {
   });
 
   describe('Step 3: Submit Payment (Pessimistic Mode)', () => {
-    // NOTE: Skipped because it conflicts with optimistic test (same buyer, same coins)
-    // The optimistic test consumes coins, pessimistic tries to use already-spent coins
-    // TODO: Run pessimistic in isolation OR fund buyer between tests
-    it.skip('should submit payment and block until finality + VERIFY BALANCES', async () => {
+    // Move contract issue fixed - settle_payment is now an entry function
+    it('should submit payment and block until finality + VERIFY BALANCES', async () => {
+      // ═══════════════════════════════════════════════════
+      // FUND buyer for THIS test (ensure fresh coins independent of previous tests)
+      // ═══════════════════════════════════════════════════
+      await fetch(`${FACILITATOR_URL}/fund`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ address: buyerAddress, sessionId: `pess_${Date.now()}` }),
+      });
+      await new Promise(resolve => setTimeout(resolve, 3000)); // Wait for funding to finalize on-chain
+      
       // ═══════════════════════════════════════════════════
       // Get FRESH invoice for this test (avoid duplicate nonce)
       // ═══════════════════════════════════════════════════

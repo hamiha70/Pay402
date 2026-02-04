@@ -24,6 +24,34 @@ async function getUSDCBalance(client: SuiGrpcClient, address: string, coinType: 
   return parseInt(balanceResp.balance?.balance || '0');
 }
 
+// Helper: Wait for balance to change with retry logic (better than fixed delays)
+async function waitForBalanceChange(
+  client: SuiGrpcClient,
+  address: string,
+  coinType: string,
+  expectedBalance: number,
+  maxRetries: number = 10,
+  delayMs: number = 500
+): Promise<number> {
+  for (let i = 0; i < maxRetries; i++) {
+    const balance = await getUSDCBalance(client, address, coinType);
+    
+    if (balance === expectedBalance) {
+      console.log(`✅ Balance updated after ${i} retries (${i * delayMs}ms)`);
+      return balance;
+    }
+    
+    if (i < maxRetries - 1) {
+      await new Promise(resolve => setTimeout(resolve, delayMs));
+    }
+  }
+  
+  // Return actual balance even if not matching expected (let test fail with accurate delta)
+  const finalBalance = await getUSDCBalance(client, address, coinType);
+  console.log(`⚠️ Balance did not match expected after ${maxRetries} retries`);
+  return finalBalance;
+}
+
 describe('End-to-End Payment Flow', () => {
   // ════════════════════════════════════════════════════════════════
   // CRITICAL: NO GLOBAL BUYER STATE - TRUE TEST ISOLATION
@@ -268,12 +296,26 @@ describe('End-to-End Payment Flow', () => {
       console.log(`  Digest: ${submitData.digest}`);
       
       // ═══════════════════════════════════════════════════
-      // PHASE 2: Wait for finality & check balances AFTER
+      // PHASE 2: Wait for finality & check balances AFTER (with retry)
       // ═══════════════════════════════════════════════════
-      console.log('\n⏳ Waiting for transaction finality...');
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      const PAYMENT_AMOUNT = 100_000;     // 0.10 USDC (from merchant .env)
+      const FACILITATOR_FEE = 10_000;      // 0.01 USDC (from merchant .env)
       
-      const buyerBalanceAfter = await getUSDCBalance(suiClient, testBuyerAddress, mockUSDCType);
+      console.log('\n⏳ Waiting for transaction finality and balance update...');
+      // Use retry logic instead of fixed delay - faster when quick, robust when slow
+      const expectedBuyerBalance = buyerBalanceBefore - (PAYMENT_AMOUNT + FACILITATOR_FEE);
+      
+      // Wait for buyer balance to change (primary indicator of settlement)
+      const buyerBalanceAfter = await waitForBalanceChange(
+        suiClient, 
+        testBuyerAddress, 
+        mockUSDCType, 
+        expectedBuyerBalance,
+        15, // max 15 retries
+        500 // 500ms between retries (max 7.5s total)
+      );
+      
+      // Once buyer balance changes, other balances should be updated too
       const merchantBalanceAfter = await getUSDCBalance(suiClient, merchantAddress, mockUSDCType);
       const facilitatorBalanceAfter = await getUSDCBalance(suiClient, facilitatorAddress, mockUSDCType);
       
@@ -285,8 +327,6 @@ describe('End-to-End Payment Flow', () => {
       // ═══════════════════════════════════════════════════
       // PHASE 3: CRITICAL VERIFICATION - Check exact deltas
       // ═══════════════════════════════════════════════════
-      const PAYMENT_AMOUNT = 100_000;     // 0.10 USDC (from merchant .env)
-      const FACILITATOR_FEE = 10_000;      // 0.01 USDC (from merchant .env)
       
       const buyerDelta = buyerBalanceBefore - buyerBalanceAfter;
       const merchantDelta = merchantBalanceAfter - merchantBalanceBefore;

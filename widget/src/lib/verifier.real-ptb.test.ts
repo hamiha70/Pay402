@@ -29,7 +29,47 @@ describe('PTB Verifier - Real PTB Tests', () => {
       return;
     }
 
-    fixtures = JSON.parse(fs.readFileSync(fixturesPath, 'utf-8'));
+    const rawFixtures = JSON.parse(fs.readFileSync(fixturesPath, 'utf-8'));
+    
+    // CRITICAL: Dynamically adjust expiry times to prevent test failures
+    // Original fixtures may have expired timestamps - we adjust them to be fresh
+    const now = Math.floor(Date.now() / 1000);
+    const ONE_HOUR = 3600;
+    
+    fixtures = {
+      validPayment: {
+        ...rawFixtures.validPayment,
+        invoice: {
+          ...rawFixtures.validPayment.invoice,
+          expiry: now + ONE_HOUR, // Fresh expiry: 1 hour from now
+        }
+      },
+      wrongAmount: {
+        ...rawFixtures.wrongAmount,
+        invoice: {
+          ...rawFixtures.wrongAmount.invoice,
+          expiry: now + ONE_HOUR,
+        }
+      },
+      wrongRecipient: {
+        ...rawFixtures.wrongRecipient,
+        invoice: {
+          ...rawFixtures.wrongRecipient.invoice,
+          expiry: now + ONE_HOUR,
+        }
+      },
+      expiredInvoice: {
+        ...rawFixtures.expiredInvoice,
+        invoice: {
+          ...rawFixtures.expiredInvoice.invoice,
+          expiry: now - ONE_HOUR, // Intentionally expired: 1 hour ago
+        }
+      }
+    };
+    
+    console.log('✅ Fixtures loaded with dynamic expiry times');
+    console.log(`   Valid invoices expire at: ${new Date((now + ONE_HOUR) * 1000).toISOString()}`);
+    console.log(`   Expired invoice expired at: ${new Date((now - ONE_HOUR) * 1000).toISOString()}`);
   });
 
   describe('verifyPaymentPTBBasic', () => {

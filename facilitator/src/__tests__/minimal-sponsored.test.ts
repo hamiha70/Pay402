@@ -25,6 +25,33 @@ describe('Minimal Sponsored Transaction Test', () => {
   
   const client = getSuiClient();
   
+  // Helper: Wait for coins to be available with retry logic
+  async function waitForCoins(
+    address: string, 
+    minCoins: number = 1,
+    maxRetries: number = 10,
+    delayMs: number = 500
+  ): Promise<void> {
+    for (let i = 0; i < maxRetries; i++) {
+      const coins = await client.listCoins({
+        owner: address,
+        coinType: '0x2::sui::SUI',
+      });
+      
+      if (coins.objects.length >= minCoins) {
+        console.log(`✅ Coins available after ${i} retries (${i * delayMs}ms)`);
+        return;
+      }
+      
+      if (i < maxRetries - 1) {
+        console.log(`⏳ Waiting for coins (attempt ${i + 1}/${maxRetries})...`);
+        await new Promise(resolve => setTimeout(resolve, delayMs));
+      }
+    }
+    
+    throw new Error(`Coins not available after ${maxRetries} retries (${maxRetries * delayMs}ms)`);
+  }
+  
   // Helper: Create and fund a dedicated buyer for a test
   async function createAndFundBuyer(): Promise<{ keypair: Ed25519Keypair; address: string }> {
     const keypair = new Ed25519Keypair();
@@ -48,8 +75,8 @@ describe('Minimal Sponsored Transaction Test', () => {
     
     console.log('🏦 Buyer funded with 0.1 SUI');
     
-    // Wait for transaction to settle (reduced from 2s with sequential execution)
-    await new Promise(resolve => setTimeout(resolve, 1000));
+    // Wait for coins to be indexed using retry logic
+    await waitForCoins(address, 1, 10, 500);
     
     return { keypair, address };
   }
@@ -69,17 +96,20 @@ describe('Minimal Sponsored Transaction Test', () => {
     console.log('═══════════════════════════════════════════════\n');
   });
   
-  // Sequential execution eliminates need for between-test waits
-  // (Keeping minimal 500ms for safety)
+  // Wait between tests to let facilitator gas coin settle
+  // CRITICAL: Facilitator uses gas in each test, need time for coin VERSION to update on-chain
+  // The issue isn't whether coins exist, but whether the VERSION is current after previous tx
   afterEach(async () => {
-    await new Promise(resolve => setTimeout(resolve, 500));
+    // Fixed delay to ensure facilitator gas coin version settles
+    // Retry logic doesn't help here because coins always exist, just stale version
+    await new Promise(resolve => setTimeout(resolve, 1500));
   });
   
   it('should execute a simple sponsored SUI transfer', async () => {
     // Create dedicated buyer for THIS test
     const { keypair: buyerKeypair, address: buyerAddress } = await createAndFundBuyer();
     
-    // Step 1: Get buyer's SUI coins
+    // Step 1: Get buyer's SUI coins (AFTER funding completes)
     const buyerCoins = await client.listCoins({
       owner: buyerAddress,
       coinType: '0x2::sui::SUI',
@@ -100,6 +130,9 @@ describe('Minimal Sponsored Transaction Test', () => {
     tx.setSender(buyerAddress);
     
     // Step 3: Add gas sponsorship (facilitator)
+    // NOTE: We must manually select gas because SDK auto-selection can hang
+    // Query facilitator's LATEST coin state right before building
+    console.log('Querying facilitator gas coins...');
     const facilitatorCoins = await client.listCoins({
       owner: facilitatorAddress,
       coinType: '0x2::sui::SUI',
@@ -108,15 +141,19 @@ describe('Minimal Sponsored Transaction Test', () => {
     expect(facilitatorCoins.objects.length).toBeGreaterThan(0);
     console.log('Facilitator has', facilitatorCoins.objects.length, 'SUI coins');
     
+    // Use the FIRST available coin (most recently updated)
+    const gasCoin = facilitatorCoins.objects[0];
+    console.log('Selected gas coin:', gasCoin.objectId, 'version:', gasCoin.version);
+    
     tx.setGasOwner(facilitatorAddress);
     tx.setGasPayment([{
-      objectId: facilitatorCoins.objects[0].objectId,
-      version: facilitatorCoins.objects[0].version,
-      digest: facilitatorCoins.objects[0].digest,
+      objectId: gasCoin.objectId,
+      version: gasCoin.version,
+      digest: gasCoin.digest,
     }]);
     tx.setGasBudget(10000000); // 0.01 SUI
     
-    // Step 4: Build complete transaction bytes
+    // Step 4: Build immediately (minimize time between query and build)
     console.log('Building transaction with gas sponsorship...');
     const txBytes = await tx.build({ client });
     

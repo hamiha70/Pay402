@@ -247,15 +247,12 @@
         <div class="next-step" id="nextStep" style="display: none">
           <h3>Next Step:</h3>
           <p>
-            Open Pay402 payment page with this invoice JWT to complete payment.
+            Click below to open the Pay402 payment page and complete your
+            payment.
           </p>
-          <a
-            href="#"
-            onclick="openPaymentPage(); return false;"
-            class="payment-link"
-          >
-            → Open Payment Page (Auto-fills Invoice)
-          </a>
+          <button class="btn" onclick="openPaymentPage()">
+            💳 Continue to Payment →
+          </button>
         </div>
       </div>
     </div>
@@ -345,11 +342,11 @@
       }
 
       function openPaymentPage() {
-        // Redirect to payment widget with invoice JWT in URL
+        // Stripe Checkout style: Redirect to hosted payment page
         const widgetUrl = `http://localhost:5173?invoice=${encodeURIComponent(
           currentInvoiceJWT
         )}`;
-        window.open(widgetUrl, "_blank");
+        window.location.href = widgetUrl;
       }
 
       // Don't auto-request - user must click button

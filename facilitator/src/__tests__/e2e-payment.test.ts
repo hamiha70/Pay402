@@ -591,15 +591,10 @@ describe('End-to-End Payment Flow', () => {
         
         const start = Date.now();
         
-        // Build PTB
-        const buildResp = await fetch(`${FACILITATOR_URL}/build-ptb`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ buyerAddress: testBuyerAddress, invoiceJWT: testInvoice }),
-        });
-        
-        const buildData = await buildResp.json();
-        const txBytes = new Uint8Array(buildData.transactionBytes);
+        // Build PTB using shared client library (same code as widget!)
+        const clientConfig = { facilitatorUrl: FACILITATOR_URL };
+        const { kindBytes } = await buildPTB(clientConfig, testInvoice, testBuyerAddress);
+        const txBytes = kindBytes;
         
         // Sign the pre-built transaction
         const { signature } = await testBuyerKeypair.signTransaction(txBytes);

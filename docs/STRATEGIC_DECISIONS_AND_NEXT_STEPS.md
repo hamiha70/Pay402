@@ -357,21 +357,35 @@ async function verifySettlement(digest: string, invoiceJWT: string) {
 
   // 4. **CRITICAL: Verify USDC balance changes**
   const balanceChanges = tx.balanceChanges || [];
-  const usdcChanges = balanceChanges.filter(bc => 
-    bc.coinType.includes("::usdc::") || bc.coinType.includes("::mock_usdc::")
+  const usdcChanges = balanceChanges.filter(
+    (bc) =>
+      bc.coinType.includes("::usdc::") || bc.coinType.includes("::mock_usdc::")
   );
-  
+
   // Verify buyer paid (negative balance)
-  const buyerChange = usdcChanges.find(bc => bc.owner.AddressOwner === buyerAddress);
-  assert(buyerChange && parseInt(buyerChange.amount) === -(invoice.amount + invoice.facilitatorFee));
-  
+  const buyerChange = usdcChanges.find(
+    (bc) => bc.owner.AddressOwner === buyerAddress
+  );
+  assert(
+    buyerChange &&
+      parseInt(buyerChange.amount) ===
+        -(invoice.amount + invoice.facilitatorFee)
+  );
+
   // Verify merchant received (positive balance)
-  const merchantChange = usdcChanges.find(bc => bc.owner.AddressOwner === invoice.merchantRecipient);
+  const merchantChange = usdcChanges.find(
+    (bc) => bc.owner.AddressOwner === invoice.merchantRecipient
+  );
   assert(merchantChange && parseInt(merchantChange.amount) === invoice.amount);
-  
+
   // Verify facilitator received fee (positive balance)
-  const facilitatorChange = usdcChanges.find(bc => bc.owner.AddressOwner === facilitatorAddress);
-  assert(facilitatorChange && parseInt(facilitatorChange.amount) === invoice.facilitatorFee);
+  const facilitatorChange = usdcChanges.find(
+    (bc) => bc.owner.AddressOwner === facilitatorAddress
+  );
+  assert(
+    facilitatorChange &&
+      parseInt(facilitatorChange.amount) === invoice.facilitatorFee
+  );
 
   // 5. Store for audit trail
   await storeReceipt({

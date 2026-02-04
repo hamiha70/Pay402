@@ -11,3 +11,4 @@ mock_usdc = "0x0"
 [dev-addresses]
 
 [environments]
+local = "76fc809e"

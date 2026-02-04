@@ -43,11 +43,13 @@ sui client balance --owner <address> | grep MOCK_USDC
 ## IMPORTANT: Who Needs MockUSDC?
 
 ### ✅ Mint to:
+
 - **Buyer addresses** (for making payments)
 - **Merchant addresses** (for testing receipt)
 - **Test wallets** (for E2E tests)
 
 ### ❌ DO NOT mint to:
+
 - **Facilitator address** - Facilitator NEVER needs USDC upfront
   - Facilitator only receives fees FROM payments
   - Facilitator only needs SUI for gas sponsorship
@@ -63,8 +65,8 @@ sui client balance --owner <address> | grep MOCK_USDC
 
 ```
 Payment Flow:
-  Buyer (has MockUSDC) 
-    → Pay 10.50 USDC 
+  Buyer (has MockUSDC)
+    → Pay 10.50 USDC
     → Merchant receives 10.00 USDC
     → Facilitator receives 0.50 USDC (fee)
     → Facilitator pays gas in SUI (sponsored transaction)
@@ -77,6 +79,7 @@ Facilitator Balance:
 ## Testing
 
 See `facilitator/src/__tests__/e2e-payment.test.ts` for examples of:
+
 - Minting MockUSDC to test addresses
 - Verifying balance changes before/after payments
 - Checking facilitator fee accumulation

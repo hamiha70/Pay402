@@ -386,7 +386,7 @@ export default function PaymentPage({ invoiceJWT: propInvoiceJWT }: PaymentPageP
 
           <div className="info-box">
             <strong>Invoice Hash:</strong>
-            <code style={{color: '#1f2937', fontWeight: 600}}>{verificationResult.details.invoiceHash?.substring(0, 32)}...</code>
+            <code style={{color: '#1f2937', fontWeight: 600, fontSize: '0.75em', wordBreak: 'break-all', display: 'block', marginTop: '8px'}}>{verificationResult.details.invoiceHash}</code>
           </div>
 
           <p>The transaction has been verified. You can safely proceed.</p>

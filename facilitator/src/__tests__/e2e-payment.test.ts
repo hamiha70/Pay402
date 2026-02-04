@@ -192,16 +192,11 @@ describe('End-to-End Payment Flow', () => {
       const invoiceData = await invoiceResponse.json();
       const testInvoiceJWT = invoiceData.invoice;
       
-      const response = await fetch(`${FACILITATOR_URL}/build-ptb`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          buyerAddress: '0xinvalid',
-          invoiceJWT: testInvoiceJWT,
-        }),
-      });
-      
-      expect(response.ok).toBe(false);
+      // Use shared client - should throw error for invalid address
+      const clientConfig = { facilitatorUrl: FACILITATOR_URL };
+      await expect(
+        buildPTB(clientConfig, testInvoiceJWT, '0xinvalid')
+      ).rejects.toThrow();
     });
 
     it('should fail with expired invoice', async () => {
@@ -213,16 +208,11 @@ describe('End-to-End Payment Flow', () => {
       // Create expired invoice (exp in past)
       const expiredJWT = 'eyJhbGciOiJFZERTQSIsInR5cCI6IkpXVCJ9.eyJleHAiOjEwMDAwMDAwMDB9.invalid';
       
-      const response = await fetch(`${FACILITATOR_URL}/build-ptb`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          buyerAddress: testBuyerAddress,
-          invoiceJWT: expiredJWT,
-        }),
-      });
-      
-      expect(response.ok).toBe(false);
+      // Use shared client - should throw error for expired invoice
+      const clientConfig = { facilitatorUrl: FACILITATOR_URL };
+      await expect(
+        buildPTB(clientConfig, expiredJWT, testBuyerAddress)
+      ).rejects.toThrow();
     });
   });
 

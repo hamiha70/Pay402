@@ -9,8 +9,18 @@ import { config } from '../config.js';
 
 export async function premiumDataController(req, res) {
   try {
-    // Generate unique invoice
+    const nonce = generateNonce();
+    
+    // Generate unique invoice with X-402 V2 fields (CAIP standards)
     const invoice = {
+      // ===== X-402 V2 REQUIRED FIELDS (CAIP Standards) =====
+      network: `sui:${config.suiNetwork}`,  // CAIP-2: "sui:mainnet" | "sui:testnet" | "sui:localnet"
+      assetType: `sui:${config.suiNetwork}/coin:${config.coinType}`,  // CAIP-19
+      payTo: `sui:${config.suiNetwork}:${config.merchantAddress}`,    // CAIP-10
+      paymentId: nonce,                      // Unique payment identifier
+      description: 'Premium market insights and analytics data',  // Human-readable
+      
+      // ===== EXISTING FIELDS (Backward Compatible) =====
       resource: '/api/premium-data',
       amount: config.resourcePrice,
       merchantRecipient: config.merchantAddress,
@@ -18,7 +28,7 @@ export async function premiumDataController(req, res) {
       facilitatorRecipient: config.facilitatorAddress,
       coinType: config.coinType,
       expiry: Math.floor(Date.now() / 1000) + config.invoiceExpirySeconds,
-      nonce: generateNonce(),
+      nonce: nonce,  // Same as paymentId for compatibility
       redirectUrl: `http://localhost:${config.port}/api/verify-payment`, // Callback after payment
     };
 

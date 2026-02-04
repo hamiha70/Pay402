@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useAuth } from '../hooks/useAuth';
 import { useBalance } from '../hooks/useBalance';
-import { verifyPaymentPTB } from '../lib/verifier';
+import { buildPTB, verifyPTB, signPTB, submitPayment } from '../lib/pay402-client';
 import type { InvoiceJWT } from '../lib/verifier';
 
 /**

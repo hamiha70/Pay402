@@ -13,8 +13,10 @@ interface FundRequest {
 const fundedSessions = new Set<string>();
 
 /**
- * Fund a buyer's wallet with test USDC
+ * Fund a buyer's wallet with test USDC (MockUSDC on localnet)
  * This is a demo faucet for the hackathon
+ * 
+ * CRITICAL: On localnet, mints MockUSDC. On testnet, would use Circle faucet.
  */
 export async function fundController(req: Request, res: Response) {
   try {
@@ -42,37 +44,46 @@ export async function fundController(req: Request, res: Response) {
 
     const client = getSuiClient();
 
-    // Check current balance
+    // Check current balance (use payment coin type)
     const balance = await client.getBalance({
       owner: address,
-      coinType: '0x2::sui::SUI', // Using SUI for testing
+      coinType: config.paymentCoinType, // MockUSDC on localnet
     });
 
     const currentBalance = balance.balance.balance ? parseInt(balance.balance.balance) : 0;
 
     // If already funded, return early
+    const decimals = config.network.paymentCoin.decimals;
     if (currentBalance > 0) {
       res.json({
         funded: false,
         alreadyFunded: true,
-        balance: currentBalance / 1_000_000_000, // Convert to SUI
+        balance: currentBalance / Math.pow(10, decimals),
         message: 'Wallet already has funds',
       });
       return;
     }
 
-    // Fund the wallet with enough for payment + gas
-    const FUND_AMOUNT = 10_000_000_000; // 10 SUI (plenty for payment + gas)
+    // Fund the wallet with MockUSDC (50 USDC for testing)
+    const FUND_AMOUNT = 50_000_000; // 50 USDC (6 decimals)
+    
+    // MockUSDC constants (localnet only)
+    const MOCK_USDC_PACKAGE = '0x34f1b450e7815b8b95df68cb6bfd81bbaf42607acf1f345bcb4a2fc732ca648b';
+    const TREASURY_CAP = '0x21aa4203c1f95e3e0584624b274f3e5c630578efaba76bb47d53d5d7421fde11';
 
     const keypair = Ed25519Keypair.fromSecretKey(config.facilitatorPrivateKey!);
 
     const tx = new Transaction();
     
-    // Split coin from facilitator's gas
-    const [coin] = tx.splitCoins(tx.gas, [FUND_AMOUNT]);
-    
-    // Transfer to recipient
-    tx.transferObjects([coin], address);
+    // Call MockUSDC::mint function
+    tx.moveCall({
+      target: `${MOCK_USDC_PACKAGE}::mock_usdc::mint`,
+      arguments: [
+        tx.object(TREASURY_CAP),
+        tx.pure.u64(FUND_AMOUNT),
+        tx.pure.address(address),
+      ],
+    });
 
     // Execute transaction
     const result = await client.signAndExecuteTransaction({
@@ -87,17 +98,17 @@ export async function fundController(req: Request, res: Response) {
     await new Promise(resolve => setTimeout(resolve, 1000)); // Wait for tx to settle
     const newBalance = await client.getBalance({
       owner: address,
-      coinType: '0x2::sui::SUI',
+      coinType: config.paymentCoinType,
     });
 
     const digest = result.$kind === 'Transaction' ? result.Transaction.digest : null;
     
     res.json({
       funded: true,
-      amount: FUND_AMOUNT / 1_000_000_000, // Convert to SUI
+      amount: FUND_AMOUNT / Math.pow(10, decimals),
       txDigest: digest,
-      balance: (newBalance.balance.balance ? parseInt(newBalance.balance.balance) : 0) / 1_000_000_000,
-      message: 'Wallet funded successfully',
+      balance: (newBalance.balance.balance ? parseInt(newBalance.balance.balance) : 0) / Math.pow(10, decimals),
+      message: 'Wallet funded successfully with MockUSDC',
     });
 
   } catch (error) {

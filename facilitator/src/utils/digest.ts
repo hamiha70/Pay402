@@ -1,15 +1,9 @@
-import { toBase58 } from '@mysten/bcs';
-import { messageWithIntent } from '@mysten/sui/cryptography';
-import { blake2b } from '@noble/hashes/blake2.js';
+import { Transaction } from '@mysten/sui/transactions';
 
 /**
  * Calculate Sui transaction digest from transaction bytes
  * 
- * This is the CANONICAL way to calculate a Sui transaction digest:
- * 1. Create intent message (3-byte intent + transaction bytes)
- * 2. Hash with Blake2b-256 (32-byte output)
- * 3. Encode as Base58
- * 
+ * Uses the official Sui SDK to ensure 100% compatibility with on-chain digests.
  * The digest can be calculated off-chain deterministically,
  * making it available immediately in optimistic settlement mode.
  * 
@@ -20,17 +14,12 @@ import { blake2b } from '@noble/hashes/blake2.js';
  * ```typescript
  * const txBytes = await tx.build({ client });
  * const digest = getTransactionDigest(txBytes);
- * // Can now use: sui client tx-block <digest>
+ * // Now use: sui client tx-block <digest>
  * ```
  */
 export function getTransactionDigest(transactionBytes: Uint8Array): string {
-  // Step 1: Create intent message (3-byte intent + transaction bytes)
-  // 'TransactionData' scope = 0 for user transaction signatures
-  const intentMessage = messageWithIntent('TransactionData', transactionBytes);
-  
-  // Step 2: Hash with Blake2b-256 (produces 32-byte hash)
-  const hash = blake2b(intentMessage, { dkLen: 32 });
-  
-  // Step 3: Encode as Base58 (Sui's standard digest format)
-  return toBase58(hash);
+  // Use Sui SDK's official Transaction.getDigest() method
+  // This ensures 100% compatibility with on-chain digest calculation
+  const tx = Transaction.from(transactionBytes);
+  return tx.getDigest();
 }

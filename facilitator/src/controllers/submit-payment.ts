@@ -126,7 +126,18 @@ export async function submitPaymentController(req: Request, res: Response): Prom
       
       // Step 2: Calculate digest IMMEDIATELY (deterministic hash)
       // Digest = hash(transactionBytes) - no blockchain needed!
-      const digest = getTransactionDigest(txBytes);
+      let digest: string;
+      try {
+        digest = getTransactionDigest(txBytes);
+        logger.info('Pre-calculated digest', { digest, txBytesLength: txBytes.length });
+      } catch (digestError) {
+        logger.error('Failed to calculate digest', {
+          error: digestError instanceof Error ? digestError.message : String(digestError),
+          stack: digestError instanceof Error ? digestError.stack : undefined,
+          txBytesLength: txBytes.length,
+        });
+        throw new Error(`Digest calculation failed: ${digestError instanceof Error ? digestError.message : String(digestError)}`);
+      }
       
       // Step 3: Return "safe to deliver" IMMEDIATELY after validation
       // Submit happens in background (non-blocking)

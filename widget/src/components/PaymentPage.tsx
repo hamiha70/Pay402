@@ -467,7 +467,7 @@ export default function PaymentPage({ invoiceJWT: propInvoiceJWT }: PaymentPageP
       explorerLink = `https://testnet.suivision.xyz/txblock/${paymentId}`;
     }
     
-    const cliCommand = `sui client tx-block ${paymentId}`;
+    const cliCommand = `lsui client tx-block ${paymentId}`;
     const actualPaymentTime = paymentTime && invoiceTime ? paymentTime - invoiceTime : null;
 
     return (

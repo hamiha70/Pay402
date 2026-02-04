@@ -7,8 +7,9 @@
 
 export function verifyPaymentController(req, res) {
   try {
-    const { paymentId, digest, mode, paymentTime, accessTime, invoiceTime } = req.query;
+    const { paymentId, digest, mode, paymentTime, accessTime, invoiceTime, network } = req.query;
     const txDigest = paymentId || digest;
+    const suiNetwork = network || 'localnet';
     
     // Calculate timing metrics (if provided)
     const paymentTimestamp = paymentTime ? parseInt(paymentTime) : null;
@@ -17,6 +18,17 @@ export function verifyPaymentController(req, res) {
     
     const timeDelta = paymentTimestamp ? accessTimestamp - paymentTimestamp : null;
     const totalTime = invoiceTimestamp && paymentTimestamp ? paymentTimestamp - invoiceTimestamp : null;
+    
+    // Generate explorer link
+    let explorerLink = null;
+    if (txDigest) {
+      if (suiNetwork === 'mainnet') {
+        explorerLink = `https://suivision.xyz/txblock/${txDigest}`;
+      } else if (suiNetwork === 'testnet') {
+        explorerLink = `https://testnet.suivision.xyz/txblock/${txDigest}`;
+      }
+      // For localnet, no public explorer available
+    }
 
     if (!txDigest) {
       res.status(400).json({
@@ -153,7 +165,7 @@ export function verifyPaymentController(req, res) {
         <strong>✅ Payment Verified Successfully!</strong>
         <p style="margin: 5px 0 0 0; font-size: 0.875rem;">
           Settlement Mode: <strong>${mode || 'optimistic'}</strong>
-          ${timeDelta !== null ? `<br>Time to access content: <strong>${timeDelta}ms</strong> ${mode === 'optimistic' ? '⚡ (Instant!)' : '🔒 (Blockchain confirmed)'}` : ''}
+          ${timeDelta !== null ? `<br>Time to access content: <strong>${timeDelta}ms</strong> ${mode === 'optimistic' ? '⚡' : '🔒'}` : ''}
         </p>
       </div>
 
@@ -186,7 +198,8 @@ export function verifyPaymentController(req, res) {
       </div>
 
       <div class="meta">
-        <p>Transaction: <code>${txDigest.substring(0, 32)}...</code></p>
+        <p>Transaction: ${explorerLink ? `<a href="${explorerLink}" target="_blank" style="color: #3b82f6; text-decoration: none;"><code style="cursor: pointer;">${txDigest}</code></a>` : `<code>${txDigest}</code>`}</p>
+        ${!explorerLink && suiNetwork === 'localnet' ? '<p style="color: #6b7280; font-size: 0.8rem;">💡 Localnet: No public explorer available. Use <code>sui client transaction ${txDigest}</code> to view details.</p>' : ''}
         <p>Generated: ${premiumContent.timestamp}</p>
       </div>
     </div>
@@ -202,8 +215,11 @@ export function verifyPaymentController(req, res) {
       ` : ''}
       ${timeDelta !== null ? `
       <div class="metric">
-        <span class="metric-label">Payment→Content:</span>
+        <span class="metric-label">Auto-redirect delay:</span>
         <span class="metric-value">${timeDelta}ms</span>
+      </div>
+      <div class="metric">
+        <span class="metric-label" style="font-size: 0.65rem; opacity: 0.7;">Note: Includes 2s UI delay</span>
       </div>
       ` : ''}
       <div class="metric">

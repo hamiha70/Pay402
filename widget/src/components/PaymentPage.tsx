@@ -176,6 +176,9 @@ export default function PaymentPage({ invoiceJWT: propInvoiceJWT }: PaymentPageP
         redirectUrl.searchParams.set('mode', mode);
         redirectUrl.searchParams.set('paymentTime', completionTime.toString());
         redirectUrl.searchParams.set('invoiceTime', invoiceTime.toString());
+        // Extract network from invoice (e.g., "sui:localnet" -> "localnet")
+        const network = invoice.network?.split(':')[1] || 'localnet';
+        redirectUrl.searchParams.set('network', network);
         
         // Redirect after 2 seconds to let user see success message
         setTimeout(() => {

@@ -111,8 +111,8 @@
         padding: 20px;
         border-radius: 8px;
         font-family: "Courier New", monospace;
-        font-size: 0.9rem;
-        max-height: 400px;
+        font-size: 0.85rem;
+        max-height: 600px;
         overflow-y: auto;
         margin: 20px 0;
         display: none;
@@ -224,15 +224,8 @@
         </div>
 
         <div class="invoice-box" id="invoiceBox">
-          <h3>📦 Full HTTP 402 Response:</h3>
+          <h3>📦 HTTP 402 Payment Required:</h3>
           <pre id="invoiceJson"></pre>
-        </div>
-
-        <div style="margin: 20px 0; display: none" id="jwtSection">
-          <h3 style="margin-bottom: 10px">
-            🎫 Invoice JWT Token (copy this!):
-          </h3>
-          <div class="jwt-display" id="jwtDisplay"></div>
         </div>
 
         <button
@@ -264,16 +257,12 @@
         const loading = document.getElementById("loading");
         const alert = document.getElementById("alert");
         const invoiceBox = document.getElementById("invoiceBox");
-        const jwtSection = document.getElementById("jwtSection");
-        const jwtDisplay = document.getElementById("jwtDisplay");
         const copyBtn = document.getElementById("copyBtn");
         const nextStep = document.getElementById("nextStep");
 
         // Reset UI
         alert.className = "alert";
         invoiceBox.classList.remove("show");
-        jwtSection.style.display = "none";
-        jwtDisplay.classList.remove("show");
         copyBtn.style.display = "none";
         nextStep.style.display = "none";
         loading.classList.add("show");
@@ -288,18 +277,13 @@
             // Success - got invoice
             currentInvoiceJWT = data.invoice;
 
-            // Show full JSON response (full 402 response)
+            // Show full JSON response (HTTP 402 response)
             document.getElementById("invoiceJson").textContent = JSON.stringify(
               data,
               null,
               2
             );
             invoiceBox.classList.add("show");
-
-            // Show just the JWT token (extracted)
-            jwtDisplay.textContent = currentInvoiceJWT;
-            jwtSection.style.display = "block";
-            jwtDisplay.classList.add("show");
 
             // Show copy button
             copyBtn.style.display = "block";

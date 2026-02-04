@@ -37,7 +37,7 @@ export async function premiumDataController(req, res) {
       error: 'Payment Required',
       message: 'This resource requires payment',
       invoice: invoiceJWT,
-      invoiceData: invoice,
+      ...invoice,
     });
   } catch (error) {
     console.error('Premium data error:', error);

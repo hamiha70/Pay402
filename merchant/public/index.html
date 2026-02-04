@@ -62,7 +62,7 @@
         border: none;
         padding: 15px 30px;
         border-radius: 8px;
-        font-size: 1.1rem;
+        font-size: 1.65rem;
         font-weight: 600;
         cursor: pointer;
         transition: transform 0.2s;
@@ -112,7 +112,7 @@
         border-radius: 8px;
         font-family: "Courier New", monospace;
         font-size: 0.85rem;
-        max-height: 600px;
+        max-height: 780px;
         overflow-y: auto;
         margin: 20px 0;
         display: none;
@@ -239,10 +239,6 @@
 
         <div class="next-step" id="nextStep" style="display: none">
           <h3>Next Step:</h3>
-          <p>
-            Click below to open the Pay402 payment page and complete your
-            payment.
-          </p>
           <button class="btn" onclick="openPaymentPage()">
             💳 Continue to Payment →
           </button>
@@ -277,12 +273,32 @@
             // Success - got invoice
             currentInvoiceJWT = data.invoice;
 
-            // Show full JSON response (HTTP 402 response)
-            document.getElementById("invoiceJson").textContent = JSON.stringify(
-              data,
-              null,
-              2
-            );
+            // Reorder fields: move merchantAmount before facilitatorFee
+            const reorderedData = {
+              error: data.error,
+              message: data.message,
+              invoice: data.invoice,
+              x402Version: data.x402Version,
+              scheme: data.scheme,
+              network: data.network,
+              assetType: data.assetType,
+              payTo: data.payTo,
+              paymentId: data.paymentId,
+              description: data.description,
+              resource: data.resource,
+              maxAmountRequired: data.maxAmountRequired,
+              maxTimeoutSeconds: data.maxTimeoutSeconds,
+              mimeType: data.mimeType,
+              merchantAmount: data.merchantAmount,
+              facilitatorFee: data.facilitatorFee,
+              expiry: data.expiry,
+              redirectUrl: data.redirectUrl
+            };
+
+            // Format JSON with syntax highlighting
+            const jsonStr = JSON.stringify(reorderedData, null, 2);
+            const highlighted = syntaxHighlight(jsonStr);
+            document.getElementById("invoiceJson").innerHTML = highlighted;
             invoiceBox.classList.add("show");
 
             // Show copy button
@@ -331,6 +347,52 @@
           currentInvoiceJWT
         )}`;
         window.location.href = widgetUrl;
+      }
+
+      // Syntax highlighting function
+      function syntaxHighlight(json) {
+        // X-402 v2 standard fields (red)
+        const standardKeys = [
+          'error', 'message', 'invoice', 'x402Version', 'scheme', 
+          'network', 'assetType', 'payTo', 'paymentId', 'description',
+          'resource', 'maxAmountRequired', 'maxTimeoutSeconds', 'mimeType'
+        ];
+        
+        // Extension fields (green)
+        const extensionKeys = [
+          'merchantAmount', 'facilitatorFee', 'expiry', 'redirectUrl'
+        ];
+
+        return json.replace(
+          /("(\\u[a-zA-Z0-9]{4}|\\[^u]|[^\\"])*"(\s*:)?|\b(true|false|null)\b|-?\d+(?:\.\d*)?(?:[eE][+\-]?\d+)?)/g,
+          function (match) {
+            let color = '#a5d6ff'; // Default value color (light blue)
+            
+            if (/^"/.test(match)) {
+              if (/:$/.test(match)) {
+                // It's a key
+                const key = match.slice(1, -2); // Remove quotes and colon
+                if (standardKeys.includes(key)) {
+                  color = '#ff7b72'; // Red for standard keys
+                } else if (extensionKeys.includes(key)) {
+                  color = '#7ee787'; // Green for extension keys
+                } else {
+                  color = '#d2a8ff'; // Purple for other keys
+                }
+              } else {
+                color = '#a5d6ff'; // Light blue for string values
+              }
+            } else if (/true|false/.test(match)) {
+              color = '#ffa657'; // Orange for booleans
+            } else if (/null/.test(match)) {
+              color = '#ffa657'; // Orange for null
+            } else {
+              color = '#79c0ff'; // Cyan for numbers
+            }
+            
+            return `<span style="color: ${color}">${match}</span>`;
+          }
+        );
       }
 
       // Don't auto-request - user must click button

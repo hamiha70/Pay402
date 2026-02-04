@@ -173,7 +173,9 @@ export async function submitPayment(
     body: JSON.stringify({
       invoiceJWT: params.invoiceJWT,
       buyerAddress: params.buyerAddress,
-      transactionKindBytes: Array.from(params.transactionKindBytes),
+      // NOTE: Despite param name, these are actually full transactionBytes (with gas sponsorship)
+      // The facilitator returns them as "transactionKindBytes" but they're full transactions
+      transactionBytes: Array.from(params.transactionKindBytes),
       buyerSignature: params.buyerSignature,
       settlementMode: params.settlementMode,
     }),

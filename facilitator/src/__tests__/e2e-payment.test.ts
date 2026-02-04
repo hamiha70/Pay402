@@ -22,18 +22,16 @@ describe('End-to-End Payment Flow', () => {
   const MERCHANT_URL = 'http://localhost:3002';
 
   beforeAll(async () => {
-    // Get active address
-    buyerAddress = execSync('sui client active-address').toString().trim();
+    // CRITICAL: Buyer MUST be different from facilitator for sponsored transactions
+    // Generate a unique buyer keypair for testing
+    buyerKeypair = new Ed25519Keypair();
+    buyerAddress = buyerKeypair.getPublicKey().toSuiAddress();
     
-    // For testing, use same keypair as facilitator
-    // In production, buyer would have their own keypair
-    const privateKey = process.env.FACILITATOR_PRIVATE_KEY;
-    if (!privateKey) {
-      throw new Error('FACILITATOR_PRIVATE_KEY not set');
-    }
-    buyerKeypair = Ed25519Keypair.fromSecretKey(privateKey);
+    console.log('🔑 Test Setup:');
+    console.log('  Buyer address:', buyerAddress);
+    console.log('  Facilitator will sponsor gas (different address)');
     
-    // Fund buyer with SUI (for gas)
+    // Fund buyer with USDC for payment
     const sessionId = `test-${Date.now()}`;
     const fundResponse = await fetch(`${FACILITATOR_URL}/fund`, {
       method: 'POST',
@@ -48,6 +46,8 @@ describe('End-to-End Payment Flow', () => {
       const errorText = await fundResponse.text();
       throw new Error(`Fund failed: ${errorText}`);
     }
+    
+    console.log('✅ Buyer funded with USDC');
     const fundData = await fundResponse.json();
     console.log('Fund response:', fundData);
     // Fund endpoint may return different success indicators

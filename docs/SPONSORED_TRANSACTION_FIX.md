@@ -6,6 +6,7 @@
 ## Problem
 
 E2E tests were failing with "Invalid user signature: Required Signature from 0x7a... is absent" even though:
+
 - The sponsored transaction pattern was implemented correctly
 - Both buyer and facilitator were signing the same `TransactionData`
 - The signature format was correct
@@ -21,6 +22,7 @@ buyerKeypair = Ed25519Keypair.fromSecretKey(privateKey); // Same as facilitator!
 ```
 
 When both parties have the same address, Sui's dual-signature validation logic fails because:
+
 1. Sponsored transactions require TWO distinct addresses (sender ≠ gas owner)
 2. The signature validation expects signatures from DIFFERENT public keys
 3. Having the same address for both roles violates the sponsored transaction model
@@ -39,6 +41,7 @@ buyerAddress = buyerKeypair.getPublicKey().toSuiAddress();
 ## Verification
 
 Created `minimal-sponsored.test.ts` to isolate and verify the basic sponsored transaction pattern:
+
 - ✅ Simple SUI transfer with gas sponsorship
 - ✅ Buyer and facilitator are DIFFERENT addresses
 - ✅ Both sign the SAME transaction bytes
@@ -49,11 +52,13 @@ Created `minimal-sponsored.test.ts` to isolate and verify the basic sponsored tr
 ## Test Results
 
 ### Before Fix
+
 - ❌ Optimistic mode: "Invalid user signature" (but returned digest anyway - false positive)
-- ❌ Pessimistic mode: "Invalid user signature" 
+- ❌ Pessimistic mode: "Invalid user signature"
 - ❌ Latency comparison: False positives (didn't check response.ok)
 
 ### After Fix
+
 - ✅ Build PTB tests (3/3 passed)
 - ✅ Optimistic mode (61ms client latency)
 - ✅ Pessimistic mode (1126ms client latency)
@@ -62,10 +67,10 @@ Created `minimal-sponsored.test.ts` to isolate and verify the basic sponsored tr
 
 ## Performance Metrics
 
-| Mode | Client Latency | Settlement | Facilitator Risk |
-|------|---------------|------------|------------------|
-| Optimistic | 46-61ms | Background (~1s) | Yes (front-running) |
-| Pessimistic | 608-1126ms | Blocking | No (confirmed on-chain) |
+| Mode        | Client Latency | Settlement       | Facilitator Risk        |
+| ----------- | -------------- | ---------------- | ----------------------- |
+| Optimistic  | 46-61ms        | Background (~1s) | Yes (front-running)     |
+| Pessimistic | 608-1126ms     | Blocking         | No (confirmed on-chain) |
 
 ## Key Learnings
 
@@ -81,8 +86,8 @@ Created `minimal-sponsored.test.ts` to isolate and verify the basic sponsored tr
 ```typescript
 // 1. Facilitator builds COMPLETE transaction with gas sponsorship
 const tx = new Transaction();
-tx.setSender(buyerAddress);           // Buyer is sender
-tx.setGasOwner(facilitatorAddress);   // Facilitator sponsors gas
+tx.setSender(buyerAddress); // Buyer is sender
+tx.setGasOwner(facilitatorAddress); // Facilitator sponsors gas
 tx.setGasPayment([gasCoins[0]]);
 tx.setGasBudget(10000000);
 

@@ -25,20 +25,24 @@ See [SPONSORED_TRANSACTION_FIX.md](./SPONSORED_TRANSACTION_FIX.md) for detailed 
 ### ✅ All Tests Passing (6/6)
 
 #### 1. **Build PTB from Invoice JWT** ✅
+
 - Facilitator correctly builds complete transaction with gas sponsorship
 - Returns full `transactionBytes` (not just transaction kind)
 - Invoice data properly extracted
 - CAIP fields parsed correctly
 
 #### 2. **Invalid Buyer Address** ✅
+
 - Correctly rejects invalid buyer addresses
 - Returns 400 error with helpful message
 
 #### 3. **Expired Invoice** ✅
+
 - Correctly rejects expired invoices
 - Returns 400 error with expiration timestamp
 
 #### 4. **Optimistic Settlement Mode** ✅
+
 - **Client Latency**: 46-61ms (immediate response)
 - **Settlement**: Background (~1s after response)
 - **Digest**: Available immediately
@@ -47,6 +51,7 @@ See [SPONSORED_TRANSACTION_FIX.md](./SPONSORED_TRANSACTION_FIX.md) for detailed 
 - **Facilitator Risk**: Yes (must compensate if settlement fails)
 
 #### 5. **Pessimistic Settlement Mode** ✅
+
 - **Client Latency**: 608-1126ms (blocks until finality)
 - **Settlement**: Synchronous (before response)
 - **Digest**: Available after finality
@@ -55,6 +60,7 @@ See [SPONSORED_TRANSACTION_FIX.md](./SPONSORED_TRANSACTION_FIX.md) for detailed 
 - **Facilitator Risk**: No (transaction confirmed on-chain)
 
 #### 6. **Latency Comparison** ✅
+
 - **Optimistic**: ~46ms
 - **Pessimistic**: ~608ms
 - **Difference**: ~562ms
@@ -64,10 +70,10 @@ See [SPONSORED_TRANSACTION_FIX.md](./SPONSORED_TRANSACTION_FIX.md) for detailed 
 
 ## Performance Metrics
 
-| Mode | Client Latency | Settlement Time | Total Time | Facilitator Risk |
-|------|---------------|-----------------|------------|------------------|
-| **Optimistic** | 46-61ms | Background (~1s) | 46-61ms (user) | Yes |
-| **Pessimistic** | 608-1126ms | Synchronous | 608-1126ms | No |
+| Mode            | Client Latency | Settlement Time  | Total Time     | Facilitator Risk |
+| --------------- | -------------- | ---------------- | -------------- | ---------------- |
+| **Optimistic**  | 46-61ms        | Background (~1s) | 46-61ms (user) | Yes              |
+| **Pessimistic** | 608-1126ms     | Synchronous      | 608-1126ms     | No               |
 
 ### Key Insights
 
@@ -85,8 +91,8 @@ See [SPONSORED_TRANSACTION_FIX.md](./SPONSORED_TRANSACTION_FIX.md) for detailed 
 ```typescript
 // 1. Facilitator builds COMPLETE transaction
 const tx = new Transaction();
-tx.setSender(buyerAddress);           // Buyer (DIFFERENT from facilitator)
-tx.setGasOwner(facilitatorAddress);   // Facilitator sponsors gas
+tx.setSender(buyerAddress); // Buyer (DIFFERENT from facilitator)
+tx.setGasOwner(facilitatorAddress); // Facilitator sponsors gas
 tx.setGasPayment([gasCoins[0]]);
 tx.setGasBudget(10000000);
 
@@ -118,11 +124,13 @@ await client.executeTransaction({
 ## Test Coverage
 
 ### Unit Tests
+
 - ✅ CAIP utilities (22 tests)
 - ✅ Verifier security (15 tests)
 - ✅ Move contract (20 tests)
 
 ### Integration Tests
+
 - ✅ Minimal sponsored transaction (4 tests)
 - ✅ E2E payment flow (6 tests)
 
@@ -147,6 +155,7 @@ await client.executeTransaction({
 **The Pay402 system is production-ready for single-chain USDC payments on Sui with gas sponsorship.**
 
 All core features are implemented, tested, and working:
+
 - ✅ X-402 V2 protocol compliance
 - ✅ Sponsored transactions (facilitator pays gas)
 - ✅ Optimistic settlement (fast UX)
@@ -156,6 +165,7 @@ All core features are implemented, tested, and working:
 - ✅ Comprehensive test coverage
 
 Performance is excellent:
+
 - Optimistic: ~50ms user experience
 - Pessimistic: ~800ms with on-chain guarantee
 - Both modes are significantly faster than traditional payment flows

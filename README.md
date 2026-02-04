@@ -326,16 +326,23 @@ Pay402/
 # 1. Start local SUI network
 localnet start
 
-# 2. Deploy Move contract
+# 2. Deploy MockUSDC (localnet only - auto-configures .env)
+./scripts/deploy-mock-usdc.sh
+
+# 3. Deploy payment contract
 cd move/payment
 sui move build
 sui client publish --gas-budget 100000000
 
-# 3. Start all services (tmux)
+# 4. Configure treasury owner (in facilitator/.env)
+# Set TREASURY_OWNER_PRIVATE_KEY to deployer's key
+# CRITICAL: Keep separate from FACILITATOR_PRIVATE_KEY
+
+# 5. Start all services (tmux)
 cd ../../
 ./scripts/pay402-tmux.sh
 
-# 4. Visit in browser
+# 6. Visit in browser
 # Merchant: http://localhost:3002
 # Payment Page: http://localhost:5173
 # Facilitator API: http://localhost:3001/health

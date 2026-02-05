@@ -335,12 +335,156 @@ Pay402/
 
 ---
 
+## Network Configuration
+
+Pay402 supports **localnet**, **testnet**, and **mainnet** with automatic configuration switching via environment variables.
+
+### 🎛️ Network Switching (Single Environment Variable)
+
+```bash
+# Switch entire stack to testnet
+export SUI_NETWORK=testnet
+
+# Or stay on localnet (default)
+export SUI_NETWORK=localnet
+```
+
+**What auto-configures:**
+- ✅ RPC endpoint (localhost → Sui fullnode)
+- ✅ Payment coin (MockUSDC → Circle USDC)
+- ✅ Timeouts (100ms → 2000ms)
+- ✅ CLI commands (`lsui` → `tsui`)
+- ✅ Explorer URLs (none → suivision.xyz)
+- ✅ Faucet (embedded → Circle)
+- ✅ Security rules (SUI payments allowed → blocked)
+
+### 📍 Network Configurations
+
+| Network | RPC URL | Payment Coin | CLI Tool | Confirmation Time |
+|---------|---------|--------------|----------|-------------------|
+| **Localnet** | `http://127.0.0.1:9000` | MockUSDC | `lsui` | ~50ms |
+| **Testnet** | `https://fullnode.testnet.sui.io` | Circle USDC | `tsui` | ~1.5s |
+| **Mainnet** | Not yet supported | Circle USDC | `sui` | ~2s |
+
+### 🔧 What YOU Configure (Per Network)
+
+#### Localnet Setup
+```bash
+# 1. Start blockchain
+sui start --with-faucet
+
+# 2. Deploy contracts (auto-configures .env)
+./scripts/deploy-mock-usdc.sh
+cd move/payment && sui client publish
+
+# 3. Done! Everything else is automatic
+export SUI_NETWORK=localnet  # or leave unset (default)
+```
+
+#### Testnet Setup
+```bash
+# 1. Create wallet and fund it
+sui client new-address ed25519
+sui client switch --env testnet
+# Get SUI: https://faucet.testnet.sui.io/
+# Get USDC: https://faucet.circle.com (20 USDC per 2 hours)
+
+# 2. Deploy contract
+cd move/payment
+sui client publish --gas-budget 100000000
+# Save the PACKAGE_ID from output
+
+# 3. Find Circle USDC address
+# Check: https://developers.circle.com/stablecoins/docs/usdc-on-test-networks
+# Or search: "Circle USDC Sui testnet"
+
+# 4. Configure environment
+export SUI_NETWORK=testnet
+export PACKAGE_ID=0x...        # From step 2
+export USDC_TYPE=0x...         # From step 3
+export FACILITATOR_PRIVATE_KEY=suiprivkey1q...  # Your wallet
+
+# 5. Validate configuration
+cd facilitator
+npm run validate-network
+```
+
+### 📁 .env File Locations
+
+```
+Pay402/
+├── facilitator/.env          # Backend configuration
+│   SUI_NETWORK=localnet
+│   PACKAGE_ID=0x...
+│   USDC_TYPE=0x...
+│   FACILITATOR_PRIVATE_KEY=...
+│   PORT=3001
+│
+├── merchant/.env             # Merchant configuration  
+│   MERCHANT_PRIVATE_KEY=...
+│   PORT=3002
+│
+└── widget/.env               # Frontend build config
+    VITE_FACILITATOR_URL=http://localhost:3001
+    VITE_GOOGLE_CLIENT_ID=...
+```
+
+**Important**: The widget `.env` is for **build-time** only. Network switching happens server-side in the facilitator.
+
+### 🔍 Validation
+
+Before deploying to a new network, validate your configuration:
+
+```bash
+cd facilitator
+npm run validate-network
+```
+
+**Output:**
+```
+✅ Network: Testnet
+   RPC URL: https://fullnode.testnet.sui.io:443
+   Payment Coin: USDC (6 decimals)
+
+🔐 Security Settings:
+   Block SUI Payments: ✅ ENABLED
+
+💰 Funding Strategy: manual
+   Circle Faucet: https://faucet.circle.com
+
+🛠️ Helper Functions:
+   CLI Command: tsui client tx-block <digest>
+   Explorer URL: https://testnet.suivision.xyz/txblock/<digest>
+   Optimistic Timeout: 2000ms
+   Pessimistic Timeout: 5000ms
+```
+
+### 🚨 Critical Security: Block SUI Payments on Testnet
+
+**Why?** On testnet/mainnet, the facilitator needs SUI for gas sponsorship. If users can pay with SUI, they'll drain your gas fund!
+
+**Protection:**
+- ✅ `blockSuiPayments: true` on testnet/mainnet (hardcoded in config)
+- ⚠️ `blockSuiPayments: false` on localnet (allows SUI for testing)
+
+The facilitator **automatically rejects** SUI payments on testnet:
+```
+❌ BLOCKED: Cannot use SUI for payments on Testnet!
+   Use USDC to prevent draining gas fund.
+   
+   Why: Facilitator needs SUI for gas sponsorship.
+   Using SUI for payments will drain the gas fund.
+```
+
+---
+
 ## Getting Started
 
 ### Prerequisites
 
 - Node.js 18+
-- SUI CLI + Suibase (for local blockchain)
+- SUI CLI (for blockchain interaction)
+- Suibase (for local blockchain) OR Testnet access
 - Google OAuth credentials (for zkLogin)
 
 ### Quick Setup

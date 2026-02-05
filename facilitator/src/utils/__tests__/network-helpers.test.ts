@@ -26,12 +26,12 @@ describe('Network Helper Functions', () => {
       expect(cmd).toContain('lsui');
     });
     
-    it('should return sui command with --network flag for testnet', () => {
+    it('should return tsui command for testnet', () => {
       process.env.SUI_NETWORK = 'testnet';
       const cmd = getCliCommand(testDigest);
-      expect(cmd).toContain('sui client tx-block');
-      expect(cmd).toContain('--network testnet');
-      expect(cmd).toContain(testDigest);
+      expect(cmd).toBe(`tsui client tx-block ${testDigest}`);
+      expect(cmd).toContain('tsui');
+      expect(cmd).not.toContain('--network'); // tsui is pre-configured
     });
   });
   

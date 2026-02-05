@@ -14,8 +14,8 @@ import { getNetworkConfig, type NetworkConfig } from '../config/networks.js';
  * Get the appropriate CLI command to query a transaction
  * 
  * @example
- * // Localnet: "sui client tx-block <digest>"
- * // Testnet: "sui client tx-block --network testnet <digest>"
+ * // Localnet: "lsui client tx-block <digest>"
+ * // Testnet: "tsui client tx-block <digest>"
  */
 export function getCliCommand(digest: string, network?: string): string {
   const config = network ? { ...getNetworkConfig(), name: network } : getNetworkConfig();
@@ -24,6 +24,11 @@ export function getCliCommand(digest: string, network?: string): string {
     return `lsui client tx-block ${digest}`;
   }
   
+  if (config.name === 'Testnet') {
+    return `tsui client tx-block ${digest}`;
+  }
+  
+  // Mainnet or other
   return `sui client tx-block --network ${config.name.toLowerCase()} ${digest}`;
 }
 

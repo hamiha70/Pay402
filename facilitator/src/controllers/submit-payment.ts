@@ -128,7 +128,7 @@ export async function submitPaymentController(req: Request, res: Response): Prom
       // Digest = hash(transactionBytes) - no blockchain needed!
       let digest: string;
       try {
-        digest = getTransactionDigest(txBytes);
+        digest = await getTransactionDigest(txBytes);
         logger.info('Pre-calculated digest', { digest, txBytesLength: txBytes.length });
       } catch (digestError) {
         logger.error('Failed to calculate digest', {

@@ -1,4 +1,10 @@
 node_modules/
 dist/
+
+# Environment variables (ALL variants - never commit these!)
 .env
+.env.*
+!.env.example
+!.env.*.example
+
 *.log

@@ -339,6 +339,8 @@ Pay402/
 
 Pay402 supports **localnet**, **testnet**, and **mainnet** with automatic configuration switching via environment variables.
 
+> 📘 **Full Testnet Deployment Guide:** See [TESTNET-DEPLOYMENT.md](TESTNET-DEPLOYMENT.md) for detailed testnet deployment instructions, including wallet setup, contract deployment, and troubleshooting.
+
 ### 🎛️ Network Switching (Single Environment Variable)
 
 ```bash
@@ -350,6 +352,7 @@ export SUI_NETWORK=localnet
 ```
 
 **What auto-configures:**
+
 - ✅ RPC endpoint (localhost → Sui fullnode)
 - ✅ Payment coin (MockUSDC → Circle USDC)
 - ✅ Timeouts (100ms → 2000ms)
@@ -360,15 +363,16 @@ export SUI_NETWORK=localnet
 
 ### 📍 Network Configurations
 
-| Network | RPC URL | Payment Coin | CLI Tool | Confirmation Time |
-|---------|---------|--------------|----------|-------------------|
-| **Localnet** | `http://127.0.0.1:9000` | MockUSDC | `lsui` | ~50ms |
-| **Testnet** | `https://fullnode.testnet.sui.io` | Circle USDC | `tsui` | ~1.5s |
-| **Mainnet** | Not yet supported | Circle USDC | `sui` | ~2s |
+| Network      | RPC URL                           | Payment Coin | CLI Tool | Confirmation Time |
+| ------------ | --------------------------------- | ------------ | -------- | ----------------- |
+| **Localnet** | `http://127.0.0.1:9000`           | MockUSDC     | `lsui`   | ~50ms             |
+| **Testnet**  | `https://fullnode.testnet.sui.io` | Circle USDC  | `tsui`   | ~1.5s             |
+| **Mainnet**  | Not yet supported                 | Circle USDC  | `sui`    | ~2s               |
 
 ### 🔧 What YOU Configure (Per Network)
 
 #### Localnet Setup
+
 ```bash
 # 1. Start blockchain
 sui start --with-faucet
@@ -382,6 +386,7 @@ export SUI_NETWORK=localnet  # or leave unset (default)
 ```
 
 #### Testnet Setup
+
 ```bash
 # 1. Create wallet and fund it
 sui client new-address ed25519
@@ -420,7 +425,7 @@ Pay402/
 │   FACILITATOR_PRIVATE_KEY=...
 │   PORT=3001
 │
-├── merchant/.env             # Merchant configuration  
+├── merchant/.env             # Merchant configuration
 │   MERCHANT_PRIVATE_KEY=...
 │   PORT=3002
 │
@@ -441,6 +446,7 @@ npm run validate-network
 ```
 
 **Output:**
+
 ```
 ✅ Network: Testnet
    RPC URL: https://fullnode.testnet.sui.io:443
@@ -464,14 +470,16 @@ npm run validate-network
 **Why?** On testnet/mainnet, the facilitator needs SUI for gas sponsorship. If users can pay with SUI, they'll drain your gas fund!
 
 **Protection:**
+
 - ✅ `blockSuiPayments: true` on testnet/mainnet (hardcoded in config)
 - ⚠️ `blockSuiPayments: false` on localnet (allows SUI for testing)
 
 The facilitator **automatically rejects** SUI payments on testnet:
+
 ```
 ❌ BLOCKED: Cannot use SUI for payments on Testnet!
    Use USDC to prevent draining gas fund.
-   
+
    Why: Facilitator needs SUI for gas sponsorship.
    Using SUI for payments will drain the gas fund.
 ```
@@ -572,6 +580,7 @@ open http://localhost:3002
 - [Architecture Guide](docs/architecture/ARCHITECTURE.md) - Complete technical design
 - [Development Guide](docs/development/DEVELOPMENT_GUIDE.md) - Setup and build
 - [Testing Guide](docs/development/TESTING.md) - Test strategy
+- [Testnet Deployment](TESTNET-DEPLOYMENT.md) - Deploy to Sui Testnet
 - [Widget Deployment](docs/deployment/WIDGET_DEPLOYMENT.md) - Production deployment
 
 ### External Links

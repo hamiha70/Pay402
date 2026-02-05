@@ -11,12 +11,18 @@ build/
 *.js.map
 *.d.ts.map
 
-# Environment variables
+# Environment variables (ALL variants - never commit these!)
 .env
+.env.*
+!.env.example
+!.env.*.example
 .env.local
 .env.development
 .env.test
 .env.production
+.env.localnet
+.env.testnet
+.env.mainnet
 
 # IDE
 .vscode/

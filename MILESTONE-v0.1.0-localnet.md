@@ -17,6 +17,7 @@ lsui client tx-block BqQ8sdVZqU5YpKhKrEBLdiMhwXxyrLQ5HE7rFdpVcKdL
 ```
 
 **Result**: ✅ Success
+
 - Merchant received: 100,000 microUSDC (0.10 USDC)
 - Facilitator fee: 10,000 microUSDC (0.01 USDC)
 - Event emitted: `PaymentSettled`
@@ -29,12 +30,14 @@ lsui client tx-block BqQ8sdVZqU5YpKhKrEBLdiMhwXxyrLQ5HE7rFdpVcKdL
 ### Components
 
 1. **Merchant** (`localhost:3002`)
+
    - Static HTTP server with JWT signing
    - Displays HTTP 402 Payment Required
    - Serves premium content after verification
    - Ed25519 keypair for invoice signing
 
 2. **Facilitator** (`localhost:3001`)
+
    - Express.js backend
    - Sui client integration
    - Gas sponsorship for transactions
@@ -42,6 +45,7 @@ lsui client tx-block BqQ8sdVZqU5YpKhKrEBLdiMhwXxyrLQ5HE7rFdpVcKdL
    - Optimistic/pessimistic settlement modes
 
 3. **Widget** (`localhost:5173`)
+
    - React SPA with Vite
    - Custom keypair authentication
    - PTB verification (security)
@@ -94,6 +98,7 @@ lsui client tx-block BqQ8sdVZqU5YpKhKrEBLdiMhwXxyrLQ5HE7rFdpVcKdL
 ### Pessimistic Mode (~500ms total)
 
 Same as optimistic, except:
+
 - Step 10: Facilitator blocks until blockchain confirmation
 - Step 12: Content delivered only after on-chain finality
 
@@ -114,7 +119,9 @@ export function getTransactionDigest(txBytes: Uint8Array): string {
 }
 
 // After (working):
-export async function getTransactionDigest(txBytes: Uint8Array): Promise<string> {
+export async function getTransactionDigest(
+  txBytes: Uint8Array
+): Promise<string> {
   const tx = Transaction.from(txBytes);
   const digest = await tx.getDigest(); // Actual digest string!
   return digest;
@@ -137,6 +144,7 @@ lsui client tx-block <digest>
 ### 3. Gas Sponsorship ✅
 
 **Achievement**: Facilitator sponsors all gas costs
+
 - Buyer only signs transaction (no SUI needed)
 - Facilitator pays gas from own wallet
 - Transaction includes two signatures (buyer + facilitator)
@@ -155,6 +163,7 @@ lsui client tx-block <digest>
 ## Test Results
 
 ### Facilitator Tests
+
 ```
 ✓ 175 tests passed
 ✗ 1 e2e test failed (property name mismatch)
@@ -162,6 +171,7 @@ lsui client tx-block <digest>
 ```
 
 ### Widget Tests
+
 ```
 ✓ 71 tests passed
 ✗ 4 tests failed (property name mismatch)
@@ -169,6 +179,7 @@ lsui client tx-block <digest>
 ```
 
 ### Manual E2E Test
+
 ```
 ✅ FULLY WORKING
 - Merchant page loads
@@ -183,10 +194,12 @@ lsui client tx-block <digest>
 ## Known Issues (Non-blocking)
 
 1. **Test Property Names**: Some tests expect old property names (`merchantRecipient` → `payTo`)
+
    - Impact: Low (tests fail, but runtime works)
    - Fix: Update test expectations
 
 2. **Widget Black Screen (Fixed)**: Was caused by missing `SuiClientProvider` config
+
    - Fixed by reverting unnecessary changes
 
 3. **Promise Display (Fixed)**: Digest showed as `[object Promise]`
@@ -199,6 +212,7 @@ lsui client tx-block <digest>
 ### Environment Variables
 
 **Facilitator** (`.env`):
+
 ```bash
 NETWORK=localnet
 SUI_PRIVATE_KEY=<facilitator-keypair>
@@ -208,6 +222,7 @@ PORT=3001
 ```
 
 **Merchant** (`.env`):
+
 ```bash
 MERCHANT_PRIVATE_KEY=<merchant-keypair>
 MERCHANT_ADDRESS=0xbf8c50a85dbb19deaec5a9712869a03959c81ec1eba43223deae594afa5a8248
@@ -224,17 +239,20 @@ PORT=3002
 ### Prerequisites
 
 1. **Sui Testnet Setup**
+
    - Fund facilitator wallet with testnet SUI
    - Fund merchant wallet with testnet SUI
    - Deploy Move contract to testnet
    - Update PACKAGE_ID in all .env files
 
 2. **Network Configuration**
+
    - Add network switching UI (localnet/testnet/mainnet)
    - Update Sui client URLs
    - Change MOCK_USDC to real testnet USDC
 
 3. **Testing**
+
    - Run e2e tests on testnet
    - Verify transaction explorer links
    - Test with real testnet USDC
@@ -265,6 +283,7 @@ cf0e74c fix: improve copy button feedback (remove alert popup)
 ## Performance Metrics
 
 ### Optimistic Settlement
+
 - **Total Time**: ~50ms
 - **Validation**: ~10ms
 - **Digest Calculation**: <1ms (off-chain)
@@ -272,6 +291,7 @@ cf0e74c fix: improve copy button feedback (remove alert popup)
 - **Background Submit**: ~150ms (after response)
 
 ### Pessimistic Settlement
+
 - **Total Time**: ~500ms (localnet) / ~1000ms (testnet expected)
 - **Validation**: ~10ms
 - **Blockchain Submit**: ~450ms (includes finality)
@@ -303,12 +323,14 @@ All criteria met for v0.1.0-localnet:
 ## Team Notes
 
 **Major Debugging Session Summary**:
+
 - Spent significant time debugging `[object Promise]` display issue
 - Root cause: Not awaiting `Transaction.getDigest()` Promise
 - Secondary issue: `sui client` vs `lsui client` for localnet
 - Both issues now resolved and documented
 
 **Lessons Learned**:
+
 1. Always check if SDK methods return Promises
 2. Network configuration matters (localnet vs testnet defaults)
 3. Revert early when changes break working code

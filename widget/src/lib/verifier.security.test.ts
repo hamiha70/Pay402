@@ -301,9 +301,14 @@ describe('PTB Verifier - Security & Failure Tests', () => {
 
   describe('❌ Unauthorized Command Attack', () => {
     it.skip('should allow multiple MoveCall commands (buyer must inspect)', async () => {
-      // NOTE: MoveCall is an allowed command type, so multiple calls are technically allowed.
-      // The buyer MUST inspect the PTB to ensure no malicious calls are included.
-      // This is a UX/UI responsibility, not a verifier responsibility.
+      // SKIPPED: This is a DESIGN DECISION test, not a bug
+      // 
+      // The verifier INTENTIONALLY allows multiple MoveCall commands because:
+      // 1. It's the buyer's wallet UI responsibility to display all commands
+      // 2. The buyer must review and approve the full PTB before signing
+      // 3. The verifier cannot distinguish "legitimate" vs "malicious" MoveCalls
+      // 
+      // Security Model: Verifier checks payment integrity, Wallet UI shows full transaction
       const invoice = createValidInvoice();
       
       const tx = new Transaction();
@@ -344,8 +349,13 @@ describe('PTB Verifier - Security & Failure Tests', () => {
     });
 
     it.skip('should REJECT PTB with Publish command', async () => {
-      // NOTE: Transaction.serialize() doesn't preserve manually added commands
-      // This test is skipped as it's not possible to construct this way
+      // SKIPPED: Technical limitation - cannot construct test case
+      // 
+      // The Sui SDK's Transaction.serialize() doesn't preserve manually injected commands.
+      // While the verifier DOES reject unauthorized commands (including Publish),
+      // we cannot create a realistic test PTB to verify this behavior.
+      // 
+      // Note: The verifier's command whitelist already handles this in production
       const invoice = createValidInvoice();
       
       const tx = new Transaction();

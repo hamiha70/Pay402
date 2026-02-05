@@ -65,3 +65,6 @@ coverage/
 
 # Temprary files and scratch files
 temp/
+
+# Submission artifacts (logos, presentations, etc.)
+submission_artefacts/

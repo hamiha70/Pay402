@@ -88,10 +88,13 @@ describe('End-to-End Payment Flow', () => {
     const invoiceData = await invoiceResponse.json();
     const sampleJWT = invoiceData.invoice;
     const payload = JSON.parse(Buffer.from(sampleJWT.split('.')[1], 'base64').toString());
-    merchantAddress = payload.merchantRecipient;
+    
+    // Extract merchant address from payTo (format: "sui:localnet:0x...")
+    const payToAddress = payload.payTo.split(':')[2];
+    merchantAddress = payToAddress;
     
     console.log('  Merchant:', merchantAddress.substring(0, 20) + '...');
-    console.log('  Payment Amount:', (parseInt(payload.amount) / 1_000_000).toFixed(2), 'USDC');
+    console.log('  Payment Amount:', (parseInt(payload.merchantAmount) / 1_000_000).toFixed(2), 'USDC');
     console.log('  Facilitator Fee:', (parseInt(payload.facilitatorFee) / 1_000_000).toFixed(2), 'USDC');
     console.log('═══════════════════════════════════════════════\n');
   });

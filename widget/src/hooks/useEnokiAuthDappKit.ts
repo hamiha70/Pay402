@@ -101,25 +101,42 @@ export function useEnokiAuthDappKit(): AuthProvider {
       throw new Error('Not connected');
     }
 
-    console.log('[EnokiAuth] Current account:', {
-      address: currentAccount.address,
-      publicKey: typeof currentAccount.publicKey,
-      chains: currentAccount.chains,
-    });
+    // VERBOSE: Log current account details
+    console.log('[EnokiAuth] === CURRENT ACCOUNT DETAILS ===');
+    console.log('[EnokiAuth] Address:', currentAccount.address);
+    console.log('[EnokiAuth] Label:', currentAccount.label);
+    console.log('[EnokiAuth] Chains:', currentAccount.chains);
+    console.log('[EnokiAuth] Features:', Object.keys(currentAccount.features || {}));
+    console.log('[EnokiAuth] Public key type:', typeof currentAccount.publicKey);
+    
+    // VERBOSE: Check if wallet supports signTransaction
+    const wallet = wallets.find(w => 
+      w.accounts.some(acc => acc.address === currentAccount.address)
+    );
+    console.log('[EnokiAuth] === WALLET DETAILS ===');
+    console.log('[EnokiAuth] Wallet name:', wallet?.name);
+    console.log('[EnokiAuth] Wallet features:', wallet?.features ? Object.keys(wallet.features) : 'none');
+    console.log('[EnokiAuth] Has sui:signTransaction?', wallet?.features?.['sui:signTransaction'] ? 'YES' : 'NO');
+    console.log('[EnokiAuth] Has sui:signAndExecuteTransaction?', wallet?.features?.['sui:signAndExecuteTransaction'] ? 'YES' : 'NO');
 
     try {
       // Step 1: Build Transaction from bytes
-      console.log('[EnokiAuth] Step 1: Building Transaction object from bytes...');
+      console.log('[EnokiAuth] === STEP 1: BUILD TRANSACTION ===');
       const tx = Transaction.from(txBytes);
       console.log('[EnokiAuth] ✅ Transaction object created');
       
       // Step 2: Call signTransaction hook (with CHAIN!)
-      console.log('[EnokiAuth] Step 2: Calling signTransaction hook...');
+      console.log('[EnokiAuth] === STEP 2: SIGN TRANSACTION ===');
       console.log('[EnokiAuth] Using account:', currentAccount.address);
       
       const network = import.meta.env.VITE_SUI_NETWORK || 'testnet';
       const chainId = `sui:${network}`;
       console.log('[EnokiAuth] Chain ID:', chainId);
+      console.log('[EnokiAuth] Calling signTransaction with params:', {
+        transaction: 'Transaction object',
+        account: currentAccount.address,
+        chain: chainId,
+      });
       
       const result = await signTransaction({
         transaction: tx,

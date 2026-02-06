@@ -5,9 +5,10 @@
 **Root Cause:** The zkLogin JWT from Google OAuth is not being passed to Enoki's zkp endpoint when signing transactions.
 
 ### Error Details
+
 - **Request:** `POST https://api.enoki.mystenlabs.com/v1/zklogin/zkp`
 - **Status:** `ERR_CONNECTION_RESET`
-- **Payload Sent:** 
+- **Payload Sent:**
   ```json
   {
     "network": "testnet",
@@ -21,6 +22,7 @@
 ### Why This Happens
 
 1. **OAuth Flow Conflict:**
+
    - Merchant redirects to `http://localhost:5173#invoice=...`
    - User clicks "Sign In with Google"
    - Enoki opens OAuth popup
@@ -43,6 +45,7 @@
 Created `/oauth-callback` route that serves as a dedicated OAuth landing page for the popup window.
 
 **Files Changed:**
+
 1. `widget/src/components/OAuthCallback.tsx` (NEW)
 2. `widget/src/App.tsx` (UPDATED)
 
@@ -104,6 +107,7 @@ Go to [Google Cloud Console](https://console.cloud.google.com/):
 5. **Save**
 
 **Final list should include BOTH:**
+
 - `http://localhost:5173` (for main app)
 - `http://localhost:5173/oauth-callback` (for OAuth popup)
 
@@ -157,6 +161,7 @@ npm run dev
 ### 4. Check Console Logs
 
 Look for:
+
 ```
 [EnokiAuth] Step 2: Calling signTransaction hook...
 [EnokiAuth] Chain ID: sui:testnet
@@ -177,14 +182,17 @@ Look for:
 ## 🐛 Troubleshooting
 
 ### If OAuth popup doesn't open:
+
 - Check browser popup blocker
 - Try Ctrl+Shift+R to hard refresh
 
 ### If popup opens but doesn't close:
+
 - Check Google OAuth redirect URIs include `/oauth-callback`
 - Check browser console in popup window for errors
 
 ### If signing still fails:
+
 1. Clear browser cache and localStorage:
    ```javascript
    localStorage.clear();
@@ -194,6 +202,7 @@ Look for:
 3. Check Network tab for the actual error response
 
 ### If JWT is still missing:
+
 - Check `localStorage` in DevTools → Application tab
 - Look for keys containing "enoki", "zklogin", or "jwt"
 - If empty, OAuth callback is not storing the JWT properly
@@ -212,15 +221,19 @@ Look for:
 ### Alternative Solutions Considered
 
 ❌ **Option A:** Store JWT in URL query param
+
 - **Problem:** Conflicts with Google OAuth redirect URI validation
 
 ❌ **Option B:** Use `sessionStorage` with manual transfer
+
 - **Problem:** Timing issues, complex to debug
 
 ❌ **Option C:** Downgrade Enoki SDK
+
 - **Problem:** Loses compatibility with dapp-kit 1.0.1
 
 ✅ **Option D:** Dedicated OAuth callback page (CHOSEN)
+
 - **Pros:** Clean separation, follows OAuth best practices
 - **Cons:** Requires updating Google OAuth config (one-time)
 
@@ -233,7 +246,7 @@ Look for:
 ✅ User can click "Confirm Payment"  
 ✅ Transaction signing completes without errors  
 ✅ Payment is submitted to blockchain  
-✅ Receipt is displayed with transaction digest  
+✅ Receipt is displayed with transaction digest
 
 ---
 

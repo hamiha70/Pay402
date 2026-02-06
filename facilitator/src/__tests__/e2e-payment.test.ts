@@ -27,8 +27,8 @@ async function getUSDCBalance(client: SuiGrpcClient, address: string, coinType: 
 
 // Helper: Fund test buyer with error handling
 // Returns: { success: boolean, balance: number, skipTest: boolean }
-async function fundTestBuyer(address: string, sessionId: string): Promise<{success: boolean; balance: number; skipTest: boolean; message?: string}> {
-  const fundResp = await fetch(`${FACILITATOR_URL}/fund`, {
+async function fundTestBuyer(facilitatorUrl: string, address: string, sessionId: string): Promise<{success: boolean; balance: number; skipTest: boolean; message?: string}> {
+  const fundResp = await fetch(`${facilitatorUrl}/fund`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ address, sessionId }),
@@ -145,7 +145,7 @@ describe('End-to-End Payment Flow', () => {
       const testInvoiceJWT = invoiceData.invoice;
       
       // Fund this test's buyer
-      const fundResult = await fundTestBuyer(testBuyerAddress, `build_${Date.now()}`);
+      const fundResult = await fundTestBuyer(FACILITATOR_URL, testBuyerAddress, `build_${Date.now()}`);
       if (fundResult.skipTest) {
         console.log('⏭️  Skipping test - USDC funding not available (run on testnet)');
         return; // Skip test gracefully
@@ -261,7 +261,7 @@ describe('End-to-End Payment Flow', () => {
       console.log('👤 Created dedicated buyer for optimistic test:', testBuyerAddress.substring(0, 20) + '...');
       
       // Fund this test's buyer
-      const fundResult = await fundTestBuyer(testBuyerAddress, `opt_${Date.now()}`);
+      const fundResult = await fundTestBuyer(FACILITATOR_URL, testBuyerAddress, `opt_${Date.now()}`);
       if (fundResult.skipTest) {
         console.log('⏭️  Skipping test - USDC funding not available (run on testnet)');
         return; // Skip test gracefully
@@ -408,7 +408,7 @@ describe('End-to-End Payment Flow', () => {
       console.log('👤 Created dedicated buyer for pessimistic test:', testBuyerAddress.substring(0, 20) + '...');
       
       // Fund this test's buyer
-      const fundResult = await fundTestBuyer(testBuyerAddress, `pess_${Date.now()}`);
+      const fundResult = await fundTestBuyer(FACILITATOR_URL, testBuyerAddress, `pess_${Date.now()}`);
       if (fundResult.skipTest) {
         console.log('⏭️  Skipping test - USDC funding not available (run on testnet)');
         return; // Skip test gracefully
@@ -589,7 +589,7 @@ describe('End-to-End Payment Flow', () => {
       console.log('👤 Created dedicated buyer for latency test:', testBuyerAddress.substring(0, 20) + '...');
       
       // Fund this test's buyer ONCE (will be used for both optimistic + pessimistic)
-      const fundResult = await fundTestBuyer(testBuyerAddress, `latency_${Date.now()}`);
+      const fundResult = await fundTestBuyer(FACILITATOR_URL, testBuyerAddress, `latency_${Date.now()}`);
       if (fundResult.skipTest) {
         console.log('⏭️  Skipping test - USDC funding not available (run on testnet)');
         return; // Skip test gracefully

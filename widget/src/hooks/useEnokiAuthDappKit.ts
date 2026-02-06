@@ -113,13 +113,18 @@ export function useEnokiAuthDappKit(): AuthProvider {
       const tx = Transaction.from(txBytes);
       console.log('[EnokiAuth] ✅ Transaction object created');
       
-      // Step 2: Call signTransaction hook
+      // Step 2: Call signTransaction hook (with CHAIN!)
       console.log('[EnokiAuth] Step 2: Calling signTransaction hook...');
       console.log('[EnokiAuth] Using account:', currentAccount.address);
+      
+      const network = import.meta.env.VITE_SUI_NETWORK || 'testnet';
+      const chainId = `sui:${network}`;
+      console.log('[EnokiAuth] Chain ID:', chainId);
       
       const result = await signTransaction({
         transaction: tx,
         account: currentAccount,
+        chain: chainId,  // CRITICAL: zkLogin needs to know which chain!
       });
 
       console.log('[EnokiAuth] ✅ signTransaction hook returned successfully');

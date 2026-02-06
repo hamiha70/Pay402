@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Test Enoki Connection</title>
+    <script type="module">
+      import { EnokiClient } from "@mysten/enoki";
+
+      const API_KEY = "enoki_public_7edbeb7decb38349e30a6d900cdc8843";
+
+      async function testEnokiConnection() {
+        console.log("Testing Enoki connection...");
+        console.log("API Key:", API_KEY);
+
+        try {
+          const enoki = new EnokiClient({ apiKey: API_KEY });
+          console.log("✅ EnokiClient created");
+
+          // Try to get auth URL (should work with just API key)
+          const authUrl = enoki.createAuthorizationURL({
+            provider: "google",
+            network: "testnet",
+            clientId:
+              "1001996736694-2ic38121fneem5ob0ond46cmvhatsrtk.apps.googleusercontent.com",
+            redirectUrl: "http://localhost:5173",
+          });
+
+          console.log("✅ Auth URL created:", authUrl);
+          console.log("✅✅✅ ENOKI CONNECTION WORKS!");
+        } catch (error) {
+          console.error("❌ Enoki connection failed:", error);
+          console.error("Error type:", error?.constructor?.name);
+          console.error("Error message:", error?.message);
+        }
+      }
+
+      testEnokiConnection();
+    </script>
+  </head>
+  <body>
+    <h1>Enoki Connection Test</h1>
+    <p>Check browser console for results</p>
+  </body>
+</html>

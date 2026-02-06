@@ -3,6 +3,7 @@ import { createNetworkConfig, SuiClientProvider, WalletProvider } from '@mysten/
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import PaymentPage from './components/PaymentPage';
 import ZkLoginTest from './components/ZkLoginTest';
+import OAuthCallback from './components/OAuthCallback';
 import RegisterEnokiWallets from './components/RegisterEnokiWallets';
 import '@mysten/dapp-kit/dist/index.css';
 import './App.css';
@@ -25,9 +26,10 @@ function App() {
   const urlParams = new URLSearchParams(window.location.search);
   const invoiceJWT = urlParams.get('invoice') || '';
   
-  // Check if we're on the zkLogin test page
+  // Check which page we're on
   const isZkLoginTest = window.location.pathname === '/zklogin-test' || 
                         window.location.pathname === '/auth';
+  const isOAuthCallback = window.location.pathname === '/oauth-callback';
 
   useEffect(() => {
     console.log('[App] Mounting...');
@@ -38,7 +40,21 @@ function App() {
     return <div>Loading...</div>;
   }
 
-  console.log('[App] Rendering with:', { isZkLoginTest, invoiceJWT: invoiceJWT.substring(0, 20) });
+  console.log('[App] Rendering with:', { isZkLoginTest, isOAuthCallback, invoiceJWT: invoiceJWT.substring(0, 20) });
+
+  // OAuth callback page (loaded in popup during Google sign-in)
+  if (isOAuthCallback) {
+    return (
+      <QueryClientProvider client={queryClient}>
+        <SuiClientProvider networks={networkConfig} defaultNetwork="testnet">
+          <RegisterEnokiWallets />
+          <WalletProvider autoConnect>
+            <OAuthCallback />
+          </WalletProvider>
+        </SuiClientProvider>
+      </QueryClientProvider>
+    );
+  }
 
   return (
     <QueryClientProvider client={queryClient}>

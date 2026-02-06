@@ -292,7 +292,7 @@
               merchantAmount: data.merchantAmount,
               facilitatorFee: data.facilitatorFee,
               expiry: data.expiry,
-              redirectUrl: data.redirectUrl
+              redirectUrl: data.redirectUrl,
             };
 
             // Format JSON with syntax highlighting
@@ -345,15 +345,15 @@
         // Save invoice to sessionStorage (cross-origin safe for same localhost)
         // This prevents OAuth redirect_uri_mismatch by keeping widget URL clean
         try {
-          sessionStorage.setItem('pendingInvoice', currentInvoiceJWT);
-          console.log('✅ Invoice saved to sessionStorage');
+          sessionStorage.setItem("pendingInvoice", currentInvoiceJWT);
+          console.log("✅ Invoice saved to sessionStorage");
         } catch (e) {
-          console.warn('⚠️ Failed to save to sessionStorage:', e);
+          console.warn("⚠️ Failed to save to sessionStorage:", e);
         }
-        
+
         // Redirect to clean widget URL (no query params)
         // OAuth will redirect back here, then widget restores invoice from sessionStorage
-        const widgetUrl = 'http://localhost:5173';
+        const widgetUrl = "http://localhost:5173";
         window.location.href = widgetUrl;
       }
 
@@ -361,43 +361,57 @@
       function syntaxHighlight(json) {
         // X-402 v2 standard fields (red)
         const standardKeys = [
-          'error', 'message', 'invoice', 'x402Version', 'scheme', 
-          'network', 'assetType', 'payTo', 'paymentId', 'description',
-          'resource', 'maxAmountRequired', 'maxTimeoutSeconds', 'mimeType'
+          "error",
+          "message",
+          "invoice",
+          "x402Version",
+          "scheme",
+          "network",
+          "assetType",
+          "payTo",
+          "paymentId",
+          "description",
+          "resource",
+          "maxAmountRequired",
+          "maxTimeoutSeconds",
+          "mimeType",
         ];
-        
+
         // Extension fields (green)
         const extensionKeys = [
-          'merchantAmount', 'facilitatorFee', 'expiry', 'redirectUrl'
+          "merchantAmount",
+          "facilitatorFee",
+          "expiry",
+          "redirectUrl",
         ];
 
         return json.replace(
           /("(\\u[a-zA-Z0-9]{4}|\\[^u]|[^\\"])*"(\s*:)?|\b(true|false|null)\b|-?\d+(?:\.\d*)?(?:[eE][+\-]?\d+)?)/g,
           function (match) {
-            let color = '#a5d6ff'; // Default value color (light blue)
-            
+            let color = "#a5d6ff"; // Default value color (light blue)
+
             if (/^"/.test(match)) {
               if (/:$/.test(match)) {
                 // It's a key
                 const key = match.slice(1, -2); // Remove quotes and colon
                 if (standardKeys.includes(key)) {
-                  color = '#ff7b72'; // Red for standard keys
+                  color = "#ff7b72"; // Red for standard keys
                 } else if (extensionKeys.includes(key)) {
-                  color = '#7ee787'; // Green for extension keys
+                  color = "#7ee787"; // Green for extension keys
                 } else {
-                  color = '#d2a8ff'; // Purple for other keys
+                  color = "#d2a8ff"; // Purple for other keys
                 }
               } else {
-                color = '#a5d6ff'; // Light blue for string values
+                color = "#a5d6ff"; // Light blue for string values
               }
             } else if (/true|false/.test(match)) {
-              color = '#ffa657'; // Orange for booleans
+              color = "#ffa657"; // Orange for booleans
             } else if (/null/.test(match)) {
-              color = '#ffa657'; // Orange for null
+              color = "#ffa657"; // Orange for null
             } else {
-              color = '#79c0ff'; // Cyan for numbers
+              color = "#79c0ff"; // Cyan for numbers
             }
-            
+
             return `<span style="color: ${color}">${match}</span>`;
           }
         );

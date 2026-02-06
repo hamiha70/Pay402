@@ -56,10 +56,50 @@ export default function PaymentPage({ invoiceJWT: propInvoiceJWT }: PaymentPageP
   // Auto-parse invoice from URL or sessionStorage on mount
   useEffect(() => {
     if (invoiceJWT && !invoice) {
-      console.log('[PaymentPage] Auto-parsing invoice from URL/storage');
+      console.log('[PaymentPage] Auto-parsing invoice from URL/storage:', invoiceJWT.substring(0, 50) + '...');
       // Save to sessionStorage for OAuth redirect flow
       sessionStorage.setItem('pendingInvoice', invoiceJWT);
-      parseInvoice();
+      
+      // Parse inline to avoid stale closure issues
+      try {
+        let jwtToken = invoiceJWT.trim();
+        
+        // Check if user pasted the entire JSON response from merchant
+        if (jwtToken.startsWith('{')) {
+          try {
+            const json = JSON.parse(jwtToken);
+            if (json.invoice) {
+              jwtToken = json.invoice;
+              setInvoiceJWT(jwtToken);
+            }
+          } catch {
+            // Not valid JSON, treat as raw JWT
+          }
+        }
+        
+        // Decode JWT
+        const parts = jwtToken.split('.');
+        if (parts.length !== 3) {
+          throw new Error('Invalid JWT format');
+        }
+
+        const payload = JSON.parse(atob(parts[1]));
+        
+        // Check expiry
+        const now = Math.floor(Date.now() / 1000);
+        if (payload.exp < now) {
+          throw new Error('Invoice expired');
+        }
+
+        setInvoice(payload as InvoiceJWT);
+        setStep('review');
+        setError('');
+        console.log('[PaymentPage] ✅ Invoice auto-parsed successfully');
+      } catch (err) {
+        console.error('[PaymentPage] ❌ Auto-parse failed:', err);
+        setError(`Failed to parse invoice: ${err instanceof Error ? err.message : String(err)}`);
+        setStep('error');
+      }
     }
     // Clear sessionStorage once invoice is parsed
     if (invoice) {

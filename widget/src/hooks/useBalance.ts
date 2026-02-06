@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { useSuiClient } from '@mysten/dapp-kit';
 import type { BalanceInfo, FundingResult } from '../types/auth';
 
@@ -160,6 +160,16 @@ export function useBalance(address: string | null) {
       throw error;
     } finally {
       setLoading(false);
+    }
+  }, [address, checkBalance]);
+
+  // Auto-check balance when address changes
+  useEffect(() => {
+    if (address) {
+      console.log('[useBalance] Auto-checking balance for:', address);
+      checkBalance().catch(err => {
+        console.warn('[useBalance] Auto-check failed:', err);
+      });
     }
   }, [address, checkBalance]);
 

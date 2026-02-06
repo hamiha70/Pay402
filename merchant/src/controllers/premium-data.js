@@ -17,7 +17,7 @@ export async function premiumDataController(req, res) {
       x402Version: 2,
       scheme: 'exact',
       network: `sui:${config.suiNetwork}`,
-      assetType: `sui:${config.suiNetwork}/coin:${config.coinType}`,
+      assetType: `sui:${config.suiNetwork}/${config.coinType}`,
       payTo: `sui:${config.suiNetwork}:${config.merchantAddress}`,
       paymentId: nonce,
       description: 'Premium market insights and analytics data',

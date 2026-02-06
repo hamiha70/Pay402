@@ -342,10 +342,18 @@
       }
 
       function openPaymentPage() {
-        // Stripe Checkout style: Redirect to hosted payment page
-        const widgetUrl = `http://localhost:5173?invoice=${encodeURIComponent(
-          currentInvoiceJWT
-        )}`;
+        // Save invoice to sessionStorage (cross-origin safe for same localhost)
+        // This prevents OAuth redirect_uri_mismatch by keeping widget URL clean
+        try {
+          sessionStorage.setItem('pendingInvoice', currentInvoiceJWT);
+          console.log('✅ Invoice saved to sessionStorage');
+        } catch (e) {
+          console.warn('⚠️ Failed to save to sessionStorage:', e);
+        }
+        
+        // Redirect to clean widget URL (no query params)
+        // OAuth will redirect back here, then widget restores invoice from sessionStorage
+        const widgetUrl = 'http://localhost:5173';
         window.location.href = widgetUrl;
       }
 

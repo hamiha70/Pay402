@@ -110,9 +110,17 @@ export function useEnokiAuthDappKit(): AuthProvider {
 
       console.log('[EnokiAuth] ✅ Transaction bytes signed');
 
+      // Convert base64 string to Uint8Array (browser-safe, no Buffer needed)
+      const base64 = result.bytes;
+      const binaryString = atob(base64);
+      const bytes = new Uint8Array(binaryString.length);
+      for (let i = 0; i < binaryString.length; i++) {
+        bytes[i] = binaryString.charCodeAt(i);
+      }
+
       return {
         signature: result.signature,
-        bytes: new Uint8Array(Buffer.from(result.bytes, 'base64')),
+        bytes,
       };
     } catch (error) {
       console.error('[EnokiAuth] ❌ Transaction bytes signing failed:', error);

@@ -490,86 +490,201 @@ The facilitator **automatically rejects** SUI payments on testnet:
 
 ### Prerequisites
 
-- Node.js 18+
-- SUI CLI (for blockchain interaction)
-- Suibase (for local blockchain) OR Testnet access
-- Google OAuth credentials (for zkLogin)
+**Required:**
+- **Node.js 18+** - [Download](https://nodejs.org/)
+- **SUI CLI** - [Installation Guide](https://docs.sui.io/build/install)
+- **Suibase** (for localnet) - [Installation Guide](https://suibase.io/how-to/install.html)
 
-### Quick Setup
+**For zkLogin (Production):**
+- **Enoki Account** - [Sign up](https://portal.enoki.mystenlabs.com)
+- **Google OAuth Client ID** - [Create credentials](https://console.cloud.google.com)
 
-**Option 1: One-Command Localnet Setup (Recommended)**
+---
+
+### 🚀 **Quick Start (3 Steps)**
+
+#### **Step 1: Clone and Install**
 
 ```bash
-# Start everything on localnet (auto-deploys contracts, funds facilitator)
+git clone https://github.com/hamiha70/Pay402.git
+cd Pay402
+npm install  # Installs all dependencies for facilitator, merchant, widget
+```
+
+#### **Step 2: Configure Environment (Interactive)**
+
+```bash
+./scripts/setup-env.sh
+```
+
+**What this does:**
+- ✅ Creates configuration files for localnet and testnet
+- ✅ Prompts for Enoki API key (get from [Enoki Portal](https://portal.enoki.mystenlabs.com))
+- ✅ Prompts for Google OAuth Client ID (get from [Google Console](https://console.cloud.google.com))
+- ✅ Auto-generates facilitator keys for both networks
+- ✅ Updates all config files automatically
+
+**Example prompts:**
+```
+Enter your Enoki API Key (public key): enoki_public_7edbeb7de...
+Enter your Google OAuth Client ID: 300529773657-abc123.apps.googleusercontent.com
+Do you want to auto-generate new keys? (y/n): y
+```
+
+**⏱️ Takes ~2 minutes**
+
+#### **Step 3: Start Pay402**
+
+**For Development (Localnet):**
+```bash
 ./scripts/pay402-tmux.sh --localnet
 
-# Visit in browser:
-# Merchant: http://localhost:3002
-# Payment Page: http://localhost:5173
-# Facilitator API: http://localhost:3001/health
+# Visit:
+# - Payment Widget: http://localhost:5173
+# - Merchant Demo: http://localhost:3002
+# - Facilitator API: http://localhost:3001/health
 ```
 
-**Option 2: One-Command Testnet Setup**
-
+**For Testing (Testnet):**
 ```bash
-# Start everything on testnet (uses existing deployed contracts)
+# First, fund your facilitator (one-time)
+sui client switch --env testnet
+sui client faucet  # Funds active address
+
+# Then start services
 ./scripts/pay402-tmux.sh --testnet
 
-# Note: Requires manual facilitator funding first:
-# sui client faucet --address <FACILITATOR_ADDRESS>
+# Visit: http://localhost:5173
 ```
 
-**Option 3: Manual Setup**
+---
 
+### ⚡ **That's It!**
+
+You should now have Pay402 running locally. Try making a payment:
+1. Visit http://localhost:3002 (merchant demo)
+2. Click "Get Premium Data"
+3. Login with Google
+4. Confirm payment
+
+---
+
+### 📖 **First Time Setup Details**
+
+<details>
+<summary><b>Click to expand: What happens during setup</b></summary>
+
+**Setup Script (`./scripts/setup-env.sh`) does:**
+
+1. **Checks Prerequisites**
+   - Verifies `sui` CLI is installed
+   - Shows version information
+
+2. **Copies Configuration Templates**
+   - Creates working config files from `.example` templates
+   - For facilitator, merchant, and widget
+   - For both localnet and testnet
+
+3. **Collects Shared Secrets (Once!)**
+   - Enoki API Key - Used for zkLogin authentication
+   - Google OAuth Client ID - Used for Google sign-in
+   - Updates BOTH localnet and testnet configs (no double entry!)
+
+4. **Generates Facilitator Keys**
+   - Creates separate keys for localnet and testnet (security best practice)
+   - Option to use existing keys if you prefer
+
+5. **Shows Summary**
+   - Lists all configured values
+   - Shows next steps
+
+**Time:** ~2-3 minutes total
+
+</details>
+
+<details>
+<summary><b>Click to expand: Get Enoki API Key</b></summary>
+
+1. Visit https://portal.enoki.mystenlabs.com
+2. Sign up or log in
+3. Create a new project (or use existing)
+4. Copy the **Public API Key**
+   - Format: `enoki_public_[64 hex characters]`
+   - Example: `enoki_public_7edbeb7decb38349e30a6d900cdc8843...`
+5. Paste into setup script when prompted
+
+**Note:** Use the PUBLIC key, not the private key!
+
+</details>
+
+<details>
+<summary><b>Click to expand: Get Google OAuth Client ID</b></summary>
+
+1. Visit https://console.cloud.google.com
+2. Create a new project (or use existing)
+3. Enable "Google+ API"
+4. Go to "Credentials" → "Create Credentials" → "OAuth 2.0 Client ID"
+5. Application type: "Web application"
+6. Authorized redirect URIs:
+   - `http://localhost:5173`
+   - `http://localhost:5173/zklogin-test`
+7. Copy the Client ID
+   - Format: `NNNNNNNN-XXXXXXXX.apps.googleusercontent.com`
+   - Example: `300529773657-mfq7blj3s6i.apps.googleusercontent.com`
+8. Paste into setup script when prompted
+
+</details>
+
+---
+
+### 🔧 **Advanced Setup Options**
+
+**Reconfigure Environment:**
 ```bash
-# 1. Start local SUI network
-localnet start
-
-# 2. Switch sui client to localnet
-sui client switch --env localnet
-
-# 3. Deploy MockUSDC (localnet only - auto-configures .env)
-./scripts/deploy-mock-usdc.sh
-
-# 4. Deploy payment contract
-cd move/payment
-sui move build
-sui client publish --gas-budget 100000000
-
-# 5. Configure treasury owner (in facilitator/.env)
-# Set TREASURY_OWNER_PRIVATE_KEY to deployer's key
-# CRITICAL: Keep separate from FACILITATOR_PRIVATE_KEY
-
-# 6. Start all services (tmux)
-cd ../../
-./scripts/pay402-tmux.sh
-
-# 7. Visit in browser
-# Merchant: http://localhost:3002
-# Payment Page: http://localhost:5173
-# Facilitator API: http://localhost:3001/health
+./scripts/setup-env.sh --force  # Overwrites existing configs
 ```
 
-### Manual Setup (Alternative)
+**Manual Configuration:**
+If you prefer to configure manually instead of using the setup script, see [ENV-TEMPLATE-STRATEGY.md](ENV-TEMPLATE-STRATEGY.md) for details.
 
+**Network Switching:**
 ```bash
-# Terminal 1: Facilitator
-cd facilitator
-npm install
-npm run dev
-
-# Terminal 2: Merchant
-cd merchant
-npm install
-npm start
-
-# Terminal 3: Widget
-cd widget
-npm install
-npm run dev
+./scripts/pay402-tmux.sh --kill      # Stop current session
+./scripts/pay402-tmux.sh --testnet   # Switch to testnet
+./scripts/pay402-tmux.sh --localnet  # Switch back to localnet
 ```
 
-See [DEVELOPMENT_GUIDE.md](docs/development/DEVELOPMENT_GUIDE.md) for detailed setup instructions.
+See [NETWORK-SWITCHING.md](NETWORK-SWITCHING.md) for comprehensive network switching guide.
+
+---
+
+### 🆘 **Troubleshooting**
+
+**"sui CLI not found"**
+```bash
+# Install Rust first
+curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+
+# Install SUI CLI
+cargo install --locked --git https://github.com/MystenLabs/sui.git --branch testnet sui
+```
+
+**"Invalid Enoki API key format"**
+- Make sure you're using the PUBLIC key (starts with `enoki_public_`)
+- Don't use the PRIVATE key (starts with `enoki_private_`)
+
+**"Invalid Google Client ID format"**
+- Should end with `.apps.googleusercontent.com`
+- Don't include spaces or quotes
+
+**"Localnet not running"**
+```bash
+localnet start  # Start Suibase localnet
+```
+
+**Still stuck?**
+- Check [ZKLOGIN-BREAKTHROUGH.md](ZKLOGIN-BREAKTHROUGH.md) for zkLogin troubleshooting
+- See full docs: [DEVELOPMENT_GUIDE.md](docs/development/DEVELOPMENT_GUIDE.md)
 
 ### Network Configuration Files
 

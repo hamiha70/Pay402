@@ -51,7 +51,7 @@ export const networks: Record<string, NetworkConfig> = {
     faucetUrl: 'http://127.0.0.1:9123/gas',
     
     paymentCoin: {
-      type: '0x34f1b450e7815b8b95df68cb6bfd81bbaf42607acf1f345bcb4a2fc732ca648b::mock_usdc::MOCK_USDC',
+      type: process.env.USDC_TYPE || '0x34f1b450e7815b8b95df68cb6bfd81bbaf42607acf1f345bcb4a2fc732ca648b::mock_usdc::MOCK_USDC',
       symbol: 'USDC',
       decimals: 6,
       name: 'Mock USDC (Localnet)',
@@ -75,7 +75,7 @@ export const networks: Record<string, NetworkConfig> = {
     faucetUrl: 'https://faucet.testnet.sui.io/gas',
     
     paymentCoin: {
-      type: '0x...::usdc::USDC',  // TODO: Get real Circle USDC address on testnet
+      type: process.env.USDC_TYPE || '0xa1ec7fc00a6f40db9693ad1415d0c193ad3906494428cf252621037bd7117e29::usdc::USDC',  // Circle USDC on Sui Testnet
       symbol: 'USDC',
       decimals: 6,
       name: 'USDC',

@@ -64,34 +64,117 @@ export async function fundController(req: Request, res: Response) {
       return;
     }
 
-    // Fund the wallet with MockUSDC (50 USDC for testing)
+    // Fund the wallet based on network
     const FUND_AMOUNT = 50_000_000; // 50 USDC (6 decimals)
     
-    // MockUSDC constants from config (set by deploy script or .env)
-    const MOCK_USDC_PACKAGE = config.mockUsdcPackage;
-    const TREASURY_CAP = config.mockUsdcTreasuryCap;
-
-    // Use treasury owner keypair (the address that deployed MockUSDC)
-    // CRITICAL: This must be separate from facilitator for proper security
-    const keypair = Ed25519Keypair.fromSecretKey(config.treasuryOwnerPrivateKey!);
-
-    const tx = new Transaction();
+    let result;
     
-    // Call MockUSDC::mint function
-    tx.moveCall({
-      target: `${MOCK_USDC_PACKAGE}::mock_usdc::mint`,
-      arguments: [
-        tx.object(TREASURY_CAP),
-        tx.pure.u64(FUND_AMOUNT),
-        tx.pure.address(address),
-      ],
-    });
+    if (config.network.name === 'localnet') {
+      // ════════════════════════════════════════════════════════════
+      // LOCALNET: Mint MockUSDC
+      // ════════════════════════════════════════════════════════════
+      const MOCK_USDC_PACKAGE = config.mockUsdcPackage;
+      const TREASURY_CAP = config.mockUsdcTreasuryCap;
 
-    // Execute transaction
-    const result = await client.signAndExecuteTransaction({
-      transaction: tx,
-      signer: keypair,
-    });
+      // Use treasury owner keypair (the address that deployed MockUSDC)
+      const keypair = Ed25519Keypair.fromSecretKey(config.treasuryOwnerPrivateKey!);
+
+      const tx = new Transaction();
+      
+      // Call MockUSDC::mint function
+      tx.moveCall({
+        target: `${MOCK_USDC_PACKAGE}::mock_usdc::mint`,
+        arguments: [
+          tx.object(TREASURY_CAP),
+          tx.pure.u64(FUND_AMOUNT),
+          tx.pure.address(address),
+        ],
+      });
+
+      // Execute transaction
+      result = await client.signAndExecuteTransaction({
+        transaction: tx,
+        signer: keypair,
+      });
+      
+    } else {
+      // ════════════════════════════════════════════════════════════
+      // TESTNET: Transfer real USDC from Treasury/Deployer address
+      // ════════════════════════════════════════════════════════════
+      
+      // Treasury address (hardcoded for testnet - this is the "internal faucet")
+      const TREASURY_ADDRESS = '0x44118d0b343e8cb4203bdd4d75321a2eec4a9ec3c4778dcdda715fee18945995';
+      
+      // Check Treasury USDC balance
+      const treasuryBalance = await client.getBalance({
+        owner: TREASURY_ADDRESS,
+        coinType: config.paymentCoinType, // Real Circle USDC on testnet
+      });
+      
+      const treasuryUSDC = treasuryBalance.balance.balance ? parseInt(treasuryBalance.balance.balance) : 0;
+      
+      if (treasuryUSDC < FUND_AMOUNT) {
+        res.status(503).json({
+          error: 'Treasury has insufficient USDC',
+          message: 'The internal Treasury needs to be funded with USDC for test buyer funding.',
+          treasury: TREASURY_ADDRESS,
+          balance: treasuryUSDC / 1_000_000,
+          required: FUND_AMOUNT / 1_000_000,
+          instructions: {
+            circleFaucet: `https://faucet.circle.com - fund address: ${TREASURY_ADDRESS}`,
+            note: 'Treasury acts as internal faucet for test addresses on testnet',
+          },
+        });
+        return;
+      }
+      
+      // Get a USDC coin from Treasury to split and transfer
+      const treasuryCoins = await client.getCoins({
+        owner: TREASURY_ADDRESS,
+        coinType: config.paymentCoinType,
+      });
+      
+      if (!treasuryCoins.data || treasuryCoins.data.length === 0) {
+        res.status(503).json({
+          error: 'No USDC coins in Treasury',
+          message: 'Treasury has balance but no spendable coin objects',
+        });
+        return;
+      }
+      
+      const treasuryCoin = treasuryCoins.data[0];
+      
+      // Check if Treasury private key is configured
+      if (!config.treasuryOwnerPrivateKey) {
+        res.status(503).json({
+          error: 'Treasury private key not configured',
+          message: 'TREASURY_OWNER_PRIVATE_KEY must be set in .env for testnet test funding',
+          treasury: TREASURY_ADDRESS,
+          instructions: {
+            setup: 'Add TREASURY_OWNER_PRIVATE_KEY=suiprivkey1q... to facilitator/.env',
+            export: 'Get key via: sui keytool export --key-identity ' + TREASURY_ADDRESS,
+          },
+        });
+        return;
+      }
+      
+      // Use Treasury keypair to sign the transfer
+      const treasuryKeypair = Ed25519Keypair.fromSecretKey(config.treasuryOwnerPrivateKey);
+      
+      const tx = new Transaction();
+      
+      // Split FUND_AMOUNT from Treasury's USDC coin
+      const [splitCoin] = tx.splitCoins(tx.object(treasuryCoin.coinObjectId), [tx.pure.u64(FUND_AMOUNT)]);
+      
+      // Transfer split coin to buyer
+      tx.transferObjects([splitCoin], tx.pure.address(address));
+      
+      // Execute transaction (Treasury signs and pays gas)
+      result = await client.signAndExecuteTransaction({
+        transaction: tx,
+        signer: treasuryKeypair,
+      });
+    }
 
     // Mark session as funded
     fundedSessions.add(sessionId);

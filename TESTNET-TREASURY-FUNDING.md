@@ -17,11 +17,13 @@ Role:    Treasury + Deployer + Internal Faucet
 ```
 
 This is the **main testnet address** you manually fund. It:
+
 - 📦 Deploys Move contracts (or could be used for deployment)
 - 🏦 Acts as internal faucet for other test addresses
 - 💰 Holds the primary SUI/USDC balance for testnet operations
 
 **Set as active address:**
+
 ```bash
 sui client switch --address heuristic-pearl
 ```
@@ -135,10 +137,10 @@ sui client gas 0x44118d0b343e8cb4203bdd4d75321a2eec4a9ec3c4778dcdda715fee1894599
 
 ### Addresses
 
-| Role                  | Address         | Private Key Location                                            | Active?        |
-| --------------------- | --------------- | --------------------------------------------------------------- | -------------- |
-| **Treasury/Deployer** | `0x4411...5995` | Imported in `sui client` (alias: `heuristic-pearl`)             | ✅ **Yes** (default) |
-| **Facilitator**       | `0x2616...e618` | `facilitator/.env.testnet.example` → `FACILITATOR_PRIVATE_KEY`  | No             |
+| Role                  | Address         | Private Key Location                                           | Active?              |
+| --------------------- | --------------- | -------------------------------------------------------------- | -------------------- |
+| **Treasury/Deployer** | `0x4411...5995` | Imported in `sui client` (alias: `heuristic-pearl`)            | ✅ **Yes** (default) |
+| **Facilitator**       | `0x2616...e618` | `facilitator/.env.testnet.example` → `FACILITATOR_PRIVATE_KEY` | No                   |
 
 **Recommended setup:** Keep `heuristic-pearl` (Treasury/Deployer) as your active address for daily operations.
 

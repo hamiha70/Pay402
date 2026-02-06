@@ -15,8 +15,20 @@ import { describe, it, expect, beforeAll } from 'vitest';
 import { Transaction } from '@mysten/sui/transactions';
 import { SuiGrpcClient } from '@mysten/sui/grpc';
 import { execSync } from 'child_process';
+import { config } from '../config.js';
 
-describe('Blockchain State Consistency', () => {
+// CRITICAL: Skip on testnet - uses SUI transfers (only runs on localnet)
+const IS_TESTNET = config.suiNetwork === 'testnet';
+
+describe(IS_TESTNET ? 'Blockchain State Consistency (SKIPPED on testnet)' : 'Blockchain State Consistency', () => {
+  if (IS_TESTNET) {
+    it.skip('All tests skipped on testnet - uses SUI transfers', () => {
+      console.log('⚠️  SKIPPED: Tests use SUI transfers for state validation');
+      console.log('   Would drain facilitator gas fund on testnet');
+      console.log('   Run on localnet: ./scripts/pay402-tmux.sh --localnet');
+    });
+    return;
+  }
   let client: SuiGrpcClient;
   let senderAddress: string;
   let recipientAddress: string;

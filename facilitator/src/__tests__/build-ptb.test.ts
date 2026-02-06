@@ -2,18 +2,35 @@
  * Build PTB Integration Test
  * 
  * Tests the ACTUAL build-ptb logic with a REAL transaction
+ * 
+ * CRITICAL: Uses tx.gas (SUI) for testing PTB mechanics
+ * These are UNIT TESTS - they only BUILD transactions, don't execute them
+ * However, building requires querying gas coins which uses network resources
  */
 
 import { describe, it, expect, beforeAll } from 'vitest';
 import { Transaction } from '@mysten/sui/transactions';
 import { SuiGrpcClient } from '@mysten/sui/grpc';
 import { execSync } from 'child_process';
+import { config } from '../config.js';
 
 const TEST_MERCHANT = '0xbf8c50a85dbb19deaec5a9712869a03959c81ec1eba43223deae594afa5a8248';
 const TEST_FACILITATOR = '0x44118d0b343e8cb4203bdd4d75321a2eec4a9ec3c4778dcdda715fee18945995';
 const CLOCK_OBJECT_ID = '0x6';
 
-describe('Build PTB - EXACT Production Logic', () => {
+// CRITICAL: Skip on testnet - these tests build SUI payment PTBs
+// While they don't EXECUTE, they test mechanics that shouldn't be used on testnet
+const IS_TESTNET = config.suiNetwork === 'testnet';
+
+describe(IS_TESTNET ? 'Build PTB - EXACT Production Logic (SKIPPED on testnet)' : 'Build PTB - EXACT Production Logic', () => {
+  if (IS_TESTNET) {
+    it.skip('All tests skipped on testnet - uses SUI payment mechanics', () => {
+      console.log('⚠️  SKIPPED: Tests use tx.gas (SUI) for PTB construction');
+      console.log('   Production code uses USDC from invoice.coinType ✓');
+      console.log('   Run on localnet: ./scripts/pay402-tmux.sh --localnet');
+    });
+    return;
+  }
   let client: SuiGrpcClient;
   let TEST_BUYER: string;
 

@@ -14,7 +14,20 @@ import { Transaction } from '@mysten/sui/transactions';
 import { getSuiClient } from '../sui.js';
 import { config } from '../config.js';
 
-describe('Minimal Sponsored Transaction Test', () => {
+// CRITICAL: Skip this entire suite on testnet - it uses SUI transfers which drain gas!
+// These tests transfer SUI from facilitator to test buyers (0.1 SUI per test)
+// On testnet, this would drain the precious gas fund needed for payment sponsorship
+const IS_TESTNET = config.suiNetwork === 'testnet';
+
+describe(IS_TESTNET ? 'Minimal Sponsored Transaction Test (SKIPPED on testnet)' : 'Minimal Sponsored Transaction Test', () => {
+  if (IS_TESTNET) {
+    it.skip('All tests skipped on testnet to preserve gas fund', () => {
+      console.log('⚠️  SKIPPED: This suite uses SUI transfers for test setup');
+      console.log('   Running on testnet would drain facilitator gas fund');
+      console.log('   Run on localnet: ./scripts/pay402-tmux.sh --localnet');
+    });
+    return;
+  }
   // ═══════════════════════════════════════════════════════════
   // CRITICAL: NO GLOBAL BUYER STATE - TRUE TEST ISOLATION
   // Each test creates its own dedicated buyer to avoid coin conflicts

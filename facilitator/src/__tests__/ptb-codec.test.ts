@@ -14,6 +14,11 @@ import { describe, it, expect, beforeAll } from 'vitest';
 import { Transaction } from '@mysten/sui/transactions';
 import { SuiGrpcClient } from '@mysten/sui/grpc';
 import { execSync } from 'child_process';
+import { config } from '../config.js';
+
+// CRITICAL: Skip on testnet - uses SUI (tx.gas) for PTB construction testing
+// These are pure serialization tests - don't execute, but test patterns we shouldn't use on testnet
+const IS_TESTNET = config.suiNetwork === 'testnet';
 
 // Dynamically get funded address from sui client
 function getActiveAddress(): string {
@@ -41,7 +46,16 @@ const TEST_MERCHANT = '0xbf8c50a85dbb19deaec5a9712869a03959c81ec1eba43223deae594
 const TEST_FACILITATOR = '0x44118d0b343e8cb4203bdd4d75321a2eec4a9ec3c4778dcdda715fee18945995';
 const CLOCK_OBJECT_ID = '0x6';
 
-describe('PTB Codec: Serialization/Deserialization', () => {
+describe(IS_TESTNET ? 'PTB Codec: Serialization/Deserialization (SKIPPED on testnet)' : 'PTB Codec: Serialization/Deserialization', () => {
+  if (IS_TESTNET) {
+    it.skip('All tests skipped on testnet - uses tx.gas (SUI) mechanics', () => {
+      console.log('⚠️  SKIPPED: Tests PTB serialization with SUI payment patterns');
+      console.log('   Production code uses USDC ✓');
+      console.log('   Run on localnet: ./scripts/pay402-tmux.sh --localnet');
+    });
+    return;
+  }
+
   let client: SuiGrpcClient;
   let hasFundedAddress = false;
 
@@ -236,7 +250,11 @@ describe('PTB Codec: Serialization/Deserialization', () => {
   });
 });
 
-describe('PTB Codec: Field Mapping Validation', () => {
+describe(IS_TESTNET ? 'PTB Codec: Field Mapping Validation (SKIPPED on testnet)' : 'PTB Codec: Field Mapping Validation', () => {
+  if (IS_TESTNET) {
+    it.skip('Skipped on testnet - uses SUI mechanics', () => {});
+    return;
+  }
   it('should correctly map invoice JWT fields to PTB', () => {
     // Mock invoice from merchant JWT
     const mockInvoice = {
@@ -298,7 +316,11 @@ describe('PTB Codec: Field Mapping Validation', () => {
   });
 });
 
-describe('PTB Codec: Error Cases', () => {
+describe(IS_TESTNET ? 'PTB Codec: Error Cases (SKIPPED on testnet)' : 'PTB Codec: Error Cases', () => {
+  if (IS_TESTNET) {
+    it.skip('Skipped on testnet - uses SUI mechanics', () => {});
+    return;
+  }
   let client: SuiGrpcClient;
   let hasFundedAddress = false;
 

@@ -3,6 +3,7 @@ import { getSuiClient } from '../sui.js';
 import { Transaction } from '@mysten/sui/transactions';
 import { Ed25519Keypair } from '@mysten/sui/keypairs/ed25519';
 import { config } from '../config.js';
+import { execSync } from 'child_process';
 
 interface FundRequest {
   address: string;
@@ -65,7 +66,9 @@ export async function fundController(req: Request, res: Response) {
     }
 
     // Fund the wallet based on network
-    const FUND_AMOUNT = 50_000_000; // 50 USDC (6 decimals)
+    // Localnet: 50 USDC (abundant MockUSDC)
+    // Testnet: 1 USDC (real USDC is precious - tests only need ~0.1 USDC per payment)
+    const FUND_AMOUNT = config.network.name === 'localnet' ? 50_000_000 : 1_000_000; // 50 or 1 USDC (6 decimals)
     
     let result;
     
@@ -128,22 +131,6 @@ export async function fundController(req: Request, res: Response) {
         return;
       }
       
-      // Get a USDC coin from Treasury to split and transfer
-      const treasuryCoins = await client.getCoins({
-        owner: TREASURY_ADDRESS,
-        coinType: config.paymentCoinType,
-      });
-      
-      if (!treasuryCoins.data || treasuryCoins.data.length === 0) {
-        res.status(503).json({
-          error: 'No USDC coins in Treasury',
-          message: 'Treasury has balance but no spendable coin objects',
-        });
-        return;
-      }
-      
-      const treasuryCoin = treasuryCoins.data[0];
-      
       // Check if Treasury private key is configured
       if (!config.treasuryOwnerPrivateKey) {
         res.status(503).json({
@@ -158,22 +145,58 @@ export async function fundController(req: Request, res: Response) {
         return;
       }
       
-      // Use Treasury keypair to sign the transfer
+      // Use Treasury keypair to transfer USDC
       const treasuryKeypair = Ed25519Keypair.fromSecretKey(config.treasuryOwnerPrivateKey);
       
       const tx = new Transaction();
       
-      // Split FUND_AMOUNT from Treasury's USDC coin
-      const [splitCoin] = tx.splitCoins(tx.object(treasuryCoin.coinObjectId), [tx.pure.u64(FUND_AMOUNT)]);
+      // Use tx.splitCoins with tx.gas for the USDC coin
+      // We need to get a USDC coin object - use the first available one
+      // Since grpcClient has limited APIs, we'll use a simple transfer approach
       
-      // Transfer split coin to buyer
-      tx.transferObjects([splitCoin], tx.pure.address(address));
-      
-      // Execute transaction (Treasury signs and pays gas)
-      result = await client.signAndExecuteTransaction({
-        transaction: tx,
-        signer: treasuryKeypair,
-      });
+      // Get all coins for the Treasury address and find USDC
+      try {
+        // Query Treasury's USDC coins via CLI (correct syntax: no --address flag)
+        const coinListCmd = `sui client objects ${TREASURY_ADDRESS} --json 2>/dev/null`;
+        const coinListOutput = execSync(coinListCmd, { encoding: 'utf8' });
+        const allObjects = JSON.parse(coinListOutput);
+        
+        // Find first USDC coin (check both type field and content.type)
+        const usdcCoin = allObjects.find((obj: any) => {
+          const objType = obj.data?.type || obj.data?.content?.type || '';
+          return objType.toLowerCase().includes('usdc');
+        });
+        
+        if (!usdcCoin) {
+          res.status(503).json({
+            error: 'No USDC coins found in Treasury',
+            message: 'Treasury has USDC balance but no queryable coin objects',
+            treasury: TREASURY_ADDRESS,
+            allObjectsFound: allObjects.length,
+            hint: 'Check if Treasury USDC balance is fragmented into multiple small coins',
+          });
+          return;
+        }
+        
+        const treasuryCoinId = usdcCoin.data.objectId;
+        
+        // Split FUND_AMOUNT from Treasury's USDC coin and transfer to buyer
+        const [splitCoin] = tx.splitCoins(tx.object(treasuryCoinId), [tx.pure.u64(FUND_AMOUNT)]);
+        tx.transferObjects([splitCoin], tx.pure.address(address));
+        
+        // Execute transaction (Treasury signs and pays gas)
+        result = await client.signAndExecuteTransaction({
+          transaction: tx,
+          signer: treasuryKeypair,
+        });
+        
+      } catch (cliError) {
+        res.status(500).json({
+          error: 'Failed to query Treasury coins',
+          details: cliError instanceof Error ? cliError.message : String(cliError),
+        });
+        return;
+      }
     }
 
     // Mark session as funded

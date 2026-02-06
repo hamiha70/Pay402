@@ -79,6 +79,20 @@ export function parseCAIP19(assetType: string): CAIP19AssetType {
   const chainId = assetType.substring(0, slashIndex);
   const assetPart = assetType.substring(slashIndex + 1);
   
+  // For Sui coin types (0x...::module::type), there's no separate namespace
+  // The entire coin type IS the reference
+  // Format: sui:testnet/0xa1ec7fc...::usdc::USDC
+  // If assetPart contains "::" (Sui Move syntax), treat entire thing as reference
+  if (assetPart.includes('::')) {
+    return {
+      chainId,
+      namespace: 'coin',  // Implicit namespace for Sui coin types
+      reference: assetPart,  // Full coin type: 0xa1ec7fc...::usdc::USDC
+      raw: assetType,
+    };
+  }
+  
+  // Legacy format with explicit namespace (e.g., "coin:0x2::usdc::USDC")
   // Split asset part by first ':' to separate namespace from reference
   const colonIndex = assetPart.indexOf(':');
   if (colonIndex === -1) {

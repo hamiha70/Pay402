@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuth } from '../hooks/useAuth';
 import { useBalance } from '../hooks/useBalance';
 import { buildPTB, verifyPTB, submitPayment as submitPaymentAPI } from '../lib/pay402-client';
@@ -28,8 +28,12 @@ export default function PaymentPage({ invoiceJWT: propInvoiceJWT }: PaymentPageP
   // Extract balance with defaults
   const balance = balanceInfo || { sui: 0, usdc: 0, loading: true, address: address || '' };
 
+  // Restore invoice from sessionStorage if available (for OAuth redirect flow)
+  const savedInvoice = typeof window !== 'undefined' ? sessionStorage.getItem('pendingInvoice') : null;
+  const initialInvoice = propInvoiceJWT || savedInvoice || '';
+
   // Payment state
-  const [invoiceJWT, setInvoiceJWT] = useState<string>(propInvoiceJWT || '');
+  const [invoiceJWT, setInvoiceJWT] = useState<string>(initialInvoice);
   const [invoice, setInvoice] = useState<InvoiceJWT | null>(null);
   const [step, setStep] = useState<'input' | 'review' | 'verify' | 'sign' | 'submit' | 'success' | 'error'>('input');
   const [ptbBytes, setPtbBytes] = useState<Uint8Array | null>(null);
@@ -48,6 +52,20 @@ export default function PaymentPage({ invoiceJWT: propInvoiceJWT }: PaymentPageP
     if (coinType.includes('::usdc::USDC')) return 'USDC'; // Real USDC on testnet
     return 'tokens'; // Fallback
   };
+
+  // Auto-parse invoice from URL or sessionStorage on mount
+  useEffect(() => {
+    if (invoiceJWT && !invoice) {
+      console.log('[PaymentPage] Auto-parsing invoice from URL/storage');
+      // Save to sessionStorage for OAuth redirect flow
+      sessionStorage.setItem('pendingInvoice', invoiceJWT);
+      parseInvoice();
+    }
+    // Clear sessionStorage once invoice is parsed
+    if (invoice) {
+      sessionStorage.removeItem('pendingInvoice');
+    }
+  }, [invoiceJWT, invoice]);
 
   // Parse invoice JWT
   const parseInvoice = () => {

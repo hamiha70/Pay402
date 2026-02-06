@@ -10,8 +10,9 @@ function getPaymentCoinType(): string {
   const network = import.meta.env.VITE_SUI_NETWORK || 'localnet';
   
   if (network === 'testnet') {
-    // Real Circle USDC on testnet (to be deployed)
-    return '0x...::usdc::USDC'; // TODO: Update when deployed
+    // Real Circle USDC on testnet
+    return import.meta.env.VITE_USDC_TYPE || 
+           '0xa1ec7fc00a6f40db9693ad1415d0c193ad3906494428cf252621037bd7117e29::usdc::USDC';
   }
   
   // MockUSDC on localnet (from deploy script or env)

@@ -18,7 +18,7 @@ export const networks = {
   testnet: {
     name: 'Testnet',
     paymentCoin: {
-      type: '0x...::usdc::USDC',  // TODO: Get real Circle USDC address on testnet
+      type: '0xa1ec7fc00a6f40db9693ad1415d0c193ad3906494428cf252621037bd7117e29::usdc::USDC',  // Circle USDC on Sui Testnet
       symbol: 'USDC',
       decimals: 6,
       name: 'USDC',

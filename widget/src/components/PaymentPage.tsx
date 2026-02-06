@@ -28,9 +28,43 @@ export default function PaymentPage({ invoiceJWT: propInvoiceJWT }: PaymentPageP
   // Extract balance with defaults
   const balance = balanceInfo || { sui: 0, usdc: 0, loading: true, address: address || '' };
 
-  // Restore invoice from sessionStorage if available (for OAuth redirect flow)
-  const savedInvoice = typeof window !== 'undefined' ? sessionStorage.getItem('pendingInvoice') : null;
-  const initialInvoice = propInvoiceJWT || savedInvoice || '';
+  // Restore invoice from multiple sources (priority order)
+  const getInitialInvoice = (): string => {
+    if (typeof window === 'undefined') return '';
+    
+    // 1. Check URL hash (from merchant redirect)
+    if (window.location.hash) {
+      const hashParams = new URLSearchParams(window.location.hash.substring(1));
+      const hashInvoice = hashParams.get('invoice');
+      if (hashInvoice) {
+        console.log('[PaymentPage] Found invoice in URL hash');
+        // Save to sessionStorage for OAuth redirect persistence
+        sessionStorage.setItem('pendingInvoice', hashInvoice);
+        // Clean URL immediately (before OAuth)
+        window.history.replaceState(null, '', window.location.pathname);
+        return hashInvoice;
+      }
+    }
+    
+    // 2. Check sessionStorage (after OAuth redirect)
+    const savedInvoice = sessionStorage.getItem('pendingInvoice');
+    if (savedInvoice) {
+      console.log('[PaymentPage] Found invoice in sessionStorage');
+      return savedInvoice;
+    }
+    
+    // 3. Check URL query param (legacy/fallback)
+    const urlParams = new URLSearchParams(window.location.search);
+    const queryInvoice = urlParams.get('invoice');
+    if (queryInvoice) {
+      console.log('[PaymentPage] Found invoice in URL query');
+      return queryInvoice;
+    }
+    
+    return '';
+  };
+  
+  const initialInvoice = propInvoiceJWT || getInitialInvoice();
 
   // Payment state
   const [invoiceJWT, setInvoiceJWT] = useState<string>(initialInvoice);

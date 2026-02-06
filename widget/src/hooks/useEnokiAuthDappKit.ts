@@ -103,7 +103,8 @@ export function useEnokiAuthDappKit(): AuthProvider {
 
     console.log('[EnokiAuth] Current account:', {
       address: currentAccount.address,
-      publicKey: currentAccount.publicKey?.substring(0, 20) + '...',
+      publicKey: typeof currentAccount.publicKey,
+      chains: currentAccount.chains,
     });
 
     try {

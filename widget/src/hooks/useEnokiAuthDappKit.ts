@@ -93,37 +93,77 @@ export function useEnokiAuthDappKit(): AuthProvider {
   }, [currentAccount, signTransaction]);
 
   const signTransactionBytes = useCallback(async (txBytes: Uint8Array) => {
-    console.log('[EnokiAuth] Signing transaction bytes with zkLogin');
+    console.log('[EnokiAuth] 🔐 Starting zkLogin transaction signing...');
+    console.log('[EnokiAuth] Transaction bytes length:', txBytes.length);
     
     if (!currentAccount) {
+      console.error('[EnokiAuth] ❌ No current account!');
       throw new Error('Not connected');
     }
 
+    console.log('[EnokiAuth] Current account:', {
+      address: currentAccount.address,
+      publicKey: currentAccount.publicKey?.substring(0, 20) + '...',
+    });
+
     try {
-      // Build Transaction from bytes
+      // Step 1: Build Transaction from bytes
+      console.log('[EnokiAuth] Step 1: Building Transaction object from bytes...');
       const tx = Transaction.from(txBytes);
+      console.log('[EnokiAuth] ✅ Transaction object created');
+      
+      // Step 2: Call signTransaction hook
+      console.log('[EnokiAuth] Step 2: Calling signTransaction hook...');
+      console.log('[EnokiAuth] Using account:', currentAccount.address);
       
       const result = await signTransaction({
         transaction: tx,
         account: currentAccount,
       });
 
-      console.log('[EnokiAuth] ✅ Transaction bytes signed');
+      console.log('[EnokiAuth] ✅ signTransaction hook returned successfully');
+      console.log('[EnokiAuth] Result signature length:', result.signature?.length || 0);
+      console.log('[EnokiAuth] Result bytes (base64):', result.bytes?.substring(0, 50) + '...');
 
-      // Convert base64 string to Uint8Array (browser-safe, no Buffer needed)
+      // Step 3: Convert base64 string to Uint8Array (browser-safe, no Buffer needed)
+      console.log('[EnokiAuth] Step 3: Converting base64 to Uint8Array...');
       const base64 = result.bytes;
+      
+      if (!base64) {
+        throw new Error('signTransaction returned empty bytes');
+      }
+      
       const binaryString = atob(base64);
+      console.log('[EnokiAuth] Binary string length:', binaryString.length);
+      
       const bytes = new Uint8Array(binaryString.length);
       for (let i = 0; i < binaryString.length; i++) {
         bytes[i] = binaryString.charCodeAt(i);
       }
+      console.log('[EnokiAuth] ✅ Uint8Array created, length:', bytes.length);
 
+      console.log('[EnokiAuth] 🎉 Transaction signing complete!');
       return {
         signature: result.signature,
         bytes,
       };
     } catch (error) {
-      console.error('[EnokiAuth] ❌ Transaction bytes signing failed:', error);
+      console.error('[EnokiAuth] ❌❌❌ Transaction bytes signing FAILED ❌❌❌');
+      console.error('[EnokiAuth] Error type:', error?.constructor?.name);
+      console.error('[EnokiAuth] Error message:', error instanceof Error ? error.message : String(error));
+      console.error('[EnokiAuth] Error stack:', error instanceof Error ? error.stack : 'No stack');
+      console.error('[EnokiAuth] Full error object:', JSON.stringify(error, Object.getOwnPropertyNames(error), 2));
+      
+      // Check if it's a network error
+      if (error instanceof TypeError && error.message.includes('fetch')) {
+        console.error('[EnokiAuth] 🌐 This is a NETWORK/FETCH error!');
+        console.error('[EnokiAuth] Possible causes:');
+        console.error('[EnokiAuth] 1. Enoki API endpoint unreachable');
+        console.error('[EnokiAuth] 2. CORS issue');
+        console.error('[EnokiAuth] 3. Invalid API key');
+        console.error('[EnokiAuth] 4. Network timeout');
+      }
+      
       throw error;
     }
   }, [currentAccount, signTransaction]);

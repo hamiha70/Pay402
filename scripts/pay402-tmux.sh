@@ -373,9 +373,18 @@ if [ $? != 0 ]; then
     BALANCE_SUI=$((BALANCE / 1000000000))
     echo "  Balance: $BALANCE_SUI SUI"
     
-    # Fund if balance < 1 SUI (1_000_000_000 MIST)
-    if [ "$BALANCE" -lt 1000000000 ]; then
-      echo "  ⚠️  Low balance - requesting funds from faucet..."
+    # Determine threshold based on network
+    if [ "$ACTIVE_ENV" = "testnet" ]; then
+      THRESHOLD=100000000  # 0.1 SUI for testnet
+      THRESHOLD_MSG="0.1 SUI"
+    else
+      THRESHOLD=1000000000  # 1 SUI for localnet
+      THRESHOLD_MSG="1 SUI"
+    fi
+    
+    # Fund if balance < threshold
+    if [ "$BALANCE" -lt "$THRESHOLD" ]; then
+      echo "  ⚠️  Low balance (< $THRESHOLD_MSG) - requesting funds..."
       
       if [ "$ACTIVE_ENV" = "localnet" ]; then
         # Localnet: Use embedded faucet (automatic)
@@ -388,43 +397,83 @@ if [ $? != 0 ]; then
         echo "  ✅ Updated balance: $NEW_BALANCE_SUI SUI"
         
       elif [ "$ACTIVE_ENV" = "testnet" ]; then
-        # Testnet: Open web faucet (requires user interaction)
-        FAUCET_URL="https://faucet.sui.io/?address=$FACILITATOR_ADDR"
-        echo ""
-        echo "  ⚠️  Testnet faucet requires web UI (browser will open automatically)"
-        echo "  📋 Facilitator address: $FACILITATOR_ADDR"
-        echo "  🌐 Opening faucet in browser..."
-        echo ""
+        # Testnet: Automatic funding from Treasury address
+        TREASURY_ADDR="0x44118d0b343e8cb4203bdd4d75321a2eec4a9ec3c4778dcdda715fee18945995"
         
-        # Try to open browser
-        if command -v xdg-open &> /dev/null; then
-          xdg-open "$FAUCET_URL" 2>/dev/null &
-        elif command -v open &> /dev/null; then
-          open "$FAUCET_URL" 2>/dev/null &
+        echo ""
+        echo "  🏦 Attempting automatic funding from Treasury..."
+        echo "  📋 Treasury address: $TREASURY_ADDR"
+        
+        # Check Treasury balance
+        TREASURY_BALANCE=$(sui client gas "$TREASURY_ADDR" --json 2>/dev/null | jq -r '[.[].balance] | add // 0' 2>/dev/null || echo "0")
+        TREASURY_BALANCE_SUI=$((TREASURY_BALANCE / 1000000000))
+        
+        echo "  💰 Treasury balance: $TREASURY_BALANCE_SUI SUI"
+        
+        # Need at least 0.5 SUI in Treasury to transfer (0.1 for transfer + buffer for gas)
+        MIN_TREASURY_BALANCE=500000000  # 0.5 SUI in MIST
+        
+        if [ "$TREASURY_BALANCE" -lt "$MIN_TREASURY_BALANCE" ]; then
+          echo ""
+          echo "  ❌ Treasury has insufficient funds!"
+          echo "  📋 Please fund Treasury address manually:"
+          echo "     Address: $TREASURY_ADDR"
+          echo "     Minimum: 0.5 SUI"
+          echo "     Faucet: https://faucet.sui.io/?address=$TREASURY_ADDR"
+          echo ""
+          echo "  💡 You can continue anyway, but tests may fail due to insufficient gas"
+          echo ""
         else
-          echo "  📋 Visit manually: $FAUCET_URL"
-        fi
-        
-        echo "  ⏳ Please complete the faucet request in your browser..."
-        echo "  ⏳ Waiting 15 seconds for you to complete the request..."
-        echo ""
-        
-        # Wait for user to complete faucet request
-        for i in {15..1}; do
-          echo -ne "  ⏳ Waiting $i seconds... (Press Ctrl+C to skip)\r"
-          sleep 1
-        done
-        echo ""
-        
-        # Check updated balance
-        NEW_BALANCE=$(sui client gas "$FACILITATOR_ADDR" --json 2>/dev/null | jq -r '[.[].balance] | add // 0' 2>/dev/null || echo "0")
-        NEW_BALANCE_SUI=$((NEW_BALANCE / 1000000000))
-        
-        if [ "$NEW_BALANCE" -gt 0 ]; then
-          echo "  ✅ Funding successful! Balance: $NEW_BALANCE_SUI SUI"
-        else
-          echo "  ⚠️  Balance still 0 SUI - you may need to complete the faucet request"
-          echo "  💡 You can continue anyway and fund later if needed"
+          # Treasury has funds - transfer to facilitator
+          echo "  ✅ Treasury has sufficient funds"
+          echo "  💸 Transferring 0.5 SUI from Treasury to Facilitator..."
+          echo ""
+          
+          # Get a gas coin from Treasury to split and transfer
+          TREASURY_COIN=$(sui client gas "$TREASURY_ADDR" --json 2>/dev/null | jq -r '.[0].gasCoinId' 2>/dev/null)
+          
+          if [ -z "$TREASURY_COIN" ] || [ "$TREASURY_COIN" = "null" ]; then
+            echo "  ❌ Could not find gas coin in Treasury"
+          else
+            # Switch to Treasury address to execute transfer
+            CURRENT_ACTIVE=$(sui client active-address 2>/dev/null)
+            
+            # Find Treasury alias (addresses is array of [alias, address] pairs)
+            TREASURY_ALIAS=$(sui client addresses --json 2>/dev/null | jq -r ".addresses[] | select(.[1] == \"$TREASURY_ADDR\") | .[0]" 2>/dev/null)
+            
+            if [ -z "$TREASURY_ALIAS" ] || [ "$TREASURY_ALIAS" = "null" ]; then
+              echo "  ❌ Treasury address not found in sui client"
+              echo "  💡 Please import Treasury private key using: sui client new-address"
+            else
+              # Switch to Treasury
+              sui client switch --address "$TREASURY_ALIAS" 2>/dev/null
+              
+              # Transfer 0.5 SUI (500000000 MIST)
+              TRANSFER_AMOUNT=500000000
+              
+              sui client transfer-sui --to "$FACILITATOR_ADDR" --sui-coin-object-id "$TREASURY_COIN" --gas-budget 10000000 --amount "$TRANSFER_AMOUNT" 2>/dev/null
+              
+              if [ $? -eq 0 ]; then
+                echo "  ✅ Transfer successful!"
+                sleep 2
+                
+                # Check new facilitator balance
+                NEW_BALANCE=$(sui client gas "$FACILITATOR_ADDR" --json 2>/dev/null | jq -r '[.[].balance] | add // 0' 2>/dev/null || echo "0")
+                NEW_BALANCE_SUI=$((NEW_BALANCE / 1000000000))
+                echo "  💰 New facilitator balance: $NEW_BALANCE_SUI SUI"
+              else
+                echo "  ❌ Transfer failed"
+                echo "  💡 You may need to fund facilitator manually:"
+                echo "     https://faucet.sui.io/?address=$FACILITATOR_ADDR"
+              fi
+              
+              # Switch back to original address
+              ORIGINAL_ALIAS=$(sui client addresses --json 2>/dev/null | jq -r ".addresses[] | select(.[1] == \"$CURRENT_ACTIVE\") | .[0]" 2>/dev/null)
+              if [ -n "$ORIGINAL_ALIAS" ] && [ "$ORIGINAL_ALIAS" != "null" ]; then
+                sui client switch --address "$ORIGINAL_ALIAS" 2>/dev/null
+              fi
+            fi
+          fi
         fi
       else
         echo "  ⚠️  Unknown network: $ACTIVE_ENV - manual funding required"

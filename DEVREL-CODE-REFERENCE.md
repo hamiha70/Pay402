@@ -2,7 +2,7 @@
 
 ## GitHub Repository
 
-**Public repo:** https://github.com/[YOUR_USERNAME]/[YOUR_REPO_NAME]
+**Public repo:** https://github.com/hamiha70/Pay402
 
 _(Replace with your actual GitHub username and repository name)_
 

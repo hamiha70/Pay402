@@ -3,11 +3,13 @@
 ## 🔄 What Changed
 
 **Old OAuth Client ID:**
+
 ```
 300529773657-mfq7blj3s6ilhskpeva3fvutisa5sbej.apps.googleusercontent.com
 ```
 
 **New OAuth Client ID:**
+
 ```
 1001996736694-2ic38121fneem5ob0ond46cmvhatsrtk.apps.googleusercontent.com
 ```
@@ -17,16 +19,20 @@
 ## ✅ Where Updated (7 Files)
 
 ### **1. Production Config:**
+
 - ✅ `widget/.env.local` - Active configuration (used by dev server)
 
 ### **2. Environment Templates:**
+
 - ✅ `widget/.env.localnet.example` - Template for localnet setup
 - ✅ `widget/.env.testnet.example` - Template for testnet setup
 
 ### **3. Test Utilities:**
+
 - ✅ `widget/test-google-oauth.html` - OAuth flow testing tool
 
 ### **4. Documentation:**
+
 - ✅ `ZKLOGIN-BREAKTHROUGH.md` - Investigation notes
 - ✅ `DEVREL-CODE-REFERENCE.md` - Code examples for support
 - ✅ `DEVREL-QUESTION-V2.md` - DevRel question context
@@ -51,13 +57,16 @@ this.#redirectUrl = redirectUrl || window.location.href.split("#")[0];
 ## 🔍 The Problem We Were Solving
 
 ### **Symptom:**
+
 - User visits: `http://localhost:5173/zklogin-test`
 - Clicks "Sign in with Google"
 - OAuth flow attempts to redirect to: `http://localhost:5173/zklogin-test`
 - Google rejects with: `401: invalid_client`
 
 ### **Root Cause:**
+
 Old OAuth Client (`300529773657-...`) had redirect URIs:
+
 ```
 ✓ http://localhost:5173      ← Base URL only
 ✓ http://localhost:5173/     ← With trailing slash
@@ -76,7 +85,7 @@ When Enoki tried to redirect to `/zklogin-test`, Google rejected it because that
 ```
 Authorized redirect URIs in Google Cloud Console:
 ✓ http://localhost:5173                ← Base URL
-✓ http://localhost:5173/               ← With trailing slash  
+✓ http://localhost:5173/               ← With trailing slash
 ✓ http://localhost:5173/zklogin-test   ← Test page (PRIMARY)
 ✓ http://localhost:5173/auth           ← Alternative route
 ```
@@ -97,8 +106,9 @@ Your app has **TWO distinct flows:**
 
 ```typescript
 // App.tsx lines 28-30:
-const isZkLoginTest = window.location.pathname === '/zklogin-test' || 
-                      window.location.pathname === '/auth';
+const isZkLoginTest =
+  window.location.pathname === "/zklogin-test" ||
+  window.location.pathname === "/auth";
 
 // If true → ZkLoginTest component
 // If false → PaymentPage component
@@ -143,9 +153,9 @@ From your testing strategy:
 ```
 Phase 1: Test on /zklogin-test (isolated)
   ✓ Test OAuth flow
-  ✓ Test address derivation  
+  ✓ Test address derivation
   ✓ Test signature
-  
+
 Phase 2: After success, integrate into PaymentPage (/)
   ✓ Update useAuth.ts
   ✓ Full payment flow
@@ -171,6 +181,7 @@ https://accounts.google.com/o/oauth2/v2/auth?
 ```
 
 After user logs in with Google, OAuth redirects back to:
+
 ```
 http://localhost:5173/zklogin-test?code=AUTH_CODE&state=...
 ```
@@ -182,23 +193,27 @@ If `/zklogin-test` isn't in Google's allowed list → **REJECTED!**
 ### **Why Not Just Use Base URL?**
 
 **Option A: Always redirect to base URL (BAD)**
+
 ```typescript
 // Force redirect to root
-this.#redirectUrl = 'http://localhost:5173';
+this.#redirectUrl = "http://localhost:5173";
 ```
 
 ❌ **Problems:**
+
 - Loses page context (user was on /zklogin-test, gets redirected to /)
 - Harder to debug (where did OAuth callback land?)
 - Need routing logic to send user back to right page
 
 **Option B: Use current URL (GOOD - What Enoki Does)**
+
 ```typescript
 // Use current page
 this.#redirectUrl = window.location.href.split("#")[0];
 ```
 
 ✅ **Benefits:**
+
 - User stays on same page
 - Clear OAuth flow (test page → Google → back to test page)
 - Natural UX (no unexpected redirects)
@@ -210,6 +225,7 @@ this.#redirectUrl = window.location.href.split("#")[0];
 ### **Immediate Benefits:**
 
 1. **zkLogin Testing Works** ✅
+
    ```
    Visit: http://localhost:5173/zklogin-test
    Click: "Sign in with Google"
@@ -217,6 +233,7 @@ this.#redirectUrl = window.location.href.split("#")[0];
    ```
 
 2. **Isolated Testing** ✅
+
    - Test zkLogin without touching main payment flow
    - If OAuth breaks, doesn't affect production widget
    - Safe experimentation
@@ -245,6 +262,7 @@ The base URL (`/`) is already configured, so main payment flow will work immedia
 ## 🚨 Common Pitfalls AVOIDED
 
 ### **Pitfall 1: Forgetting Trailing Slash**
+
 ```
 ✗ Only listing: http://localhost:5173
 ✓ Both needed: http://localhost:5173 AND http://localhost:5173/
@@ -255,6 +273,7 @@ Google treats these as **different URLs**. Your new OAuth client has **both**.
 ---
 
 ### **Pitfall 2: Missing Test Path**
+
 ```
 ✗ Only: http://localhost:5173
 ✓ Also: http://localhost:5173/zklogin-test
@@ -265,6 +284,7 @@ Without the test path, you can't test zkLogin in isolation. You **have it**.
 ---
 
 ### **Pitfall 3: Typos in Redirect URI**
+
 ```
 ✗ http://localhost:5173/zklogin-test/  ← Extra trailing slash
 ✓ http://localhost:5173/zklogin-test   ← Exact match
@@ -279,6 +299,7 @@ One extra character = OAuth failure. You need **exact matches**.
 Before testing zkLogin, verify these match **exactly**:
 
 ### **1. Google Cloud Console:**
+
 ```
 OAuth Client: 1001996736694-2ic38121fneem5ob0ond46cmvhatsrtk
 Authorized redirect URIs:
@@ -289,11 +310,13 @@ Authorized redirect URIs:
 ```
 
 ### **2. Your `.env.local`:**
+
 ```bash
 VITE_GOOGLE_CLIENT_ID=1001996736694-2ic38121fneem5ob0ond46cmvhatsrtk.apps.googleusercontent.com
 ```
 
 ### **3. Enoki Portal:**
+
 ```
 API Key: enoki_public_7edbeb7decb38349e30a6d900cdc8843
 Network: testnet
@@ -304,12 +327,14 @@ Network: testnet
 ## 🧪 Testing Instructions
 
 ### **Step 1: Start Services**
+
 ```bash
 ./scripts/pay402-tmux.sh --testnet
 cd widget && npm run dev
 ```
 
 ### **Step 2: Open Test Page**
+
 ```
 http://localhost:5173/zklogin-test
 ```
@@ -317,6 +342,7 @@ http://localhost:5173/zklogin-test
 ### **Step 3: Click "Sign in with Google"**
 
 **Expected Success:**
+
 ```
 1. Google OAuth popup appears
 2. You log in with your Google account
@@ -326,6 +352,7 @@ http://localhost:5173/zklogin-test
 ```
 
 **Expected Failure (if still broken):**
+
 ```
 ✗ "invalid_client" error
 ✗ ERR_CONNECTION_RESET
@@ -339,21 +366,25 @@ If it fails, double-check the redirect URIs in Google Cloud Console match **exac
 ## 🎯 Summary: Why This Makes Sense
 
 ### **1. Technical Accuracy** ✅
+
 - Matches how Enoki SDK actually works (uses current URL)
 - Follows Google OAuth security requirements (exact path matching)
 - Aligns with your app's routing (`/zklogin-test` vs `/`)
 
 ### **2. Testing Strategy** ✅
+
 - Enables isolated zkLogin testing
 - Doesn't affect production payment flow
 - Clear separation of concerns
 
 ### **3. Future-Proof** ✅
+
 - Base URL (`/`) already configured for main widget
 - Alternative routes (`/auth`) supported
 - Easy to add more paths if needed
 
 ### **4. Security** ✅
+
 - No wildcards (Google doesn't allow them anyway)
 - Explicit path listing (best practice)
 - Limited to localhost (not exposing to public yet)

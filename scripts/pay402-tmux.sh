@@ -105,15 +105,22 @@ if [ -n "$SWITCH_NETWORK" ]; then
   echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
   echo ""
   
+  # Map user-friendly names to sui client environment names
+  # User says --localnet, but sui client knows it as 'local'
+  SUI_ENV_NAME="$SWITCH_NETWORK"
+  if [ "$SWITCH_NETWORK" = "localnet" ]; then
+    SUI_ENV_NAME="local"
+  fi
+  
   # Switch sui client environment
   echo "1️⃣  Switching sui client..."
-  sui client switch --env "$SWITCH_NETWORK" 2>/dev/null || {
-    echo "⚠️  Failed to switch to $SWITCH_NETWORK (environment may not exist)"
+  sui client switch --env "$SUI_ENV_NAME" 2>/dev/null || {
+    echo "⚠️  Failed to switch to $SUI_ENV_NAME (environment may not exist)"
     echo "   Available environments:"
     sui client envs
     exit 1
   }
-  echo "   ✅ sui client now on: $SWITCH_NETWORK"
+  echo "   ✅ sui client now on: $SUI_ENV_NAME"
   echo ""
   
   # Update .env files in facilitator, merchant, and widget
@@ -256,8 +263,9 @@ if [ $? != 0 ]; then
   echo ""
   
   # Ensure localnet is running (only if on localnet)
+  # Note: sui client calls it 'local', not 'localnet'
   CURRENT_ENV=$(sui client active-env 2>/dev/null || echo "unknown")
-  if [ "$CURRENT_ENV" = "localnet" ]; then
+  if [ "$CURRENT_ENV" = "local" ]; then
     echo "🔍 Checking Suibase localnet..."
     if ! localnet status | grep -q "running"; then
       echo "⚠️  Localnet not running. Starting it..."
@@ -348,7 +356,8 @@ if [ $? != 0 ]; then
     FACILITATOR_ADDR=$(grep "^FACILITATOR_ADDRESS=" .env 2>/dev/null | cut -d= -f2)
     # Fallback: try to get from private key
     if [ -z "$FACILITATOR_ADDR" ]; then
-      if [ "$ACTIVE_ENV" = "localnet" ]; then
+      # Note: sui client calls it 'local', not 'localnet'
+      if [ "$ACTIVE_ENV" = "local" ]; then
         FACILITATOR_ADDR=$(lsui client active-address 2>/dev/null)
       else
         FACILITATOR_ADDR=$(sui client active-address 2>/dev/null)
@@ -364,7 +373,8 @@ if [ $? != 0 ]; then
     echo "  Address: $FACILITATOR_ADDR"
     
     # Check balance (returns in MIST, 1 SUI = 1_000_000_000 MIST)
-    if [ "$ACTIVE_ENV" = "localnet" ]; then
+    # Note: sui client calls it 'local', not 'localnet'
+    if [ "$ACTIVE_ENV" = "local" ]; then
       BALANCE=$(lsui client gas --json 2>/dev/null | jq -r '[.[].balance] | add // 0' 2>/dev/null || echo "0")
     else
       BALANCE=$(sui client gas "$FACILITATOR_ADDR" --json 2>/dev/null | jq -r '[.[].balance] | add // 0' 2>/dev/null || echo "0")
@@ -386,7 +396,8 @@ if [ $? != 0 ]; then
     if [ "$BALANCE" -lt "$THRESHOLD" ]; then
       echo "  ⚠️  Low balance (< $THRESHOLD_MSG) - requesting funds..."
       
-      if [ "$ACTIVE_ENV" = "localnet" ]; then
+      # Note: sui client calls it 'local', not 'localnet'
+      if [ "$ACTIVE_ENV" = "local" ]; then
         # Localnet: Use embedded faucet (automatic)
         lsui client faucet --address "$FACILITATOR_ADDR" 2>/dev/null || {
           echo "  ❌  Faucet request failed"

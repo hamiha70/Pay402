@@ -169,6 +169,84 @@ if [ -n "$SWITCH_NETWORK" ]; then
   fi
 fi
 
+# ========================================
+# SAFETY CHECK: Ensure .env files exist
+# If no flags were used, check if .env files exist.
+# If missing, copy from .env.<active-network>.example
+# This prevents first-run failures.
+# ========================================
+if [ -z "$SWITCH_NETWORK" ]; then
+  CURRENT_ENV=$(sui client active-env 2>/dev/null || echo "localnet")
+  
+  # Map 'local' to 'localnet' for .env file naming consistency
+  if [ "$CURRENT_ENV" = "local" ]; then
+    CURRENT_ENV="localnet"
+  fi
+  
+  NEEDS_SETUP=false
+  
+  # Check facilitator
+  if [ ! -f "$PROJECT_DIR/facilitator/.env" ]; then
+    echo "⚠️  facilitator/.env missing"
+    NEEDS_SETUP=true
+  fi
+  
+  # Check merchant
+  if [ ! -f "$PROJECT_DIR/merchant/.env" ]; then
+    echo "⚠️  merchant/.env missing"
+    NEEDS_SETUP=true
+  fi
+  
+  # Check widget
+  if [ ! -f "$PROJECT_DIR/widget/.env.local" ]; then
+    echo "⚠️  widget/.env.local missing"
+    NEEDS_SETUP=true
+  fi
+  
+  if [ "$NEEDS_SETUP" = true ]; then
+    echo ""
+    echo "🔧 First-time setup detected - copying .env templates for: $CURRENT_ENV"
+    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    
+    # Facilitator
+    if [ ! -f "$PROJECT_DIR/facilitator/.env" ]; then
+      if [ -f "$PROJECT_DIR/facilitator/.env.$CURRENT_ENV.example" ]; then
+        cp "$PROJECT_DIR/facilitator/.env.$CURRENT_ENV.example" "$PROJECT_DIR/facilitator/.env"
+        echo "   ✅ Facilitator: .env.$CURRENT_ENV.example → .env"
+      else
+        echo "   ❌ Facilitator: .env.$CURRENT_ENV.example not found!"
+        exit 1
+      fi
+    fi
+    
+    # Merchant
+    if [ ! -f "$PROJECT_DIR/merchant/.env" ]; then
+      if [ -f "$PROJECT_DIR/merchant/.env.$CURRENT_ENV.example" ]; then
+        cp "$PROJECT_DIR/merchant/.env.$CURRENT_ENV.example" "$PROJECT_DIR/merchant/.env"
+        echo "   ✅ Merchant: .env.$CURRENT_ENV.example → .env"
+      else
+        echo "   ❌ Merchant: .env.$CURRENT_ENV.example not found!"
+        exit 1
+      fi
+    fi
+    
+    # Widget
+    if [ ! -f "$PROJECT_DIR/widget/.env.local" ]; then
+      if [ -f "$PROJECT_DIR/widget/.env.$CURRENT_ENV.example" ]; then
+        cp "$PROJECT_DIR/widget/.env.$CURRENT_ENV.example" "$PROJECT_DIR/widget/.env.local"
+        echo "   ✅ Widget: .env.$CURRENT_ENV.example → .env.local"
+      else
+        echo "   ❌ Widget: .env.$CURRENT_ENV.example not found!"
+        exit 1
+      fi
+    fi
+    
+    echo "✅ Configuration files created for: $CURRENT_ENV"
+    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    echo ""
+  fi
+fi
+
 # Check if session exists
 tmux has-session -t $SESSION_NAME 2>/dev/null
 

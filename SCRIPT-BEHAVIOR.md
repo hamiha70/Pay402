@@ -9,6 +9,7 @@ The `pay402-tmux.sh` script now has **intelligent configuration management** tha
 ## 🎯 Key Features
 
 ### 1. **Network Switching with Flags** (`--testnet` / `--localnet`)
+
 When you explicitly switch networks using flags, the script ensures **complete consistency**:
 
 ```bash
@@ -16,12 +17,14 @@ When you explicitly switch networks using flags, the script ensures **complete c
 ```
 
 **What happens:**
+
 1. ✅ Switches `sui client` to testnet
 2. ✅ Copies `.env.testnet.example` → `.env` for all services
 3. ✅ Kills existing tmux session (if present)
 4. ✅ Creates fresh session with correct config
 
 **Output:**
+
 ```
 🔄 Switching network to: testnet
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -45,7 +48,8 @@ When you explicitly switch networks using flags, the script ensures **complete c
 
 ---
 
-### 2. **Safety Check (No Flags)** 
+### 2. **Safety Check (No Flags)**
+
 When you run the script **without flags**, it checks if `.env` files exist:
 
 ```bash
@@ -53,11 +57,13 @@ When you run the script **without flags**, it checks if `.env` files exist:
 ```
 
 **What happens:**
+
 - If `.env` files are **missing** → copies from `.env.<active-network>.example`
 - If `.env` files **exist** → uses them as-is (no overwrite)
 - Uses your current `sui client` environment to determine which templates to use
 
 **Example (first run on testnet):**
+
 ```
 ⚠️  facilitator/.env missing
 ⚠️  merchant/.env missing
@@ -73,10 +79,12 @@ When you run the script **without flags**, it checks if `.env` files exist:
 ```
 
 **Example (subsequent runs):**
+
 ```
 🚀 Creating new tmux session: pay402
 📦 Starting all services...
 ```
+
 (No warnings - files already exist)
 
 ---
@@ -116,9 +124,11 @@ When you run the script **without flags**, it checks if `.env` files exist:
 ## 🔒 Safety Mechanisms
 
 ### Automatic Backups
+
 When the script copies `.env` files, it uses **complete templates** (`.env.<network>.example`) that contain all fields. This prevents data loss.
 
 **Example structure:**
+
 ```
 facilitator/
 ├── .env                    # Active config (testnet or localnet)
@@ -128,7 +138,9 @@ facilitator/
 ```
 
 ### Environment Name Mapping
+
 The script handles `sui client` environment name variations:
+
 - `local` (sui environment) → `localnet` (our .env naming)
 - `testnet` → `testnet`
 - `devnet` → `devnet`
@@ -139,6 +151,7 @@ The script handles `sui client` environment name variations:
 ## 🎬 Usage Examples
 
 ### Example 1: First-Time Setup (No .env files)
+
 ```bash
 # Ensure sui client is on testnet
 sui client switch --env testnet
@@ -146,16 +159,20 @@ sui client switch --env testnet
 # Run script (will auto-create .env files)
 ./scripts/pay402-tmux.sh
 ```
+
 **Result:** Creates `.env` files from `.env.testnet.example`
 
 ---
 
 ### Example 2: Switch to Testnet (Existing Session)
+
 ```bash
 # You were on localnet, now want testnet
 ./scripts/pay402-tmux.sh --testnet
 ```
-**Result:** 
+
+**Result:**
+
 - Switches sui client
 - Overwrites all `.env` files with testnet configs
 - Kills old session
@@ -164,10 +181,13 @@ sui client switch --env testnet
 ---
 
 ### Example 3: Switch to Localnet
+
 ```bash
 ./scripts/pay402-tmux.sh --localnet
 ```
+
 **Result:**
+
 - Switches sui client to `local` (maps to localnet)
 - Overwrites all `.env` files with localnet configs
 - Kills old session
@@ -176,11 +196,14 @@ sui client switch --env testnet
 ---
 
 ### Example 4: Just Attach (No Changes)
+
 ```bash
 # Already on testnet, .env files exist
 ./scripts/pay402-tmux.sh
 ```
+
 **Result:**
+
 - Attaches to existing session (if running)
 - OR creates new session with current configs
 - No overwriting of .env files
@@ -190,19 +213,25 @@ sui client switch --env testnet
 ## ⚠️ Important Notes
 
 ### When .env Files Are Overwritten
+
 **.env files are ONLY overwritten when:**
+
 1. You use `--testnet` or `--localnet` flags
 2. Files are missing (safety check)
 
 **.env files are NEVER overwritten when:**
+
 - You run script without flags AND files already exist
 
 ### Session Management
+
 **Session is killed when:**
+
 - You use `--testnet` or `--localnet` flag AND session exists
   (Necessary to apply new network config)
 
 **Session is preserved when:**
+
 - You run without flags
 - No existing session (creates new one)
 
@@ -211,7 +240,9 @@ sui client switch --env testnet
 ## 🐛 Troubleshooting
 
 ### Issue: "Config mismatch between sui client and .env"
+
 **Solution:** Use explicit flag to force sync:
+
 ```bash
 # Force everything to testnet
 ./scripts/pay402-tmux.sh --testnet
@@ -221,7 +252,9 @@ sui client switch --env testnet
 ```
 
 ### Issue: "Tests running on wrong network"
+
 **Diagnosis:**
+
 ```bash
 # Check sui client
 sui client active-env
@@ -233,6 +266,7 @@ grep "^VITE_SUI_NETWORK=" widget/.env.local
 ```
 
 **Solution:** If mismatched, run with flag:
+
 ```bash
 ./scripts/pay402-tmux.sh --testnet
 ```
@@ -244,6 +278,7 @@ grep "^VITE_SUI_NETWORK=" widget/.env.local
 When network switching occurs (with flags), these files are updated:
 
 ### Facilitator (`facilitator/.env`)
+
 - `SUI_NETWORK`
 - `PACKAGE_ID`
 - `RPC_URL`
@@ -252,12 +287,14 @@ When network switching occurs (with flags), these files are updated:
 - `TREASURY_OWNER_ADDRESS` (testnet only)
 
 ### Merchant (`merchant/.env`)
+
 - `SUI_NETWORK`
 - `PACKAGE_ID`
 - `RPC_URL`
 - API keys (if present)
 
 ### Widget (`widget/.env.local`)
+
 - `VITE_SUI_NETWORK`
 - `VITE_PACKAGE_ID`
 - `VITE_RPC_URL`
@@ -269,11 +306,13 @@ When network switching occurs (with flags), these files are updated:
 ## 🚀 Best Practices
 
 ### For Development
+
 1. **First time:** Run `./scripts/setup-env.sh` to create all templates
 2. **Daily work:** Just run `./scripts/pay402-tmux.sh` (attaches to existing session)
 3. **Switch networks:** Use flags (`--testnet` or `--localnet`)
 
 ### For Testing
+
 ```bash
 # Test on testnet
 ./scripts/pay402-tmux.sh --testnet
@@ -285,6 +324,7 @@ cd facilitator && npm run test
 ```
 
 ### For CI/CD
+
 ```bash
 # Always explicit
 ./scripts/pay402-tmux.sh --testnet
@@ -294,11 +334,11 @@ cd facilitator && npm run test
 
 ## 🎓 Summary
 
-| Scenario | Command | What Happens |
-|----------|---------|--------------|
-| First run (no .env) | `./pay402-tmux.sh` | Creates .env from current sui env |
-| Regular run (.env exists) | `./pay402-tmux.sh` | Uses existing .env, attaches session |
-| Force testnet | `./pay402-tmux.sh --testnet` | Overwrites .env, kills session, creates testnet session |
-| Force localnet | `./pay402-tmux.sh --localnet` | Overwrites .env, kills session, creates localnet session |
+| Scenario                  | Command                       | What Happens                                             |
+| ------------------------- | ----------------------------- | -------------------------------------------------------- |
+| First run (no .env)       | `./pay402-tmux.sh`            | Creates .env from current sui env                        |
+| Regular run (.env exists) | `./pay402-tmux.sh`            | Uses existing .env, attaches session                     |
+| Force testnet             | `./pay402-tmux.sh --testnet`  | Overwrites .env, kills session, creates testnet session  |
+| Force localnet            | `./pay402-tmux.sh --localnet` | Overwrites .env, kills session, creates localnet session |
 
 **Golden Rule:** Use flags when you want to **force** a network. Don't use flags when you want to **preserve** current state.

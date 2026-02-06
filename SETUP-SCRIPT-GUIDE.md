@@ -20,12 +20,15 @@ That's it! Follow the interactive prompts.
 ## 📋 **What It Does**
 
 ### **1. Prerequisites Check**
+
 - Verifies `sui` CLI is installed
 - Shows version information
 - Exits with helpful error if not found
 
 ### **2. Template File Setup**
+
 Automatically copies 6 template files:
+
 ```
 facilitator/.env.localnet.example → facilitator/.env.localnet
 facilitator/.env.testnet.example  → facilitator/.env.testnet
@@ -36,26 +39,33 @@ widget/.env.testnet.example       → widget/.env.testnet
 ```
 
 ### **3. Shared Secrets (No Double Entry!)**
+
 Prompts for values used across both networks:
+
 - **Enoki API Key** (public key)
 - **Google OAuth Client ID**
 
 **Key Feature:** Enter once, automatically updates BOTH localnet and testnet configs!
 
 ### **4. Input Validation**
+
 - **Enoki API Key:** Must match `enoki_public_[64 hex chars]`
 - **Google Client ID:** Must match `NNNN-XXX.apps.googleusercontent.com`
 - Prevents typos and format errors
 
 ### **5. Facilitator Key Generation**
+
 Two options:
+
 - **Auto-generate** (recommended): Creates new keys via `sui client new-address ed25519`
 - **Use existing**: Enter your own keys
 
 Generates **separate keys** for localnet and testnet (security best practice).
 
 ### **6. Summary & Next Steps**
+
 Shows:
+
 - All configured values (truncated for security)
 - Files created
 - Next commands to run
@@ -160,12 +170,15 @@ Files Created:
 ## 🔧 **Advanced Usage**
 
 ### **Force Reconfigure**
+
 ```bash
 ./scripts/setup-env.sh --force
 ```
+
 Overwrites existing configuration files without prompting.
 
 ### **Check Existing Config**
+
 ```bash
 # Script automatically detects existing configs and asks:
 ⚠️  Configuration files already exist.
@@ -186,18 +199,21 @@ Do you want to reconfigure? This will overwrite existing files. (y/n):
 ### **Before (Manual Setup)**
 
 **Step 1:** Edit `widget/.env.localnet`:
+
 ```env
 VITE_ENOKI_API_KEY=enoki_public_7edbeb7decb38349...
 VITE_GOOGLE_CLIENT_ID=300529773657-mfq7blj3s6ilhskpeva3fvutisa5sbej.apps.googleusercontent.com
 ```
 
 **Step 2:** Edit `widget/.env.testnet` with **SAME VALUES**:
+
 ```env
 VITE_ENOKI_API_KEY=enoki_public_7edbeb7decb38349...  # ← Enter again!
 VITE_GOOGLE_CLIENT_ID=300529773657-mfq7blj3s6ilhskpeva3fvutisa5sbej.apps.googleusercontent.com  # ← Enter again!
 ```
 
 **Problems:**
+
 - ❌ Annoying to enter twice
 - ❌ Risk of typos
 - ❌ Values might not match
@@ -205,17 +221,20 @@ VITE_GOOGLE_CLIENT_ID=300529773657-mfq7blj3s6ilhskpeva3fvutisa5sbej.apps.googleu
 ### **After (Setup Script)**
 
 **Script prompts ONCE:**
+
 ```
 Enter your Enoki API Key: enoki_public_7edbeb7de...
 Enter your Google Client ID: 300529773657-mfq7blj3s6i...
 ```
 
 **Script updates BOTH files automatically:**
+
 ```
 ✅ Widget configs updated (localnet + testnet)
 ```
 
 **Result:**
+
 - ✅ Enter once
 - ✅ No typos
 - ✅ Guaranteed to match
@@ -225,14 +244,17 @@ Enter your Google Client ID: 300529773657-mfq7blj3s6i...
 ## 🔒 **Security Features**
 
 ### **Separate Network Keys**
+
 The script generates **different facilitator keys** for localnet and testnet:
 
 **Why?**
+
 - ✅ Isolates risk: Compromised localnet key doesn't affect testnet
 - ✅ Prevents accidents: Can't accidentally drain testnet funds from localnet
 - ✅ Best practice: Production security separation
 
 ### **Input Validation**
+
 All inputs are validated with regex:
 
 ```bash
@@ -256,6 +278,7 @@ fi
 ## 📊 **Time Comparison**
 
 ### **Manual Setup (Before)**
+
 ```
 1. Copy 6 template files manually                   (2 min)
 2. Edit widget/.env.localnet (2 values)            (1 min)
@@ -271,6 +294,7 @@ Errors: High (typos, copy-paste, forgotten files)
 ```
 
 ### **Setup Script (After)**
+
 ```
 1. Run: ./scripts/setup-env.sh                     (0.5 min)
 2. Enter Enoki API key (once)                      (0.5 min)
@@ -291,6 +315,7 @@ Errors: Low (validated inputs, automated updates)
 ### **"sui CLI not found"**
 
 **Error:**
+
 ```
 ❌ Error: sui CLI not found
 
@@ -307,17 +332,20 @@ Install Rust and SUI CLI as instructed.
 ### **"Invalid Enoki API key format"**
 
 **Error:**
+
 ```
 ❌ Invalid format. Expected: enoki_public_[64 hex characters]
    Example: enoki_public_7edbeb7decb38349e30a6d900cdc8843...
 ```
 
 **Common mistakes:**
+
 - Using **private key** instead of **public key**
 - Including spaces or quotes
 - Truncated key (must be full 64 hex chars after prefix)
 
 **Solution:**
+
 - Go to https://portal.enoki.mystenlabs.com
 - Copy the **PUBLIC** API key (starts with `enoki_public_`)
 - Don't copy private key (starts with `enoki_private_`)
@@ -327,17 +355,20 @@ Install Rust and SUI CLI as instructed.
 ### **"Invalid Google Client ID format"**
 
 **Error:**
+
 ```
 ❌ Invalid format. Expected: NNNNNN-XXXXX.apps.googleusercontent.com
    Example: 300529773657-abc123.apps.googleusercontent.com
 ```
 
 **Common mistakes:**
+
 - Missing `.apps.googleusercontent.com` suffix
 - Including `https://` prefix
 - Including spaces or quotes
 
 **Solution:**
+
 - Go to https://console.cloud.google.com
 - Navigate to: APIs & Services → Credentials
 - Copy the **Client ID** (not Client Secret!)
@@ -348,15 +379,18 @@ Install Rust and SUI CLI as instructed.
 ### **"Failed to generate key"**
 
 **Error:**
+
 ```
 ❌ Failed to generate localnet key
 ```
 
 **Possible causes:**
+
 - `sui client` not responding
 - No active sui environment configured
 
 **Solution:**
+
 ```bash
 # Check sui client status
 sui client active-env
@@ -383,26 +417,34 @@ sui client switch --env localnet
 ## 💡 **Tips**
 
 ### **1. Keep Your Keys Secure**
+
 The script generates and stores private keys in `.env` files. These are gitignored, but:
+
 - ✅ Back them up securely
 - ✅ Don't share them publicly
 - ✅ Use different keys for production
 
 ### **2. Test on Localnet First**
+
 Always test your setup on localnet before trying testnet:
+
 ```bash
 ./scripts/pay402-tmux.sh --localnet  # Test here first
 ./scripts/pay402-tmux.sh --testnet   # Then try testnet
 ```
 
 ### **3. Reconfigure If Needed**
+
 If you get new API keys or want to change configuration:
+
 ```bash
 ./scripts/setup-env.sh --force
 ```
 
 ### **4. Verify After Setup**
+
 Check that files were created correctly:
+
 ```bash
 ls -la facilitator/.env.* merchant/.env.* widget/.env.*
 ```

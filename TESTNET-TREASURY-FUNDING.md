@@ -8,14 +8,23 @@ This eliminates manual faucet interactions and enables fully automated testnet o
 
 ---
 
-## 🏦 Treasury Address
+## 🏦 Treasury/Deployer Address
 
 ```
 Address: 0x44118d0b343e8cb4203bdd4d75321a2eec4a9ec3c4778dcdda715fee18945995
-Alias:   heuristic-pearl
+Alias:   heuristic-pearl (should be your active address)
+Role:    Treasury + Deployer + Internal Faucet
 ```
 
-This address acts as an **internal faucet** for testnet development.
+This is the **main testnet address** you manually fund. It:
+- 📦 Deploys Move contracts (or could be used for deployment)
+- 🏦 Acts as internal faucet for other test addresses
+- 💰 Holds the primary SUI/USDC balance for testnet operations
+
+**Set as active address:**
+```bash
+sui client switch --address heuristic-pearl
+```
 
 ---
 
@@ -73,6 +82,7 @@ https://faucet.sui.io/?address=0x44118d0b343e8cb4203bdd4d75321a2eec4a9ec3c4778dc
 ```
 
 **Or manually:**
+
 1. Go to https://faucet.sui.io
 2. Paste address: `0x44118d0b343e8cb4203bdd4d75321a2eec4a9ec3c4778dcdda715fee18945995`
 3. Complete CAPTCHA
@@ -94,6 +104,7 @@ sui client gas 0x44118d0b343e8cb4203bdd4d75321a2eec4a9ec3c4778dcdda715fee1894599
 ```
 
 **Expected output:**
+
 ```
 💰 Checking facilitator balance on testnet...
   Address: 0x2616cf141ab19b9dd657ac652fbcda65a7cbd437c1eb7cb7f28d5c4f5859e618
@@ -116,34 +127,39 @@ sui client gas 0x44118d0b343e8cb4203bdd4d75321a2eec4a9ec3c4778dcdda715fee1894599
 
 ### Thresholds
 
-| Parameter | Value | Reason |
-|-----------|-------|--------|
-| **Facilitator Threshold** | 0.1 SUI | Triggers auto-funding |
-| **Treasury Minimum** | 0.5 SUI | Enough for 1 transfer + gas |
-| **Transfer Amount** | 0.5 SUI | Provides buffer for multiple test runs |
+| Parameter                 | Value   | Reason                                 |
+| ------------------------- | ------- | -------------------------------------- |
+| **Facilitator Threshold** | 0.1 SUI | Triggers auto-funding                  |
+| **Treasury Minimum**      | 0.5 SUI | Enough for 1 transfer + gas            |
+| **Transfer Amount**       | 0.5 SUI | Provides buffer for multiple test runs |
 
 ### Addresses
 
-| Role | Address | Private Key Location |
-|------|---------|---------------------|
-| **Facilitator** | `0x2616...e618` | `facilitator/.env.testnet.example` → `FACILITATOR_PRIVATE_KEY` |
-| **Treasury** | `0x4411...5995` | Imported in `sui client` (alias: `heuristic-pearl`) |
+| Role                  | Address         | Private Key Location                                            | Active?        |
+| --------------------- | --------------- | --------------------------------------------------------------- | -------------- |
+| **Treasury/Deployer** | `0x4411...5995` | Imported in `sui client` (alias: `heuristic-pearl`)             | ✅ **Yes** (default) |
+| **Facilitator**       | `0x2616...e618` | `facilitator/.env.testnet.example` → `FACILITATOR_PRIVATE_KEY`  | No             |
+
+**Recommended setup:** Keep `heuristic-pearl` (Treasury/Deployer) as your active address for daily operations.
 
 ---
 
 ## 🔍 Monitoring
 
 ### Check Facilitator Balance
+
 ```bash
 sui client gas 0x2616cf141ab19b9dd657ac652fbcda65a7cbd437c1eb7cb7f28d5c4f5859e618 --json | jq -r '[.[].balance] | add // 0' | awk '{printf "%.2f SUI\n", $1/1000000000}'
 ```
 
 ### Check Treasury Balance
+
 ```bash
 sui client gas 0x44118d0b343e8cb4203bdd4d75321a2eec4a9ec3c4778dcdda715fee18945995 --json | jq -r '[.[].balance] | add // 0' | awk '{printf "%.2f SUI\n", $1/1000000000}'
 ```
 
 ### Switch to Treasury Manually (for debugging)
+
 ```bash
 sui client switch --address heuristic-pearl
 sui client gas
@@ -156,6 +172,7 @@ sui client gas
 ### Issue: "Treasury has insufficient funds!"
 
 **Output:**
+
 ```
 ❌ Treasury has insufficient funds!
 📋 Please fund Treasury address manually:
@@ -167,6 +184,7 @@ sui client gas
 ```
 
 **Solution:**
+
 1. Visit faucet link provided
 2. Request SUI from testnet faucet
 3. Wait 10-30 seconds
@@ -177,6 +195,7 @@ sui client gas
 ### Issue: "Treasury address not found in sui client"
 
 **Output:**
+
 ```
 ❌ Treasury address not found in sui client
 💡 Please import Treasury private key using: sui client new-address
@@ -188,6 +207,7 @@ sui client gas
 The Treasury address should already be in your `sui client` (check with `sui client addresses`). If missing, you need to import it.
 
 **Check if present:**
+
 ```bash
 sui client addresses | grep "heuristic-pearl"
 ```
@@ -199,6 +219,7 @@ If not present, contact the team lead for the Treasury private key.
 ### Issue: "Transfer failed"
 
 **Output:**
+
 ```
 ❌ Transfer failed
 💡 You may need to fund facilitator manually:
@@ -206,10 +227,13 @@ If not present, contact the team lead for the Treasury private key.
 ```
 
 **Possible causes:**
+
 1. **Insufficient gas in Treasury for transaction**
+
    - Solution: Fund Treasury with more SUI (aim for >1 SUI)
 
 2. **Network issues**
+
    - Solution: Retry after a few seconds
 
 3. **Gas coin not available**
@@ -225,10 +249,12 @@ If not present, contact the team lead for the Treasury private key.
 ### For Development
 
 1. **Fund Treasury once** at the start of the day/week
+
    - Aim for **2-5 SUI** to cover multiple test runs
    - Faucet typically provides **1 SUI per request**
 
 2. **Monitor Treasury balance** periodically
+
    ```bash
    sui client gas heuristic-pearl
    ```
@@ -239,6 +265,7 @@ If not present, contact the team lead for the Treasury private key.
 ### For CI/CD
 
 If running in CI, you would:
+
 1. Pre-fund Treasury address in CI setup
 2. Run `./scripts/pay402-tmux.sh --testnet` in tests
 3. Script auto-funds as needed
@@ -255,6 +282,7 @@ sui client tx-history --json | jq '.data[] | {digest, timestamp}'
 ```
 
 Or via explorer:
+
 ```
 https://testnet.suivision.xyz/account/0x44118d0b343e8cb4203bdd4d75321a2eec4a9ec3c4778dcdda715fee18945995
 ```
@@ -286,15 +314,16 @@ sui client chain-identifier
 
 ### Testnet SUI Costs
 
-| Operation | Cost | Frequency |
-|-----------|------|-----------|
-| Transfer 0.5 SUI | ~0.001 SUI gas | Per auto-fund |
-| Test run (facilitator) | ~0.05 SUI | Per test suite |
-| Daily usage (estimate) | ~0.5 SUI | 10 test runs |
+| Operation              | Cost           | Frequency      |
+| ---------------------- | -------------- | -------------- |
+| Transfer 0.5 SUI       | ~0.001 SUI gas | Per auto-fund  |
+| Test run (facilitator) | ~0.05 SUI      | Per test suite |
+| Daily usage (estimate) | ~0.5 SUI       | 10 test runs   |
 
 ### Refill Frequency
 
 With **2 SUI in Treasury:**
+
 - Supports ~4 auto-funding cycles (0.5 SUI each)
 - Or ~40 test runs before needing refill
 - **Estimate:** Refill every **2-3 days** of heavy testing
@@ -306,10 +335,16 @@ With **2 SUI in Treasury:**
 ### Commands
 
 ```bash
+# Set Treasury as active address (recommended)
+sui client switch --address heuristic-pearl
+
 # Fund Treasury (one-time)
 open "https://faucet.sui.io/?address=0x44118d0b343e8cb4203bdd4d75321a2eec4a9ec3c4778dcdda715fee18945995"
 
-# Check Treasury balance
+# Check Treasury balance (if active address)
+sui client gas
+
+# Or check by address
 sui client gas heuristic-pearl
 
 # Check Facilitator balance
@@ -325,8 +360,8 @@ sui client chain-identifier  # Should be: 4c78adac
 ### Addresses (Quick Copy)
 
 ```
-Treasury:    0x44118d0b343e8cb4203bdd4d75321a2eec4a9ec3c4778dcdda715fee18945995
-Facilitator: 0x2616cf141ab19b9dd657ac652fbcda65a7cbd437c1eb7cb7f28d5c4f5859e618
+Treasury/Deployer (ACTIVE): 0x44118d0b343e8cb4203bdd4d75321a2eec4a9ec3c4778dcdda715fee18945995
+Facilitator:                0x2616cf141ab19b9dd657ac652fbcda65a7cbd437c1eb7cb7f28d5c4f5859e618
 ```
 
 ---

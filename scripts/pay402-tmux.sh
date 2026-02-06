@@ -160,6 +160,51 @@ if [ $? != 0 ]; then
   echo ""
   
   # ========================================
+  # STEP 1: Auto-Fund Facilitator (Localnet Only)
+  # ========================================
+  cd "$PROJECT_DIR/facilitator"
+  if [ -f .env ]; then
+    NETWORK=$(grep "^SUI_NETWORK=" .env | cut -d'=' -f2 | tr -d '"' | tr -d "'" | xargs)
+    
+    if [ "$NETWORK" = "localnet" ]; then
+      echo "💰 Checking facilitator balance on localnet..."
+      
+      # Get facilitator address from active sui client
+      FACILITATOR_ADDR=$(lsui client active-address 2>/dev/null)
+      
+      if [ -n "$FACILITATOR_ADDR" ]; then
+        # Check balance (returns in MIST, 1 SUI = 1_000_000_000 MIST)
+        BALANCE=$(lsui client gas --json 2>/dev/null | jq -r '[.[].balance] | add // 0' 2>/dev/null || echo "0")
+        BALANCE_SUI=$((BALANCE / 1000000000))
+        
+        echo "  Address: $FACILITATOR_ADDR"
+        echo "  Balance: $BALANCE_SUI SUI"
+        
+        # Fund if balance < 1 SUI (1_000_000_000 MIST)
+        if [ "$BALANCE" -lt 1000000000 ]; then
+          echo "  ⚠️  Low balance - requesting funds from faucet..."
+          lsui client faucet --address "$FACILITATOR_ADDR" 2>/dev/null || {
+            echo "  ⚠️  Faucet request failed (may need manual funding)"
+          }
+          sleep 2
+          NEW_BALANCE=$(lsui client gas --json 2>/dev/null | jq -r '[.[].balance] | add // 0' 2>/dev/null || echo "0")
+          NEW_BALANCE_SUI=$((NEW_BALANCE / 1000000000))
+          echo "  ✅ Updated balance: $NEW_BALANCE_SUI SUI"
+        else
+          echo "  ✅ Sufficient balance"
+        fi
+      else
+        echo "  ⚠️  Could not determine facilitator address"
+      fi
+    else
+      echo "⚠️  Network: $NETWORK - skipping auto-fund (manual funding required)"
+    fi
+  else
+    echo "⚠️  No .env file found - skipping auto-fund check"
+  fi
+  echo ""
+  
+  # ========================================
   # START SERVICES
   # ========================================
   

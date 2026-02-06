@@ -43,14 +43,29 @@ if [ "$CHAIN_NAME" = "local" ]; then
 fi
 
 # Check if already deployed (unless --force)
-EXISTING_PACKAGE_ID=$(grep "^PACKAGE_ID=" ../../facilitator/.env 2>/dev/null | cut -d= -f2 || echo "")
+# Priority: Read from network-specific .env file first, fallback to .env
+ENV_FILE="../../facilitator/.env"
+if [ -f "../../facilitator/.env.$CHAIN_NAME" ]; then
+  ENV_FILE="../../facilitator/.env.$CHAIN_NAME"
+  echo "📋 Using network-specific config: .env.$CHAIN_NAME"
+fi
+
+EXISTING_PACKAGE_ID=$(grep "^PACKAGE_ID=" "$ENV_FILE" 2>/dev/null | cut -d= -f2 || echo "")
+
 if [ -n "$EXISTING_PACKAGE_ID" ] && [ "$EXISTING_PACKAGE_ID" != "0x0" ] && [ "$FORCE_DEPLOY" = false ]; then
-  echo "✅ Contract already deployed!"
-  echo "📦 Package ID: $EXISTING_PACKAGE_ID"
-  echo "🌐 Network: $CHAIN_NAME"
-  echo ""
-  echo "💡 To re-deploy: ./deploy-local.sh --force"
-  exit 0
+  # Verify package exists on current network
+  echo "🔍 Verifying package exists on $CHAIN_NAME..."
+  if sui client object "$EXISTING_PACKAGE_ID" --json >/dev/null 2>&1; then
+    echo "✅ Contract already deployed!"
+    echo "📦 Package ID: $EXISTING_PACKAGE_ID"
+    echo "🌐 Network: $CHAIN_NAME"
+    echo ""
+    echo "💡 To re-deploy: ./deploy-local.sh --force"
+    exit 0
+  else
+    echo "⚠️  Package ID $EXISTING_PACKAGE_ID not found on $CHAIN_NAME"
+    echo "    Proceeding with fresh deployment..."
+  fi
 fi
 
 if [ "$FORCE_DEPLOY" = true ]; then

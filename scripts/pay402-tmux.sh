@@ -3,12 +3,15 @@
 # Enhanced with auto-start, browser opening, and convenience commands
 #
 # Usage: 
-#   ./pay402-tmux.sh           # Start/attach to session
-#   ./pay402-tmux.sh --kill    # Kill session and all servers
-#   ./pay402-tmux.sh --help    # Show help
+#   ./pay402-tmux.sh                # Start/attach to session (uses current sui env)
+#   ./pay402-tmux.sh --localnet     # Switch to localnet and start
+#   ./pay402-tmux.sh --testnet      # Switch to testnet and start
+#   ./pay402-tmux.sh --kill         # Kill session and all servers
+#   ./pay402-tmux.sh --help         # Show help
 
 SESSION_NAME="pay402"
 PROJECT_DIR="$HOME/Projects/ETHGlobal/HackMoney_Jan26/Pay402"
+SWITCH_NETWORK=""
 
 # Parse arguments
 if [ "$1" = "--kill" ]; then
@@ -24,14 +27,32 @@ if [ "$1" = "--kill" ]; then
   exit 0
 fi
 
+if [ "$1" = "--localnet" ]; then
+  SWITCH_NETWORK="localnet"
+  echo "🔄 Will switch to localnet..."
+fi
+
+if [ "$1" = "--testnet" ]; then
+  SWITCH_NETWORK="testnet"
+  echo "🔄 Will switch to testnet..."
+fi
+
 if [ "$1" = "--help" ]; then
   cat << EOF
 Pay402 Development Environment
 
 Usage:
-  ./pay402-tmux.sh           Start/attach to development session
-  ./pay402-tmux.sh --kill    Kill session and all servers
-  ./pay402-tmux.sh --help    Show this help
+  ./pay402-tmux.sh                Start/attach to development session (uses current sui env)
+  ./pay402-tmux.sh --localnet     Switch to localnet and start all services
+  ./pay402-tmux.sh --testnet      Switch to testnet and start all services
+  ./pay402-tmux.sh --kill         Kill session and all servers
+  ./pay402-tmux.sh --help         Show this help
+
+Network Switching:
+  --localnet    Switches sui client to localnet, updates all .env files, deploys contracts
+  --testnet     Switches sui client to testnet, updates all .env files, uses deployed contracts
+  
+  Without flags, uses whatever sui environment is currently active.
 
 Tmux Key Bindings:
   Ctrl-b + arrow keys   Navigate between panes
@@ -82,12 +103,60 @@ if [ $? != 0 ]; then
   echo "📦 Starting all services..."
   echo ""
   
-  # Ensure localnet is running
-  echo "🔍 Checking Suibase localnet..."
-  if ! localnet status | grep -q "running"; then
-    echo "⚠️  Localnet not running. Starting it..."
-    localnet start
-    sleep 2
+  # ========================================
+  # STEP -1: Network Switching (if requested)
+  # ========================================
+  if [ -n "$SWITCH_NETWORK" ]; then
+    echo "🔄 Switching sui client environment to: $SWITCH_NETWORK"
+    sui client switch --env "$SWITCH_NETWORK" 2>/dev/null || {
+      echo "⚠️  Failed to switch to $SWITCH_NETWORK (environment may not exist)"
+      echo "   Available environments:"
+      sui client envs
+      exit 1
+    }
+    
+    echo "✅ Switched to: $SWITCH_NETWORK"
+    echo ""
+    
+    # Update .env files in facilitator, merchant, and widget
+    echo "📝 Updating .env files to match $SWITCH_NETWORK..."
+    
+    # Facilitator
+    if [ -f "$PROJECT_DIR/facilitator/.env.$SWITCH_NETWORK" ]; then
+      cp "$PROJECT_DIR/facilitator/.env.$SWITCH_NETWORK" "$PROJECT_DIR/facilitator/.env"
+      echo "  ✅ Facilitator: .env.$SWITCH_NETWORK → .env"
+    else
+      echo "  ⚠️  Facilitator: .env.$SWITCH_NETWORK not found (using current .env)"
+    fi
+    
+    # Merchant
+    if [ -f "$PROJECT_DIR/merchant/.env.$SWITCH_NETWORK" ]; then
+      cp "$PROJECT_DIR/merchant/.env.$SWITCH_NETWORK" "$PROJECT_DIR/merchant/.env"
+      echo "  ✅ Merchant: .env.$SWITCH_NETWORK → .env"
+    else
+      echo "  ⚠️  Merchant: .env.$SWITCH_NETWORK not found (using current .env)"
+    fi
+    
+    # Widget
+    if [ -f "$PROJECT_DIR/widget/.env.$SWITCH_NETWORK" ]; then
+      cp "$PROJECT_DIR/widget/.env.$SWITCH_NETWORK" "$PROJECT_DIR/widget/.env.local"
+      echo "  ✅ Widget: .env.$SWITCH_NETWORK → .env.local"
+    else
+      echo "  ⚠️  Widget: .env.$SWITCH_NETWORK not found (using current .env.local)"
+    fi
+    
+    echo ""
+  fi
+  
+  # Ensure localnet is running (only if on localnet)
+  CURRENT_ENV=$(sui client active-env 2>/dev/null || echo "unknown")
+  if [ "$CURRENT_ENV" = "localnet" ]; then
+    echo "🔍 Checking Suibase localnet..."
+    if ! localnet status | grep -q "running"; then
+      echo "⚠️  Localnet not running. Starting it..."
+      localnet start
+      sleep 2
+    fi
   fi
   
   # Create new session with 6 panes
@@ -163,44 +232,42 @@ if [ $? != 0 ]; then
   # STEP 1: Auto-Fund Facilitator (Localnet Only)
   # ========================================
   cd "$PROJECT_DIR/facilitator"
-  if [ -f .env ]; then
-    NETWORK=$(grep "^SUI_NETWORK=" .env | cut -d'=' -f2 | tr -d '"' | tr -d "'" | xargs)
+  
+  # Detect ACTUAL active network from sui client (not .env, which may be stale)
+  ACTIVE_ENV=$(sui client active-env 2>/dev/null || echo "unknown")
+  
+  if [ "$ACTIVE_ENV" = "localnet" ]; then
+    echo "💰 Checking facilitator balance on localnet..."
     
-    if [ "$NETWORK" = "localnet" ]; then
-      echo "💰 Checking facilitator balance on localnet..."
+    # Get facilitator address from active sui client (use lsui for localnet)
+    FACILITATOR_ADDR=$(lsui client active-address 2>/dev/null)
+    
+    if [ -n "$FACILITATOR_ADDR" ]; then
+      # Check balance (returns in MIST, 1 SUI = 1_000_000_000 MIST)
+      BALANCE=$(lsui client gas --json 2>/dev/null | jq -r '[.[].balance] | add // 0' 2>/dev/null || echo "0")
+      BALANCE_SUI=$((BALANCE / 1000000000))
       
-      # Get facilitator address from active sui client
-      FACILITATOR_ADDR=$(lsui client active-address 2>/dev/null)
+      echo "  Address: $FACILITATOR_ADDR"
+      echo "  Balance: $BALANCE_SUI SUI"
       
-      if [ -n "$FACILITATOR_ADDR" ]; then
-        # Check balance (returns in MIST, 1 SUI = 1_000_000_000 MIST)
-        BALANCE=$(lsui client gas --json 2>/dev/null | jq -r '[.[].balance] | add // 0' 2>/dev/null || echo "0")
-        BALANCE_SUI=$((BALANCE / 1000000000))
-        
-        echo "  Address: $FACILITATOR_ADDR"
-        echo "  Balance: $BALANCE_SUI SUI"
-        
-        # Fund if balance < 1 SUI (1_000_000_000 MIST)
-        if [ "$BALANCE" -lt 1000000000 ]; then
-          echo "  ⚠️  Low balance - requesting funds from faucet..."
-          lsui client faucet --address "$FACILITATOR_ADDR" 2>/dev/null || {
-            echo "  ⚠️  Faucet request failed (may need manual funding)"
-          }
-          sleep 2
-          NEW_BALANCE=$(lsui client gas --json 2>/dev/null | jq -r '[.[].balance] | add // 0' 2>/dev/null || echo "0")
-          NEW_BALANCE_SUI=$((NEW_BALANCE / 1000000000))
-          echo "  ✅ Updated balance: $NEW_BALANCE_SUI SUI"
-        else
-          echo "  ✅ Sufficient balance"
-        fi
+      # Fund if balance < 1 SUI (1_000_000_000 MIST)
+      if [ "$BALANCE" -lt 1000000000 ]; then
+        echo "  ⚠️  Low balance - requesting funds from faucet..."
+        lsui client faucet --address "$FACILITATOR_ADDR" 2>/dev/null || {
+          echo "  ⚠️  Faucet request failed (may need manual funding)"
+        }
+        sleep 2
+        NEW_BALANCE=$(lsui client gas --json 2>/dev/null | jq -r '[.[].balance] | add // 0' 2>/dev/null || echo "0")
+        NEW_BALANCE_SUI=$((NEW_BALANCE / 1000000000))
+        echo "  ✅ Updated balance: $NEW_BALANCE_SUI SUI"
       else
-        echo "  ⚠️  Could not determine facilitator address"
+        echo "  ✅ Sufficient balance"
       fi
     else
-      echo "⚠️  Network: $NETWORK - skipping auto-fund (manual funding required)"
+      echo "  ⚠️  Could not determine facilitator address"
     fi
   else
-    echo "⚠️  No .env file found - skipping auto-fund check"
+    echo "⚠️  Network: $ACTIVE_ENV - skipping auto-fund (manual funding required)"
   fi
   echo ""
   

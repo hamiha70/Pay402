@@ -497,27 +497,54 @@ The facilitator **automatically rejects** SUI payments on testnet:
 
 ### Quick Setup
 
+**Option 1: One-Command Localnet Setup (Recommended)**
+
+```bash
+# Start everything on localnet (auto-deploys contracts, funds facilitator)
+./scripts/pay402-tmux.sh --localnet
+
+# Visit in browser:
+# Merchant: http://localhost:3002
+# Payment Page: http://localhost:5173
+# Facilitator API: http://localhost:3001/health
+```
+
+**Option 2: One-Command Testnet Setup**
+
+```bash
+# Start everything on testnet (uses existing deployed contracts)
+./scripts/pay402-tmux.sh --testnet
+
+# Note: Requires manual facilitator funding first:
+# sui client faucet --address <FACILITATOR_ADDRESS>
+```
+
+**Option 3: Manual Setup**
+
 ```bash
 # 1. Start local SUI network
 localnet start
 
-# 2. Deploy MockUSDC (localnet only - auto-configures .env)
+# 2. Switch sui client to localnet
+sui client switch --env localnet
+
+# 3. Deploy MockUSDC (localnet only - auto-configures .env)
 ./scripts/deploy-mock-usdc.sh
 
-# 3. Deploy payment contract
+# 4. Deploy payment contract
 cd move/payment
 sui move build
 sui client publish --gas-budget 100000000
 
-# 4. Configure treasury owner (in facilitator/.env)
+# 5. Configure treasury owner (in facilitator/.env)
 # Set TREASURY_OWNER_PRIVATE_KEY to deployer's key
 # CRITICAL: Keep separate from FACILITATOR_PRIVATE_KEY
 
-# 5. Start all services (tmux)
+# 6. Start all services (tmux)
 cd ../../
 ./scripts/pay402-tmux.sh
 
-# 6. Visit in browser
+# 7. Visit in browser
 # Merchant: http://localhost:3002
 # Payment Page: http://localhost:5173
 # Facilitator API: http://localhost:3001/health
@@ -559,8 +586,8 @@ See [DEVELOPMENT_GUIDE.md](docs/development/DEVELOPMENT_GUIDE.md) for detailed s
 ### Testing Locally
 
 ```bash
-# 1. Start services
-./scripts/pay402-tmux.sh
+# 1. Start services on localnet (easiest for testing)
+./scripts/pay402-tmux.sh --localnet
 
 # 2. Visit merchant demo
 open http://localhost:3002

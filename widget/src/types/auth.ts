@@ -51,4 +51,8 @@ export interface FundingResult {
   txDigest?: string;
   amount?: number;
   error?: string;
+  message?: string;
+  manualFunding?: boolean;  // True if user needs to manually fund via faucet
+  faucetUrl?: string;        // URL to external faucet (e.g., Circle)
+  address?: string;          // Address to fund
 }

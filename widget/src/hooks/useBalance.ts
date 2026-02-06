@@ -79,12 +79,45 @@ export function useBalance(address: string | null) {
     }
   }, [address, suiClient]);
 
-  // Fund wallet via facilitator
+  // Fund wallet via facilitator (localnet) or Circle faucet (testnet)
   const fundWallet = useCallback(async () => {
     if (!address) {
       throw new Error('No address provided');
     }
 
+    const network = import.meta.env.VITE_SUI_NETWORK || 'localnet';
+
+    // TESTNET: Redirect to Circle USDC faucet (no API call)
+    if (network === 'testnet') {
+      console.log('[useBalance] Testnet detected - opening Circle USDC faucet');
+      
+      const faucetUrl = 'https://faucet.circle.com';
+      
+      // Copy address to clipboard
+      try {
+        await navigator.clipboard.writeText(address);
+        console.log('✅ Address copied to clipboard:', address);
+      } catch (e) {
+        console.warn('⚠️ Failed to copy address:', e);
+      }
+      
+      // Open Circle faucet in new tab
+      window.open(faucetUrl, '_blank', 'noopener,noreferrer');
+      
+      // Return result indicating manual funding needed
+      const fundingRes: FundingResult = {
+        success: true,
+        message: 'Circle faucet opened. Please request USDC for your address.',
+        manualFunding: true,
+        faucetUrl,
+        address,
+      };
+      
+      setFundingResult(fundingRes);
+      return fundingRes;
+    }
+
+    // LOCALNET: Auto-fund via facilitator (existing behavior)
     setLoading(true);
     setFundingResult(null);
 

@@ -23,7 +23,7 @@ interface PaymentPageProps {
 
 export default function PaymentPage({ invoiceJWT: propInvoiceJWT }: PaymentPageProps) {
   const { isConnected, address, signIn, signTransaction, signTransactionBytes, authMethod } = useAuth();
-  const { balanceInfo, fundWallet } = useBalance(address);
+  const { balanceInfo, fundWallet, checkBalance } = useBalance(address);
 
   // Extract balance with defaults
   const balance = balanceInfo || { sui: 0, usdc: 0, loading: true, address: address || '' };
@@ -329,10 +329,109 @@ export default function PaymentPage({ invoiceJWT: propInvoiceJWT }: PaymentPageP
 
           {relevantBalance < totalAmount && (
             <div className="warning">
-              ⚠️ Insufficient balance. You need {(totalAmount - relevantBalance).toFixed(4)} more {coinName}.
-              <button onClick={() => fundWallet()} className="btn-secondary">
-                Get Test {coinName}
-              </button>
+              <div style={{marginBottom: '10px'}}>
+                ⚠️ Insufficient balance. You need {(totalAmount - relevantBalance).toFixed(4)} more {coinName}.
+              </div>
+              
+              {/* Different UI for testnet vs localnet */}
+              {invoice.network?.includes('testnet') ? (
+                <div style={{
+                  background: '#f3f4f6',
+                  border: '2px solid #3b82f6',
+                  borderRadius: '8px',
+                  padding: '15px',
+                  marginTop: '10px'
+                }}>
+                  <div style={{fontWeight: 'bold', marginBottom: '8px', color: '#1e40af'}}>
+                    🌐 Get Real Testnet USDC from Circle
+                  </div>
+                  <div style={{fontSize: '0.875rem', marginBottom: '12px', color: '#4b5563'}}>
+                    This demonstrates the real-world flow using Circle's USDC faucet.
+                  </div>
+                  
+                  {/* Address display with copy button */}
+                  <div style={{marginBottom: '12px'}}>
+                    <div style={{fontSize: '0.75rem', color: '#6b7280', marginBottom: '4px'}}>
+                      Your Address:
+                    </div>
+                    <div style={{
+                      display: 'flex',
+                      gap: '8px',
+                      alignItems: 'center'
+                    }}>
+                      <code style={{
+                        flex: 1,
+                        background: 'white',
+                        padding: '8px',
+                        borderRadius: '4px',
+                        fontSize: '0.7em',
+                        wordBreak: 'break-all',
+                        border: '1px solid #d1d5db'
+                      }}>
+                        {address}
+                      </code>
+                      <button
+                        onClick={async () => {
+                          await navigator.clipboard.writeText(address || '');
+                          const btn = document.getElementById('copy-addr-btn');
+                          if (btn) {
+                            btn.textContent = '✅';
+                            setTimeout(() => btn.textContent = '📋', 2000);
+                          }
+                        }}
+                        id="copy-addr-btn"
+                        style={{
+                          padding: '8px 12px',
+                          background: '#10b981',
+                          color: 'white',
+                          border: 'none',
+                          borderRadius: '4px',
+                          cursor: 'pointer',
+                          fontSize: '0.9rem',
+                          fontWeight: 600
+                        }}
+                      >
+                        📋
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Faucet button */}
+                  <button 
+                    onClick={() => fundWallet()} 
+                    className="btn-secondary"
+                    style={{
+                      width: '100%',
+                      padding: '12px',
+                      fontSize: '1rem',
+                      fontWeight: 'bold',
+                      background: '#3b82f6',
+                      color: 'white',
+                      border: 'none',
+                      marginBottom: '8px'
+                    }}
+                  >
+                    🚀 Open Circle USDC Faucet
+                  </button>
+                  
+                  <button
+                    onClick={() => checkBalance()}
+                    className="btn-secondary"
+                    style={{
+                      width: '100%',
+                      padding: '10px',
+                      fontSize: '0.875rem'
+                    }}
+                  >
+                    🔄 Refresh Balance
+                  </button>
+                </div>
+              ) : (
+                // Localnet: Simple auto-fund button
+                <button onClick={() => fundWallet()} className="btn-secondary">
+                  Get Test {coinName}
+                </button>
+              )}
             </div>
           )}
 

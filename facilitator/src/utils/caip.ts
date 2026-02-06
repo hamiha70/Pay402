@@ -7,6 +7,9 @@
  * - CAIP-19: Asset Type and Asset ID Specification
  * 
  * @see https://chainagnostic.org/
+ * 
+ * ⚠️ NOTE: This is duplicated in widget/src/lib/caip.ts
+ * TODO: Extract to shared package (@pay402/caip-utils) post-hackathon
  */
 
 /**

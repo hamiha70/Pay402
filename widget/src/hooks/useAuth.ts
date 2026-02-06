@@ -1,4 +1,5 @@
 import { useKeypairAuth } from './useKeypairAuth';
+import { useEnokiAuthDappKit } from './useEnokiAuthDappKit';
 import type { AuthProvider } from '../types/auth';
 
 /**
@@ -13,19 +14,26 @@ import type { AuthProvider } from '../types/auth';
  */
 export function useAuth(): AuthProvider & { authMethod: 'enoki' | 'keypair' } {
   const ENOKI_API_KEY = import.meta.env.VITE_ENOKI_API_KEY;
-  const ENOKI_AVAILABLE = ENOKI_API_KEY && ENOKI_API_KEY !== 'your_public_api_key_here';
+  const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID;
+  const ENOKI_AVAILABLE = ENOKI_API_KEY && 
+                          ENOKI_API_KEY !== 'your_public_api_key_here' &&
+                          GOOGLE_CLIENT_ID &&
+                          GOOGLE_CLIENT_ID !== 'your_client_id_here';
 
-  // For now, always use keypair
-  // When Enoki is ready, we'll import useEnokiAuth conditionally
+  const enokiAuth = useEnokiAuthDappKit();
   const keypairAuth = useKeypairAuth();
 
   if (ENOKI_AVAILABLE) {
-    // TODO: When Enoki API key is available, use useEnokiAuth()
-    console.warn('Enoki API key detected but Enoki auth not yet implemented. Using keypair fallback.');
+    console.log('[useAuth] ✅ Using Enoki (zkLogin) authentication');
+    return {
+      ...enokiAuth,
+      authMethod: 'enoki',
+    };
   }
 
+  console.log('[useAuth] ⚠️ Using keypair fallback (Enoki not configured)');
   return {
     ...keypairAuth,
-    authMethod: ENOKI_AVAILABLE ? 'enoki' : 'keypair',
+    authMethod: 'keypair',
   };
 }

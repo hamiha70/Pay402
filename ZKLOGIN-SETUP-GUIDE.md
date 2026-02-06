@@ -14,6 +14,7 @@ You have **TWO critical blockers** preventing zkLogin integration:
 ### What is Enoki?
 
 Enoki is Mysten Labs' zkLogin infrastructure service. It handles:
+
 - JWT validation
 - zkLogin proof generation
 - Transaction sponsorship (optional)
@@ -24,24 +25,30 @@ Enoki is Mysten Labs' zkLogin infrastructure service. It handles:
 #### Option A: Official Mysten Labs Registration (RECOMMENDED)
 
 1. **Visit Enoki Portal:**
+
    ```
    https://enoki.mystenlabs.com/
    ```
+
    OR
+
    ```
    https://docs.enoki.mystenlabs.com/
    ```
 
 2. **Sign up / Log in:**
+
    - Use your Mysten Labs account
    - Or create new account if first time
 
 3. **Create New Application:**
+
    - Name: `Pay402-Dev` (for development)
    - Network: `Testnet` (switch to Mainnet later)
    - Redirect URIs: `http://localhost:5173/auth/callback`
 
 4. **Get API Key:**
+
    - Copy the API key (starts with `enoki_`)
    - Copy the API Secret (keep this VERY secret!)
 
@@ -54,6 +61,7 @@ Enoki is Mysten Labs' zkLogin infrastructure service. It handles:
 #### Option B: Enoki SDK Documentation
 
 If portal not found, check SDK docs:
+
 ```
 https://docs.enoki.mystenlabs.com/ts-sdk/getting-started
 ```
@@ -86,6 +94,7 @@ zkLogin uses OAuth providers (Google, Facebook, etc.) to derive blockchain addre
 #### 2.1 Create Google Cloud Project
 
 1. **Go to Google Cloud Console:**
+
    ```
    https://console.cloud.google.com/
    ```
@@ -100,6 +109,7 @@ zkLogin uses OAuth providers (Google, Facebook, etc.) to derive blockchain addre
 #### 2.2 Enable APIs
 
 1. **Navigate to APIs & Services:**
+
    ```
    Left menu → APIs & Services → Library
    ```
@@ -111,15 +121,18 @@ zkLogin uses OAuth providers (Google, Facebook, etc.) to derive blockchain addre
 #### 2.3 Configure OAuth Consent Screen
 
 1. **Go to OAuth Consent Screen:**
+
    ```
    Left menu → APIs & Services → OAuth consent screen
    ```
 
 2. **Choose User Type:**
+
    - Select: **"External"** (for testing with any Google account)
    - Click "Create"
 
 3. **Fill in App Information:**
+
    ```
    App name: Pay402
    User support email: your-email@gmail.com
@@ -127,6 +140,7 @@ zkLogin uses OAuth providers (Google, Facebook, etc.) to derive blockchain addre
    ```
 
 4. **Add Scopes:**
+
    - Click "Add or Remove Scopes"
    - Select:
      ✓ openid
@@ -135,6 +149,7 @@ zkLogin uses OAuth providers (Google, Facebook, etc.) to derive blockchain addre
    - Click "Update"
 
 5. **Add Test Users (for development):**
+
    - Click "Add Users"
    - Add your Gmail address
    - Add any other testers
@@ -147,23 +162,26 @@ zkLogin uses OAuth providers (Google, Facebook, etc.) to derive blockchain addre
 #### 2.4 Create OAuth Client ID
 
 1. **Go to Credentials:**
+
    ```
    Left menu → APIs & Services → Credentials
    ```
 
 2. **Create Credentials:**
+
    - Click "Create Credentials" → "OAuth Client ID"
 
 3. **Configure OAuth Client:**
+
    ```
    Application type: Web application
    Name: Pay402 Widget
-   
+
    Authorized JavaScript origins:
    - http://localhost:5173
    - http://localhost:3002
    - https://pay402.com (add your production domain later)
-   
+
    Authorized redirect URIs:
    - http://localhost:5173/auth/callback
    - http://localhost:3002/auth/callback
@@ -217,7 +235,7 @@ Ensure environment variables are exposed:
 export default defineConfig({
   // ...
   define: {
-    'process.env': {},
+    "process.env": {},
   },
 });
 ```
@@ -231,7 +249,7 @@ export default defineConfig({
 Add Enoki provider initialization:
 
 ```typescript
-import { EnokiFlowProvider } from '@mysten/enoki/react';
+import { EnokiFlowProvider } from "@mysten/enoki/react";
 
 const enokiApiKey = import.meta.env.VITE_ENOKI_API_KEY;
 const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
@@ -241,9 +259,7 @@ function App() {
     <QueryClientProvider client={queryClient}>
       <SuiClientProvider networks={networkConfig} defaultNetwork="testnet">
         <EnokiFlowProvider apiKey={enokiApiKey}>
-          <WalletProvider autoConnect>
-            {/* ... */}
-          </WalletProvider>
+          <WalletProvider autoConnect>{/* ... */}</WalletProvider>
         </EnokiFlowProvider>
       </SuiClientProvider>
     </QueryClientProvider>
@@ -256,17 +272,17 @@ function App() {
 Replace stub implementation:
 
 ```typescript
-import { useEnokiFlow, useZkLogin } from '@mysten/enoki/react';
+import { useEnokiFlow, useZkLogin } from "@mysten/enoki/react";
 
 export function useEnokiAuth(): AuthProvider {
   const enokiFlow = useEnokiFlow();
   const zkLogin = useZkLogin();
-  
+
   const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
 
   const signIn = useCallback(async () => {
     if (!enokiFlow || !googleClientId) {
-      throw new Error('Enoki not configured - check .env.local');
+      throw new Error("Enoki not configured - check .env.local");
     }
 
     const protocol = window.location.protocol;
@@ -274,11 +290,11 @@ export function useEnokiAuth(): AuthProvider {
     const redirectUrl = `${protocol}//${host}/auth/callback`;
 
     const authUrl = await enokiFlow.createAuthorizationURL({
-      provider: 'google',
+      provider: "google",
       clientId: googleClientId,
       redirectUrl,
       extraParams: {
-        scope: 'openid email profile',
+        scope: "openid email profile",
       },
     });
 
@@ -323,6 +339,7 @@ http://localhost:5173/zklogin-test
 ### 5.4 Expected Behavior
 
 **Success indicators:**
+
 ```
 ✓ Google OAuth popup appears
 ✓ After login, address is displayed (0x...)
@@ -332,6 +349,7 @@ http://localhost:5173/zklogin-test
 ```
 
 **Failure indicators:**
+
 ```
 ✗ "Enoki not configured" error
 ✗ "Invalid client ID" from Google
@@ -348,6 +366,7 @@ http://localhost:5173/zklogin-test
 **Cause:** Missing or invalid API key
 
 **Fix:**
+
 1. Check `.env.local` exists in `widget/` folder
 2. Check variable name: `VITE_ENOKI_API_KEY` (must start with `VITE_`)
 3. Restart dev server after changing `.env.local`
@@ -360,6 +379,7 @@ http://localhost:5173/zklogin-test
 **Cause:** Wrong Google Client ID or not configured
 
 **Fix:**
+
 1. Verify Client ID in Google Cloud Console
 2. Check it ends with `.apps.googleusercontent.com`
 3. Verify redirect URI matches exactly: `http://localhost:5173/auth/callback`
@@ -372,6 +392,7 @@ http://localhost:5173/zklogin-test
 **Cause:** Google OAuth redirect URI not whitelisted
 
 **Fix:**
+
 1. Go to Google Cloud Console → Credentials
 2. Click your OAuth Client ID
 3. Add redirect URI: `http://localhost:5173/auth/callback`
@@ -385,11 +406,12 @@ http://localhost:5173/zklogin-test
 **Cause:** No callback handler or routing issue
 
 **Fix:**
+
 1. Check `App.tsx` has route for `/auth/callback`
 2. Implement callback handler:
    ```typescript
    // In App.tsx or separate component
-   if (window.location.pathname === '/auth/callback') {
+   if (window.location.pathname === "/auth/callback") {
      return <div>Processing login...</div>;
    }
    ```
@@ -402,6 +424,7 @@ http://localhost:5173/zklogin-test
 **Cause:** Enoki API rejecting requests
 
 **Fix:**
+
 1. Check API key is correct
 2. Verify network (testnet vs mainnet)
 3. Check if API key is expired/revoked
@@ -429,12 +452,12 @@ Once manual testing works, add tests:
 
 ```typescript
 // widget/src/__tests__/zklogin.test.ts
-describe('zkLogin Integration', () => {
-  it('should initialize Enoki with API key', () => {
+describe("zkLogin Integration", () => {
+  it("should initialize Enoki with API key", () => {
     expect(import.meta.env.VITE_ENOKI_API_KEY).toBeDefined();
   });
 
-  it('should create Google OAuth URL', async () => {
+  it("should create Google OAuth URL", async () => {
     // Mock test
   });
 
@@ -449,6 +472,7 @@ describe('zkLogin Integration', () => {
 ### 🔴 Critical (BLOCKING)
 
 1. **Enoki API Key**
+
    - Where: https://enoki.mystenlabs.com/
    - What: API key for zkLogin service
    - Add to: `widget/.env.local` as `VITE_ENOKI_API_KEY`

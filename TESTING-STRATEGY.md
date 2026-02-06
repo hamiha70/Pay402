@@ -16,6 +16,7 @@ Pay402 has a comprehensive test suite with **199 tests** covering all critical p
 **Production code is 100% safe:** `build-ptb.ts` correctly uses USDC from `invoice.coinType` and blocks SUI payments via `validatePaymentCoin()`.
 
 **Evidence of gas drainage (before fix):**
+
 ```
 Facilitator balance before tests: 0.656 SUI
 Facilitator balance after tests:  0.230 SUI
@@ -31,6 +32,7 @@ Drainage: -0.426 SUI (65% loss!)
 These tests validate the **entire payment flow** using the same production code paths:
 
 1. **PTB Building** (`build-ptb.test.ts`)
+
    - Transaction construction with `tx.gas`
    - Split coins functionality
    - Transfer logic
@@ -38,6 +40,7 @@ These tests validate the **entire payment flow** using the same production code 
    - **Result:** All payment logic validated ✓
 
 2. **API Integration** (`api-integration.test.ts`)
+
    - `/build-ptb` endpoint (27 tests)
    - `/submit-payment` endpoint
    - Error handling
@@ -45,17 +48,20 @@ These tests validate the **entire payment flow** using the same production code 
    - **Result:** All API endpoints validated ✓
 
 3. **Sponsored Transactions** (`sponsored-transactions.test.ts`)
+
    - Dual signature validation (31 tests)
    - Buyer + Facilitator signing
    - Transaction execution
    - **Result:** Core sponsorship validated ✓
 
 4. **Transaction Serialization** (`ptb-codec.test.ts`)
+
    - PTB encoding/decoding (14 tests)
    - Wire format validation
    - **Result:** Transaction format validated ✓
 
 5. **State Consistency** (`state-consistency.test.ts`)
+
    - Blockchain queries (2 tests)
    - Gas object handling
    - **Result:** Network interaction validated ✓
@@ -73,15 +79,18 @@ These tests validate the **entire payment flow** using the same production code 
 #### Tests that ONLY run on Localnet (skipped on testnet to preserve gas):
 
 1. **Minimal Sponsored Transactions** (`minimal-sponsored.test.ts` - 3 tests) ❌
+
    - **WHY SKIPPED:** Executes SUI transfers (0.1 SUI per test)
    - **RISK:** Would drain facilitator's gas fund on testnet
    - **PRODUCTION SAFETY:** Production code uses USDC, not SUI ✓
 
 2. **PTB Building Tests** (`build-ptb.test.ts` - 3 tests) ❌
+
    - **WHY SKIPPED:** Tests `tx.gas` (SUI) payment patterns
    - **PRODUCTION SAFETY:** Production uses `invoice.coinType` (USDC) ✓
 
 3. **State Consistency Tests** (`state-consistency.test.ts` - 2 tests) ❌
+
    - **WHY SKIPPED:** Uses SUI transfers for validation
    - **PRODUCTION SAFETY:** Production doesn't transfer SUI ✓
 
@@ -94,6 +103,7 @@ These tests validate the **entire payment flow** using the same production code 
 #### Tests that ONLY run on Testnet (require funding):
 
 5. **E2E Payment with Balance Verification** (`e2e-payment.test.ts` - 4 tests)
+
    - **WHY TESTNET:** Requires real USDC funding from Treasury
    - Tests complete flow: fund → build → sign → submit → verify balances
 
@@ -110,6 +120,7 @@ These tests validate the **entire payment flow** using the same production code 
 ### Localnet (Rapid Development) - 176/199 Tests ✅
 
 **What works:**
+
 - ✅ All **production-critical** PTB construction logic
 - ✅ All API endpoints (`/build-ptb`, `/submit-payment`, `/health`)
 - ✅ Transaction signing and validation
@@ -119,19 +130,22 @@ These tests validate the **entire payment flow** using the same production code 
 - ✅ Network configuration
 
 **What's skipped:**
+
 - ❌ 4 e2e tests (require USDC funding from Treasury)
 - ❌ 17 SUI-based tests (use `tx.gas` mechanics, not production flow)
 - ❌ 2 network config tests (expect localnet-specific values)
 
 **Why this is sufficient:**
+
 - All **production code paths** are exercised (using USDC ✓)
-- SUI-based tests validate *transaction mechanics*, not payment logic
+- SUI-based tests validate _transaction mechanics_, not payment logic
 - Production `build-ptb.ts` uses `invoice.coinType` (USDC), never SUI
 - 88% coverage validates all payment logic
 
 ### Testnet (Production-like Validation) - 176/199 Tests ✅
 
 **What works:**
+
 - ✅ All 176 tests that work on localnet
 - ✅ **PLUS** 4 e2e tests with real USDC funding
 - ✅ All localnet tests
@@ -186,6 +200,7 @@ const testBuyerAddress = testBuyerKeypair.getPublicKey().toSuiAddress();
 ```
 
 **Benefits:**
+
 - No test interference
 - Parallel execution possible
 - Clean state per test
@@ -193,11 +208,13 @@ const testBuyerAddress = testBuyerKeypair.getPublicKey().toSuiAddress();
 ### Shared Infrastructure
 
 Only shared across tests in a suite:
+
 - Facilitator keypair
 - Merchant address
 - MockUSDC package ID
 
 **Benefits:**
+
 - Faster test execution
 - Realistic production setup
 
@@ -211,7 +228,7 @@ Tests include delays to handle gas coin version updates:
 
 ```typescript
 afterEach(async () => {
-  await new Promise(resolve => setTimeout(resolve, 2500)); // 2.5s
+  await new Promise((resolve) => setTimeout(resolve, 2500)); // 2.5s
 });
 ```
 
@@ -222,10 +239,17 @@ afterEach(async () => {
 Balance checks use retry logic instead of fixed delays:
 
 ```typescript
-await waitForBalanceChange(client, address, expectedBalance, maxRetries, delayMs);
+await waitForBalanceChange(
+  client,
+  address,
+  expectedBalance,
+  maxRetries,
+  delayMs
+);
 ```
 
 **Benefits:**
+
 - Faster when network is fast
 - Robust when network is slow
 
@@ -240,6 +264,7 @@ await waitForBalanceChange(client, address, expectedBalance, maxRetries, delayMs
 **Cause:** MockUSDC Treasury Cap not configured for current localnet session
 
 **Solution:**
+
 1. Run tests on testnet: `./scripts/pay402-tmux.sh --testnet`
 2. OR: Accept 191/199 passing (96% coverage is excellent)
 
@@ -250,6 +275,7 @@ await waitForBalanceChange(client, address, expectedBalance, maxRetries, delayMs
 **Cause:** Services not restarted after network switch
 
 **Solution:**
+
 ```bash
 # Kill and restart with network flag
 ./scripts/pay402-tmux.sh --kill
@@ -263,6 +289,7 @@ await waitForBalanceChange(client, address, expectedBalance, maxRetries, delayMs
 **Cause:** Facilitator or Merchant not started
 
 **Solution:**
+
 ```bash
 # Check services
 curl http://localhost:3001/health  # Facilitator
@@ -313,21 +340,21 @@ cd facilitator && npm run test
 
 ## Test Metrics
 
-| Category | Tests | Localnet | Testnet | Coverage |
-|----------|-------|----------|---------|----------|
-| PTB Building | 3 | ✅ | ✅ | 100% |
-| API Integration | 27 | ✅ | ✅ | 100% |
-| Sponsored TX | 31 | ✅ | ✅ | 100% |
-| Serialization | 14 | ✅ | ✅ | 100% |
-| State Consistency | 2 | ✅ | ✅ | 100% |
-| Health | 23 | ✅ | ✅ | 100% |
-| Balance | 23 | ✅ | ✅ | 100% |
-| Network Config | 27 | ⚠️ 26/27 | ✅ | 96% |
-| E2E Payment | 6 | ⚠️ 2/6 | ✅ | 33% |
-| Minimal Sponsored | 4 | ⚠️ 1/4 | ✅ | 25% |
-| Fund Controller | 16 | ✅ | ✅ | 100% |
-| Other | 23 | ✅ | ✅ | 100% |
-| **TOTAL** | **199** | **191 (96%)** | **199 (100%)** | **96%+** |
+| Category          | Tests   | Localnet      | Testnet        | Coverage |
+| ----------------- | ------- | ------------- | -------------- | -------- |
+| PTB Building      | 3       | ✅            | ✅             | 100%     |
+| API Integration   | 27      | ✅            | ✅             | 100%     |
+| Sponsored TX      | 31      | ✅            | ✅             | 100%     |
+| Serialization     | 14      | ✅            | ✅             | 100%     |
+| State Consistency | 2       | ✅            | ✅             | 100%     |
+| Health            | 23      | ✅            | ✅             | 100%     |
+| Balance           | 23      | ✅            | ✅             | 100%     |
+| Network Config    | 27      | ⚠️ 26/27      | ✅             | 96%      |
+| E2E Payment       | 6       | ⚠️ 2/6        | ✅             | 33%      |
+| Minimal Sponsored | 4       | ⚠️ 1/4        | ✅             | 25%      |
+| Fund Controller   | 16      | ✅            | ✅             | 100%     |
+| Other             | 23      | ✅            | ✅             | 100%     |
+| **TOTAL**         | **199** | **191 (96%)** | **199 (100%)** | **96%+** |
 
 ---
 
@@ -338,9 +365,10 @@ cd facilitator && npm run test
 ✅ **Rapid development:** Localnet provides 96% coverage  
 ✅ **Production validation:** Testnet provides 100% coverage  
 ✅ **Test isolation:** Per-test buyers prevent interference  
-✅ **Reliability:** Retry logic handles network timing  
+✅ **Reliability:** Retry logic handles network timing
 
-**Recommendation:** 
+**Recommendation:**
+
 - Use **localnet** for daily development (fast, 96% coverage)
 - Use **testnet** for pre-release validation (slower, 100% coverage)
 - Accept 8 skipped tests on localnet as documented trade-off

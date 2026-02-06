@@ -71,9 +71,9 @@ http://localhost:5173/zklogin-test
 ### **Add the Full Path to Google Cloud Console:**
 
 1. Go to: https://console.cloud.google.com/apis/credentials
-2. Find OAuth Client: `300529773657-mfq7blj3s6ilhskpeva3fvutisa5sbej`
+2. Find OAuth Client: `1001996736694-2ic38121fneem5ob0ond46cmvhatsrtk`
 3. Click "Edit"
-4. Under "Authorized redirect URIs", ensure BOTH are present:
+4. Under "Authorized redirect URIs", ensure ALL are present:
    ```
    http://localhost:5173
    http://localhost:5173/zklogin-test

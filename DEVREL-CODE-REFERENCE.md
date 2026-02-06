@@ -43,7 +43,7 @@ _(Replace with your actual GitHub username and repository name)_
 
 ```env
 VITE_ENOKI_API_KEY=enoki_public_7edbeb7decb38349e30a6d900cdc8843
-VITE_GOOGLE_CLIENT_ID=300529773657-mfq7blj3s6ilhskpeva3fvutisa5sbej.apps.googleusercontent.com
+VITE_GOOGLE_CLIENT_ID=1001996736694-2ic38121fneem5ob0ond46cmvhatsrtk.apps.googleusercontent.com
 VITE_SUI_NETWORK=testnet
 ```
 

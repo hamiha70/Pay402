@@ -9,11 +9,13 @@
 ### Evidence of Gas Drainage
 
 **Before running tests on testnet:**
+
 ```
 Facilitator balance: 0.656 SUI
 ```
 
 **After running tests on testnet:**
+
 ```
 Facilitator balance: 0.230 SUI
 ```
@@ -33,8 +35,9 @@ Here's what was happening:
 ### 1. `minimal-sponsored.test.ts` - **EXECUTING SUI TRANSFERS** ⚠️
 
 **Line 64-73:**
+
 ```typescript
-const [coin] = fundTx.splitCoins(fundTx.gas, [100000000]);  // 0.1 SUI
+const [coin] = fundTx.splitCoins(fundTx.gas, [100000000]); // 0.1 SUI
 fundTx.transferObjects([coin], address);
 
 // THIS EXECUTES THE TRANSACTION!
@@ -45,17 +48,20 @@ const result = await client.signAndExecuteTransaction({
 ```
 
 **Impact:**
+
 - 3 tests × 0.1 SUI per test = **0.3 SUI drained per test run**
 - Transaction gets **submitted to blockchain** and **fails** with `InsufficientCoinBalance`
 - Even failed transactions consume gas!
 
 **Proof from test output:**
+
 ```
 Error: Failed to fund buyer: {
   "digest":"51o7ApJfVaChT49Jd3VRQhjWdgZZJBsQF7BHoWoWHKZS",
   "status":{"success":false,"error":"InsufficientCoinBalance"}
 }
 ```
+
 ☝️ **That `digest` means the transaction was EXECUTED on-chain!**
 
 ---
@@ -63,15 +69,16 @@ Error: Failed to fund buyer: {
 ### 2. `build-ptb.test.ts` - Only Builds, BUT...
 
 **Line 50-81:**
+
 ```typescript
 const [merchantCoin, feeCoin] = tx.splitCoins(tx.gas, [
-  amount,      // 100000 MIST
-  fee          // 10000 MIST
+  amount, // 100000 MIST
+  fee, // 10000 MIST
 ]);
 
 // ...
 
-const ptbBytes = await tx.build({ client });  // ❌ QUERIES BLOCKCHAIN!
+const ptbBytes = await tx.build({ client }); // ❌ QUERIES BLOCKCHAIN!
 ```
 
 **Why it drains (even without execution):**
@@ -82,6 +89,7 @@ const ptbBytes = await tx.build({ client });  // ❌ QUERIES BLOCKCHAIN!
 4. Each failure attempt creates a failed transaction attempt
 
 **However:** This test is NOT directly draining SUI from the facilitator's balance, but it's:
+
 - Testing SUI payment patterns (not production USDC flow)
 - Failing due to insufficient gas
 - Should be skipped on testnet
@@ -91,12 +99,13 @@ const ptbBytes = await tx.build({ client });  // ❌ QUERIES BLOCKCHAIN!
 ### 3. `state-consistency.test.ts` - Only Builds, Same Issue
 
 **Line 56-60:**
+
 ```typescript
 const [coin] = tx1.splitCoins(tx1.gas, [1000000]);
 tx1.transferObjects([coin], recipientAddress);
 tx1.setGasBudget(10000000);
 
-const ptb1 = await tx1.build({ client });  // ❌ QUERIES BLOCKCHAIN
+const ptb1 = await tx1.build({ client }); // ❌ QUERIES BLOCKCHAIN
 ```
 
 Same pattern: builds transaction, queries for gas, fails, should be skipped.
@@ -106,12 +115,13 @@ Same pattern: builds transaction, queries for gas, fails, should be skipped.
 ### 4. `ptb-codec.test.ts` - Pure Serialization, BUT...
 
 **Lines 91-98:**
+
 ```typescript
 const [coin] = tx.splitCoins(tx.gas, [1000000]);
-tx.transferObjects([coin], '0x1234...');
+tx.transferObjects([coin], "0x1234...");
 tx.setGasBudget(10000000);
 
-const bytes = await tx.build({ client });  // ❌ QUERIES BLOCKCHAIN
+const bytes = await tx.build({ client }); // ❌ QUERIES BLOCKCHAIN
 ```
 
 Tests serialization logic but queries blockchain for gas selection.
@@ -124,19 +134,19 @@ Tests serialization logic but queries blockchain for gas selection.
 
 ```typescript
 // At top of each test file:
-import { config } from '../config.js';
+import { config } from "../config.js";
 
-const IS_TESTNET = config.suiNetwork === 'testnet';
+const IS_TESTNET = config.suiNetwork === "testnet";
 
-describe(IS_TESTNET ? 'Test Suite (SKIPPED on testnet)' : 'Test Suite', () => {
+describe(IS_TESTNET ? "Test Suite (SKIPPED on testnet)" : "Test Suite", () => {
   if (IS_TESTNET) {
-    it.skip('Skipped - uses SUI transfers (drains gas)', () => {
-      console.log('⚠️  SKIPPED: Would drain facilitator gas fund');
-      console.log('   Run on localnet: ./scripts/pay402-tmux.sh --localnet');
+    it.skip("Skipped - uses SUI transfers (drains gas)", () => {
+      console.log("⚠️  SKIPPED: Would drain facilitator gas fund");
+      console.log("   Run on localnet: ./scripts/pay402-tmux.sh --localnet");
     });
-    return;  // Exit early
+    return; // Exit early
   }
-  
+
   // ... actual tests only run on localnet
 });
 ```
@@ -168,6 +178,7 @@ No more drainage!
 ### Production `build-ptb.ts` Uses USDC, Not SUI
 
 **Line 106-147:**
+
 ```typescript
 // Validate payment coin type (blocks SUI on testnet!)
 const { coinType, decimals, funding } = validatePaymentCoin(
@@ -183,11 +194,12 @@ const paymentCoin = tx.object(selectedCoin.coinObjectId);
 // Split the USDC (NOT SUI!)
 const [merchantCoin, feeCoin] = tx.splitCoins(paymentCoin, [
   invoice.amount,
-  invoice.facilitatorFee
+  invoice.facilitatorFee,
 ]);
 ```
 
 **Key differences from test code:**
+
 1. Uses `invoice.coinType` (USDC) from JWT, never `tx.gas` (SUI)
 2. `validatePaymentCoin()` explicitly blocks SUI payments on testnet
 3. Uses actual USDC coin object from buyer's balance
@@ -239,6 +251,7 @@ const [merchantCoin, feeCoin] = tx.splitCoins(paymentCoin, [
 ## Recommendation
 
 **Always run these tests on localnet:**
+
 ```bash
 ./scripts/pay402-tmux.sh --localnet
 cd facilitator && npm run test

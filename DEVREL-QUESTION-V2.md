@@ -55,7 +55,7 @@ content-type: application/json
 ### Google Cloud Console
 - ✅ OAuth 2.0 Client ID created
 - ✅ Authorized redirect URIs: `http://localhost:5173`, `http://localhost:5173/`
-- ✅ Client ID matches Enoki portal (`300529773657-mfq7blj3s6ilhskpeva3fvutisa5sbej.apps.googleusercontent.com`)
+- ✅ Client ID matches Enoki portal (`1001996736694-2ic38121fneem5ob0ond46cmvhatsrtk.apps.googleusercontent.com`)
 
 ### Implementation
 - ✅ Follows official docs line-by-line: https://docs.enoki.mystenlabs.com/ts-sdk/register#react-integration

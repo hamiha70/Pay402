@@ -571,6 +571,63 @@ npm run dev
 
 See [DEVELOPMENT_GUIDE.md](docs/development/DEVELOPMENT_GUIDE.md) for detailed setup instructions.
 
+### Network Configuration Files
+
+Pay402 uses **network-specific configuration templates** to safely switch between environments:
+
+```
+facilitator/
+  .env                      # Active config (updated by --localnet/--testnet flags)
+  .env.localnet.example     # Complete localnet template (committed to git)
+  .env.testnet.example      # Complete testnet template (committed to git)
+
+merchant/
+  .env                      # Active config
+  .env.localnet.example     # Localnet template
+  .env.testnet.example      # Testnet template
+
+widget/
+  .env.local                # Active config
+  .env.localnet.example     # Localnet template
+  .env.testnet.example      # Testnet template
+```
+
+**Why Complete Templates?**
+- ✅ Each `.env.<network>` file contains ALL fields needed for that network
+- ✅ Fields not used on a network are commented out (e.g., `MOCK_USDC_*` on testnet)
+- ✅ Safe to copy: `cp .env.testnet → .env` replaces entire file with correct config
+- ✅ No merge conflicts or missing fields
+- ✅ Easy to understand what each network needs
+
+**Example: Facilitator `.env.localnet.example`**
+```env
+# All localnet fields present:
+PACKAGE_ID=0x1d1d...              # Localnet package
+TREASURY_OWNER_PRIVATE_KEY=...    # For MockUSDC minting
+MOCK_USDC_PACKAGE=...             # MockUSDC contract
+# USDC_TYPE=                      # Not used on localnet (commented)
+```
+
+**Example: Facilitator `.env.testnet.example`**
+```env
+# All testnet fields present:
+PACKAGE_ID=0x2999...              # Testnet package
+USDC_TYPE=0xa1ec...               # Real Circle USDC
+# TREASURY_OWNER_PRIVATE_KEY=     # Not used on testnet (commented)
+# MOCK_USDC_PACKAGE=              # Not used on testnet (commented)
+```
+
+**Switching Networks:**
+```bash
+# Automatic (recommended):
+./scripts/pay402-tmux.sh --testnet   # Copies .env.testnet.example → .env for all services
+
+# Manual:
+cp facilitator/.env.testnet.example facilitator/.env
+cp merchant/.env.testnet.example merchant/.env
+cp widget/.env.testnet.example widget/.env.local
+```
+
 ---
 
 ## Demo

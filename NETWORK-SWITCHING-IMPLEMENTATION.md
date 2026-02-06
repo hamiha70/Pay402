@@ -3,9 +3,11 @@
 ## ✅ **What Was Fixed**
 
 ### **Problem:**
+
 When running `./pay402-tmux.sh` on testnet, the script used the localnet `PACKAGE_ID` from `.env`, causing contract verification failures.
 
 ### **Root Cause:**
+
 1. `deploy-local.sh` read from `.env` without checking which network was active
 2. No network switching flags existed in `pay402-tmux.sh`
 3. `.env` files weren't updated when switching networks
@@ -19,6 +21,7 @@ When running `./pay402-tmux.sh` on testnet, the script used the localnet `PACKAG
 **File:** `move/payment/deploy-local.sh`
 
 **Changes:**
+
 ```bash
 # OLD (WRONG):
 EXISTING_PACKAGE_ID=$(grep "^PACKAGE_ID=" ../../facilitator/.env | ...)
@@ -53,6 +56,7 @@ fi
 ```
 
 **Benefits:**
+
 - ✅ Reads from `.env.testnet` when on testnet
 - ✅ Reads from `.env.localnet` when on localnet
 - ✅ Fallback to `.env` if network-specific file doesn't exist
@@ -66,6 +70,7 @@ fi
 **File:** `scripts/pay402-tmux.sh`
 
 **New Flags:**
+
 ```bash
 ./pay402-tmux.sh --localnet   # Switch to localnet and start
 ./pay402-tmux.sh --testnet    # Switch to testnet and start
@@ -73,6 +78,7 @@ fi
 ```
 
 **Implementation Order:**
+
 ```bash
 1. Parse --localnet or --testnet flag
 2. Check if tmux session exists
@@ -89,12 +95,13 @@ fi
 ```
 
 **Code Location:**
+
 ```bash
 # After session check, BEFORE deployment:
 if [ -n "$SWITCH_NETWORK" ]; then
   # 1. Switch sui client
   sui client switch --env "$SWITCH_NETWORK"
-  
+
   # 2. Update .env files
   cp facilitator/.env.$SWITCH_NETWORK → facilitator/.env
   cp merchant/.env.$SWITCH_NETWORK → merchant/.env
@@ -117,6 +124,7 @@ cd move/payment
 ### **Fix 3: Smart Localnet Checking**
 
 **Old Behavior (WRONG):**
+
 ```bash
 # Always tried to start localnet, even on testnet
 echo "🔍 Checking Suibase localnet..."
@@ -124,6 +132,7 @@ localnet start
 ```
 
 **New Behavior (CORRECT):**
+
 ```bash
 # Only check/start localnet if we're actually using localnet
 CURRENT_ENV=$(sui client active-env)
@@ -144,6 +153,7 @@ fi
 ```
 
 **What happens:**
+
 1. ✅ Switches sui client: `sui client switch --env localnet`
 2. ✅ Copies `facilitator/.env.localnet` → `facilitator/.env`
 3. ✅ Copies `merchant/.env.localnet` → `merchant/.env`
@@ -167,6 +177,7 @@ fi
 ```
 
 **What happens:**
+
 1. ✅ Switches sui client: `sui client switch --env testnet`
 2. ✅ Copies `facilitator/.env.testnet` → `facilitator/.env`
 3. ✅ Copies `merchant/.env.testnet` → `merchant/.env`
@@ -190,6 +201,7 @@ fi
 ```
 
 **What happens:**
+
 1. ✅ Uses whatever sui environment is currently active
 2. ✅ Reads current `.env` files (no overwriting)
 3. ✅ Checks localnet only if `sui client active-env` = localnet
@@ -207,14 +219,17 @@ fi
 ## 🎯 **Key Improvements**
 
 ### **1. No More Wrong Network Errors**
+
 ❌ **Before:** Testnet used localnet package ID → "Package not found" errors
 ✅ **After:** Testnet reads `.env.testnet` → Uses correct package ID
 
 ### **2. Smart Package Verification**
+
 ❌ **Before:** Blindly trusted `.env` package ID
 ✅ **After:** Verifies package exists on network with `sui client object`
 
 ### **3. Network-Specific Config Priority**
+
 ```bash
 # Priority order:
 1. .env.testnet (if on testnet)
@@ -223,11 +238,13 @@ fi
 ```
 
 ### **4. Idempotent Deployment**
+
 - ✅ Won't redeploy if package already exists on network
 - ✅ Will deploy if package ID is from wrong network
 - ✅ Explicit `--force` flag to force redeployment
 
 ### **5. One-Command Network Switching**
+
 ```bash
 # Switch from localnet to testnet:
 ./pay402-tmux.sh --kill
@@ -243,6 +260,7 @@ fi
 ## 🧪 **Testing the Fixes**
 
 ### **Test 1: Localnet from Scratch**
+
 ```bash
 ./pay402-tmux.sh --localnet
 
@@ -265,6 +283,7 @@ fi
 ---
 
 ### **Test 2: Testnet with Existing Deployment**
+
 ```bash
 ./pay402-tmux.sh --testnet
 
@@ -286,6 +305,7 @@ fi
 ---
 
 ### **Test 3: Wrong Network Package ID**
+
 ```bash
 # Scenario: .env has localnet package, but we're on testnet
 ./pay402-tmux.sh
@@ -306,17 +326,20 @@ fi
 ## 📁 **Files Modified**
 
 1. **`move/payment/deploy-local.sh`**
+
    - Added network-specific `.env` reading
    - Added package verification with `sui client object`
    - Smarter deployment logic
 
 2. **`scripts/pay402-tmux.sh`**
+
    - Added `--localnet` and `--testnet` flags
    - Added network switching before deployment
    - Conditional localnet checking
    - Updated help text
 
 3. **`README.md`**
+
    - Updated Quick Setup with network flags
    - Added one-command setup examples
 
@@ -330,6 +353,7 @@ fi
 ## 🎓 **Best Practices**
 
 ### **Always Use Flags When Switching Networks**
+
 ```bash
 # ✅ Good (explicit)
 ./pay402-tmux.sh --localnet
@@ -341,6 +365,7 @@ sui client switch --env testnet
 ```
 
 ### **Keep Network-Specific .env Files**
+
 ```bash
 # Maintain these files:
 facilitator/.env.localnet   # Localnet config
@@ -349,6 +374,7 @@ facilitator/.env            # Active config (updated by script)
 ```
 
 ### **Verify After Switching**
+
 ```bash
 ./pay402-tmux.sh --testnet
 
@@ -362,12 +388,14 @@ npm run validate-network  # Should show "testnet"
 ## 🔒 **Backward Compatibility**
 
 ✅ **Old behavior still works:**
+
 ```bash
 # Without flags: uses current sui env + current .env files
 ./pay402-tmux.sh
 ```
 
 ✅ **Manual switching still works:**
+
 ```bash
 sui client switch --env testnet
 cp facilitator/.env.testnet facilitator/.env
@@ -375,6 +403,7 @@ cp facilitator/.env.testnet facilitator/.env
 ```
 
 ✅ **Existing .env files are respected:**
+
 - If `.env.localnet` doesn't exist, uses `.env`
 - Won't overwrite files without flag
 

@@ -48,6 +48,9 @@ ENV_FILE="../../facilitator/.env"
 if [ -f "../../facilitator/.env.$CHAIN_NAME" ]; then
   ENV_FILE="../../facilitator/.env.$CHAIN_NAME"
   echo "📋 Using network-specific config: .env.$CHAIN_NAME"
+elif [ -f "../../facilitator/.env.$CHAIN_NAME.example" ]; then
+  ENV_FILE="../../facilitator/.env.$CHAIN_NAME.example"
+  echo "📋 Using network-specific config: .env.$CHAIN_NAME.example"
 fi
 
 EXISTING_PACKAGE_ID=$(grep "^PACKAGE_ID=" "$ENV_FILE" 2>/dev/null | cut -d= -f2 || echo "")

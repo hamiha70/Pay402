@@ -125,6 +125,9 @@ if [ $? != 0 ]; then
     if [ -f "$PROJECT_DIR/facilitator/.env.$SWITCH_NETWORK" ]; then
       cp "$PROJECT_DIR/facilitator/.env.$SWITCH_NETWORK" "$PROJECT_DIR/facilitator/.env"
       echo "  ✅ Facilitator: .env.$SWITCH_NETWORK → .env"
+    elif [ -f "$PROJECT_DIR/facilitator/.env.$SWITCH_NETWORK.example" ]; then
+      cp "$PROJECT_DIR/facilitator/.env.$SWITCH_NETWORK.example" "$PROJECT_DIR/facilitator/.env"
+      echo "  ✅ Facilitator: .env.$SWITCH_NETWORK.example → .env (first time setup)"
     else
       echo "  ⚠️  Facilitator: .env.$SWITCH_NETWORK not found (using current .env)"
     fi
@@ -133,6 +136,9 @@ if [ $? != 0 ]; then
     if [ -f "$PROJECT_DIR/merchant/.env.$SWITCH_NETWORK" ]; then
       cp "$PROJECT_DIR/merchant/.env.$SWITCH_NETWORK" "$PROJECT_DIR/merchant/.env"
       echo "  ✅ Merchant: .env.$SWITCH_NETWORK → .env"
+    elif [ -f "$PROJECT_DIR/merchant/.env.$SWITCH_NETWORK.example" ]; then
+      cp "$PROJECT_DIR/merchant/.env.$SWITCH_NETWORK.example" "$PROJECT_DIR/merchant/.env"
+      echo "  ✅ Merchant: .env.$SWITCH_NETWORK.example → .env (first time setup)"
     else
       echo "  ⚠️  Merchant: .env.$SWITCH_NETWORK not found (using current .env)"
     fi
@@ -141,6 +147,9 @@ if [ $? != 0 ]; then
     if [ -f "$PROJECT_DIR/widget/.env.$SWITCH_NETWORK" ]; then
       cp "$PROJECT_DIR/widget/.env.$SWITCH_NETWORK" "$PROJECT_DIR/widget/.env.local"
       echo "  ✅ Widget: .env.$SWITCH_NETWORK → .env.local"
+    elif [ -f "$PROJECT_DIR/widget/.env.$SWITCH_NETWORK.example" ]; then
+      cp "$PROJECT_DIR/widget/.env.$SWITCH_NETWORK.example" "$PROJECT_DIR/widget/.env.local"
+      echo "  ✅ Widget: .env.$SWITCH_NETWORK.example → .env.local (first time setup)"
     else
       echo "  ⚠️  Widget: .env.$SWITCH_NETWORK not found (using current .env.local)"
     fi

@@ -95,6 +95,80 @@ EOF
   exit 0
 fi
 
+# ========================================
+# STEP -1: Network Switching (if requested)
+# CRITICAL: Do this BEFORE session check so it works even if session exists
+# ========================================
+if [ -n "$SWITCH_NETWORK" ]; then
+  echo ""
+  echo "🔄 Switching network to: $SWITCH_NETWORK"
+  echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+  echo ""
+  
+  # Switch sui client environment
+  echo "1️⃣  Switching sui client..."
+  sui client switch --env "$SWITCH_NETWORK" 2>/dev/null || {
+    echo "⚠️  Failed to switch to $SWITCH_NETWORK (environment may not exist)"
+    echo "   Available environments:"
+    sui client envs
+    exit 1
+  }
+  echo "   ✅ sui client now on: $SWITCH_NETWORK"
+  echo ""
+  
+  # Update .env files in facilitator, merchant, and widget
+  echo "2️⃣  Updating .env files..."
+  
+  # Facilitator
+  if [ -f "$PROJECT_DIR/facilitator/.env.$SWITCH_NETWORK" ]; then
+    cp "$PROJECT_DIR/facilitator/.env.$SWITCH_NETWORK" "$PROJECT_DIR/facilitator/.env"
+    echo "   ✅ Facilitator: .env.$SWITCH_NETWORK → .env"
+  elif [ -f "$PROJECT_DIR/facilitator/.env.$SWITCH_NETWORK.example" ]; then
+    cp "$PROJECT_DIR/facilitator/.env.$SWITCH_NETWORK.example" "$PROJECT_DIR/facilitator/.env"
+    echo "   ✅ Facilitator: .env.$SWITCH_NETWORK.example → .env"
+  else
+    echo "   ⚠️  Facilitator: .env.$SWITCH_NETWORK not found (keeping current .env)"
+  fi
+  
+  # Merchant
+  if [ -f "$PROJECT_DIR/merchant/.env.$SWITCH_NETWORK" ]; then
+    cp "$PROJECT_DIR/merchant/.env.$SWITCH_NETWORK" "$PROJECT_DIR/merchant/.env"
+    echo "   ✅ Merchant: .env.$SWITCH_NETWORK → .env"
+  elif [ -f "$PROJECT_DIR/merchant/.env.$SWITCH_NETWORK.example" ]; then
+    cp "$PROJECT_DIR/merchant/.env.$SWITCH_NETWORK.example" "$PROJECT_DIR/merchant/.env"
+    echo "   ✅ Merchant: .env.$SWITCH_NETWORK.example → .env"
+  else
+    echo "   ⚠️  Merchant: .env.$SWITCH_NETWORK not found (keeping current .env)"
+  fi
+  
+  # Widget
+  if [ -f "$PROJECT_DIR/widget/.env.$SWITCH_NETWORK" ]; then
+    cp "$PROJECT_DIR/widget/.env.$SWITCH_NETWORK" "$PROJECT_DIR/widget/.env.local"
+    echo "   ✅ Widget: .env.$SWITCH_NETWORK → .env.local"
+  elif [ -f "$PROJECT_DIR/widget/.env.$SWITCH_NETWORK.example" ]; then
+    cp "$PROJECT_DIR/widget/.env.$SWITCH_NETWORK.example" "$PROJECT_DIR/widget/.env.local"
+    echo "   ✅ Widget: .env.$SWITCH_NETWORK.example → .env.local"
+  else
+    echo "   ⚠️  Widget: .env.$SWITCH_NETWORK not found (keeping current .env.local)"
+  fi
+  
+  echo ""
+  echo "✅ Network configuration updated to: $SWITCH_NETWORK"
+  echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+  echo ""
+  
+  # If session exists, kill it so we can recreate with new config
+  if tmux has-session -t $SESSION_NAME 2>/dev/null; then
+    echo "⚠️  Existing session found - killing to apply new network config..."
+    tmux kill-session -t $SESSION_NAME 2>/dev/null
+    # Kill any running processes
+    lsof -ti:3001,3002,5173 | xargs kill -9 2>/dev/null || true
+    sleep 1
+    echo "   ✅ Old session killed"
+    echo ""
+  fi
+fi
+
 # Check if session exists
 tmux has-session -t $SESSION_NAME 2>/dev/null
 
@@ -102,60 +176,6 @@ if [ $? != 0 ]; then
   echo "🚀 Creating new tmux session: $SESSION_NAME"
   echo "📦 Starting all services..."
   echo ""
-  
-  # ========================================
-  # STEP -1: Network Switching (if requested)
-  # ========================================
-  if [ -n "$SWITCH_NETWORK" ]; then
-    echo "🔄 Switching sui client environment to: $SWITCH_NETWORK"
-    sui client switch --env "$SWITCH_NETWORK" 2>/dev/null || {
-      echo "⚠️  Failed to switch to $SWITCH_NETWORK (environment may not exist)"
-      echo "   Available environments:"
-      sui client envs
-      exit 1
-    }
-    
-    echo "✅ Switched to: $SWITCH_NETWORK"
-    echo ""
-    
-    # Update .env files in facilitator, merchant, and widget
-    echo "📝 Updating .env files to match $SWITCH_NETWORK..."
-    
-    # Facilitator
-    if [ -f "$PROJECT_DIR/facilitator/.env.$SWITCH_NETWORK" ]; then
-      cp "$PROJECT_DIR/facilitator/.env.$SWITCH_NETWORK" "$PROJECT_DIR/facilitator/.env"
-      echo "  ✅ Facilitator: .env.$SWITCH_NETWORK → .env"
-    elif [ -f "$PROJECT_DIR/facilitator/.env.$SWITCH_NETWORK.example" ]; then
-      cp "$PROJECT_DIR/facilitator/.env.$SWITCH_NETWORK.example" "$PROJECT_DIR/facilitator/.env"
-      echo "  ✅ Facilitator: .env.$SWITCH_NETWORK.example → .env (first time setup)"
-    else
-      echo "  ⚠️  Facilitator: .env.$SWITCH_NETWORK not found (using current .env)"
-    fi
-    
-    # Merchant
-    if [ -f "$PROJECT_DIR/merchant/.env.$SWITCH_NETWORK" ]; then
-      cp "$PROJECT_DIR/merchant/.env.$SWITCH_NETWORK" "$PROJECT_DIR/merchant/.env"
-      echo "  ✅ Merchant: .env.$SWITCH_NETWORK → .env"
-    elif [ -f "$PROJECT_DIR/merchant/.env.$SWITCH_NETWORK.example" ]; then
-      cp "$PROJECT_DIR/merchant/.env.$SWITCH_NETWORK.example" "$PROJECT_DIR/merchant/.env"
-      echo "  ✅ Merchant: .env.$SWITCH_NETWORK.example → .env (first time setup)"
-    else
-      echo "  ⚠️  Merchant: .env.$SWITCH_NETWORK not found (using current .env)"
-    fi
-    
-    # Widget
-    if [ -f "$PROJECT_DIR/widget/.env.$SWITCH_NETWORK" ]; then
-      cp "$PROJECT_DIR/widget/.env.$SWITCH_NETWORK" "$PROJECT_DIR/widget/.env.local"
-      echo "  ✅ Widget: .env.$SWITCH_NETWORK → .env.local"
-    elif [ -f "$PROJECT_DIR/widget/.env.$SWITCH_NETWORK.example" ]; then
-      cp "$PROJECT_DIR/widget/.env.$SWITCH_NETWORK.example" "$PROJECT_DIR/widget/.env.local"
-      echo "  ✅ Widget: .env.$SWITCH_NETWORK.example → .env.local (first time setup)"
-    else
-      echo "  ⚠️  Widget: .env.$SWITCH_NETWORK not found (using current .env.local)"
-    fi
-    
-    echo ""
-  fi
   
   # Ensure localnet is running (only if on localnet)
   CURRENT_ENV=$(sui client active-env 2>/dev/null || echo "unknown")

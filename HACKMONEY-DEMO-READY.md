@@ -12,21 +12,24 @@
 ## 🎯 What's Included
 
 ### **Core Features:**
+
 ✅ **Full zkLogin Integration** - Google login → Sui address → payment flow  
 ✅ **Gas Sponsorship** - Facilitator sponsors all gas fees  
 ✅ **Sub-second Settlement** - Optimistic mode for instant confirmation  
 ✅ **Real USDC Payments** - Circle USDC on Sui Testnet  
-✅ **End-to-End Testnet Flow** - Merchant → Widget → Facilitator → Blockchain  
+✅ **End-to-End Testnet Flow** - Merchant → Widget → Facilitator → Blockchain
 
 ### **Transparency Features (NEW!):**
+
 ✅ **Buyer Address Link** - Verify zkLogin address on-chain  
 ✅ **Merchant Address Link** - Verify who you're paying  
 ✅ **Facilitator Address Link** - Prove fee transparency (not stealing!)  
 ✅ **Asset Type Link** - Verify USDC package (Sui-native approach)  
 ✅ **Payment Transaction Link** - See payment on blockchain  
-✅ **Enhanced Invoice Hash** - Cryptographic proof display  
+✅ **Enhanced Invoice Hash** - Cryptographic proof display
 
 ### **100% Transparency Coverage:**
+
 Every single party in the payment flow is now verifiable on-chain! 🔍
 
 ---
@@ -34,11 +37,13 @@ Every single party in the payment flow is now verifiable on-chain! 🔍
 ## 🚀 Demo Flow
 
 ### **1. Merchant Visit:**
+
 - URL: `http://localhost:3002`
 - Click "Get Premium Content"
 - Copy invoice JWT
 
 ### **2. Payment Widget:**
+
 - URL: `http://localhost:5173`
 - Paste invoice (or redirected with invoice in URL hash)
 - Sign in with Google (zkLogin)
@@ -48,6 +53,7 @@ Every single party in the payment flow is now verifiable on-chain! 🔍
 - Click "Sign & Pay"
 
 ### **3. Success:**
+
 - Payment completes in ~500ms (optimistic)
 - See transaction link on SuiScan
 - Merchant page updates with premium content
@@ -64,19 +70,23 @@ Every single party in the payment flow is now verifiable on-chain! 🔍
 **Click through each one:**
 
 1. **🔍 My Address (Buyer)**
+
    - "This is my zkLogin wallet—generated from my Google login"
    - Shows it's a real on-chain address with transaction history
 
 2. **🔍 Merchant Address**
+
    - "This is who I'm paying—you can verify their history"
    - Proves merchant is legitimate
 
 3. **🔍 Facilitator Address**
+
    - "This is the facilitator collecting the 0.01 USDC fee"
    - "Click to prove they're only taking what they declare—no hidden fees!"
    - **THIS IS CRITICAL** - proves Pay402's honesty
 
 4. **🔍 Asset Type (USDC Package)**
+
    - "This is the Circle USDC package that defines the token"
    - "On Sui, coins aren't contracts like ERC-20—they're objects defined by packages"
    - "This proves it's real Circle USDC, not a fake token"
@@ -93,26 +103,31 @@ Every single party in the payment flow is now verifiable on-chain! 🔍
 ## 🎯 Technical Highlights for Judges
 
 ### **1. Sui-Native Understanding:**
+
 - Asset type link points to **package**, not contract
 - Demonstrates understanding of Sui's object model
 - Shows we're not just "porting EVM code"
 
 ### **2. zkLogin Integration:**
+
 - Google OAuth → Sui address derivation
 - Zero-knowledge proofs for transaction signing
 - Seamless UX (no wallet installation needed)
 
 ### **3. Gas Sponsorship:**
+
 - Facilitator sponsors all gas fees
 - User only pays in USDC
 - Shows understanding of Sui's gas model
 
 ### **4. Sub-second Settlement:**
+
 - Optimistic mode uses facilitator's instant confirmation
 - Pessimistic mode waits for blockchain finality
 - Demonstrates understanding of trade-offs
 
 ### **5. Complete Transparency:**
+
 - Every address is verifiable on-chain
 - Proves "don't trust, verify" principle
 - Competitive advantage over traditional payment systems
@@ -122,12 +137,14 @@ Every single party in the payment flow is now verifiable on-chain! 🔍
 ## 📁 Key Files
 
 ### **Core Components:**
+
 - `widget/src/components/PaymentPage.tsx` - Main payment UI with explorer links
 - `widget/src/hooks/useEnokiAuthDappKit.ts` - zkLogin integration (CRITICAL FIX: added `chain` parameter)
 - `facilitator/src/controllers/payment-controller.ts` - Gas sponsorship logic
 - `merchant/src/controllers/verify-payment.js` - Payment verification
 
 ### **Documentation:**
+
 - `ZKLOGIN-SUCCESS.md` - zkLogin breakthrough documentation
 - `EXPLORER-LINKS.md` - Explorer link implementation details
 - `FACILITATOR-ASSET-LINKS.md` - Facilitator and asset type link rationale
@@ -139,6 +156,7 @@ Every single party in the payment flow is now verifiable on-chain! 🔍
 ## 🔧 Configuration
 
 ### **Testnet Environment:**
+
 - **Network:** Sui Testnet
 - **Facilitator:** `0x2616cf141ab19b9dd657ac652fbcda65a7cbd437c1eb7cb7f28d5c4f5859e618`
 - **Package:** `0x29993321fbc54723dfca3ed38d7ce3b18ec2df97a7e1048c2932b022e47193eb`
@@ -146,6 +164,7 @@ Every single party in the payment flow is now verifiable on-chain! 🔍
 - **Explorer:** `https://suiscan.xyz/testnet`
 
 ### **Services:**
+
 - Merchant: `http://localhost:3002`
 - Payment Widget: `http://localhost:5173`
 - Facilitator API: `http://localhost:3001`
@@ -155,9 +174,11 @@ Every single party in the payment flow is now verifiable on-chain! 🔍
 ## 🎬 Demo Script
 
 ### **Opening (30 seconds):**
+
 > "Pay402 is a payment protocol for digital content on Sui. Let me show you how it works with zkLogin and complete transparency."
 
 ### **Flow (2 minutes):**
+
 1. Visit merchant, click "Get Premium Content"
 2. Sign in with Google (zkLogin)
 3. **HIGHLIGHT EXPLORER LINKS:** "Notice these magnifying glass icons? Every address is verifiable."
@@ -167,6 +188,7 @@ Every single party in the payment flow is now verifiable on-chain! 🔍
 7. Return to merchant, see premium content
 
 ### **Closing (30 seconds):**
+
 > "What makes Pay402 unique? Complete transparency. Every single party—buyer, merchant, facilitator, even the token itself—is verifiable on-chain. No hidden fees. No fake tokens. No trust required. That's the power of Sui."
 
 ---
@@ -174,11 +196,13 @@ Every single party in the payment flow is now verifiable on-chain! 🔍
 ## 🐛 Known Issues (None Blocking!)
 
 ### **Minor:**
+
 - OAuth redirect URL must be configured in Google Console
 - Testnet faucet sometimes slow (use Circle faucet as backup)
 - `signTransaction` unused variable warning (harmless)
 
 ### **Future Improvements:**
+
 - Add mainnet support
 - Implement retry logic for expired JWTs
 - Add network switching UI
@@ -196,7 +220,7 @@ Every single party in the payment flow is now verifiable on-chain! 🔍
 ✅ Working explorer links  
 ✅ **100% transparency coverage**  
 ✅ Sui-native implementation  
-✅ Demo-ready UI  
+✅ Demo-ready UI
 
 ---
 

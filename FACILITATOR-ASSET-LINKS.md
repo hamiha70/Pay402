@@ -7,20 +7,24 @@ Added explorer links for **Facilitator** and **Asset Type** to enable complete t
 ## What Was Added
 
 ### 1. Facilitator Address Link (Next to Fee)
+
 **Location:** Review Payment page, next to "Facilitator Fee"
 
 **What it does:**
+
 - Shows a "🔍" icon next to the facilitator fee amount
 - Links to: `https://suiscan.xyz/testnet/account/{facilitatorAddress}`
 - User can verify the facilitator's transaction history
 
 **Why it matters:**
+
 - **CRITICAL FOR JUDGES:** Proves facilitator fee transparency
 - Shows facilitator isn't stealing more than declared fee
 - Demonstrates Pay402's provable honesty
 - Blockchain transparency in action!
 
 **Example:**
+
 ```
 Facilitator Fee: 0.01 USDC 🔍
                          ↑
@@ -30,25 +34,29 @@ Facilitator Fee: 0.01 USDC 🔍
 ---
 
 ### 2. Asset Type Link (Token Contract)
+
 **Location:** Review Payment page, "Invoice Details" section
 
 **What it does:**
+
 - Shows a "🔍" icon next to the asset type (CAIP-19 format)
-- Parses CAIP-19 to extract coin type: `sui:testnet/0xabc...::usdc::USDC` → `0xabc...::usdc::USDC`
-- Links to: `https://suiscan.xyz/testnet/object/{coinType}`
-- User can verify the token contract
+- Parses CAIP-19 to extract the **package ID**: `sui:testnet/0xPACKAGE_ID::usdc::USDC` → `0xPACKAGE_ID`
+- Links to: `https://suiscan.xyz/testnet/object/{packageId}`
+- User can verify the package that defines the coin type
 
 **Why it matters:**
-- **Proves token authenticity:** Is this really Circle USDC or a fake token?
-- Advanced verification for power users
-- Shows transparency at every level
-- Judges can verify contract integrity
+
+- **Proves package authenticity:** Is this the real Circle USDC package?
+- On Sui, unlike EVM chains, USDC is not an ERC-20 contract—it's a `Coin<USDC>` object
+- We link to the **package** that defines the coin type (the Sui-native approach)
+- Judges can verify package ownership and code
 
 **Example:**
+
 ```
 Asset Type: sui:testnet/0xa1ec...::usdc::USDC 🔍
-                                                ↑
-                          Links to USDC token contract
+                          ↑
+                Links to USDC package (defines the coin type)
 ```
 
 ---
@@ -58,14 +66,18 @@ Asset Type: sui:testnet/0xa1ec...::usdc::USDC 🔍
 ### Helper Functions Added
 
 ```typescript
-// Parse CAIP-19 asset type to get coin contract address
-// Format: sui:testnet/0xabc...::usdc::USDC
-// Returns: 0xabc...::usdc::USDC (for explorer object link)
-const parseCoinTypeFromAssetType = (assetType: string): string | null => {
+// Parse CAIP-19 asset type to get package ID
+// Format: sui:testnet/0xPACKAGE_ID::module::Type
+// Returns: 0xPACKAGE_ID (for explorer package link)
+// Note: On Sui, USDC is a Coin<USDC> object, not a contract like ERC-20
+// We link to the package that defines the coin type
+const parsePackageIdFromAssetType = (assetType: string): string | null => {
   try {
-    const parts = assetType.split('/');
+    const parts = assetType.split("/");
     if (parts.length >= 2) {
-      return parts[1]; // Return the coin type
+      const coinType = parts[1]; // 0xPACKAGE_ID::module::Type
+      const packageId = coinType.split("::")[0]; // Extract package ID
+      return packageId;
     }
     return null;
   } catch {
@@ -75,23 +87,36 @@ const parseCoinTypeFromAssetType = (assetType: string): string | null => {
 
 // Get facilitator address from environment
 const getFacilitatorAddress = (): string => {
-  return '0x2616cf141ab19b9dd657ac652fbcda65a7cbd437c1eb7cb7f28d5c4f5859e618';
+  return "0x2616cf141ab19b9dd657ac652fbcda65a7cbd437c1eb7cb7f28d5c4f5859e618";
 };
 ```
 
 ### Links Added
 
 1. **Facilitator Fee Row:**
+
 ```tsx
 <div className="detail-row">
-  <span><strong>Facilitator Fee:</strong></span>
-  <div style={{display: 'flex', alignItems: 'center', gap: '8px'}}>
-    <span style={{color: '#6b7280'}}>{feeAmount.toFixed(2)} {coinName}</span>
-    {invoice.network?.includes('testnet') && (
-      <a href={`https://suiscan.xyz/testnet/account/${getFacilitatorAddress()}`}
-         target="_blank" rel="noopener noreferrer"
-         style={{fontSize: '0.8em', color: '#3b82f6', textDecoration: 'none', whiteSpace: 'nowrap'}}
-         title="View facilitator account on explorer">
+  <span>
+    <strong>Facilitator Fee:</strong>
+  </span>
+  <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+    <span style={{ color: "#6b7280" }}>
+      {feeAmount.toFixed(2)} {coinName}
+    </span>
+    {invoice.network?.includes("testnet") && (
+      <a
+        href={`https://suiscan.xyz/testnet/account/${getFacilitatorAddress()}`}
+        target="_blank"
+        rel="noopener noreferrer"
+        style={{
+          fontSize: "0.8em",
+          color: "#3b82f6",
+          textDecoration: "none",
+          whiteSpace: "nowrap",
+        }}
+        title="View facilitator account on explorer"
+      >
         🔍
       </a>
     )}
@@ -100,23 +125,41 @@ const getFacilitatorAddress = (): string => {
 ```
 
 2. **Asset Type Row:**
+
 ```tsx
-{invoice.assetType && (
-  <div className="detail-row">
-    <span><strong>Asset Type:</strong></span>
-    <div style={{display: 'flex', alignItems: 'center', gap: '8px'}}>
-      <code style={{fontSize: '0.65em', wordBreak: 'break-all', flex: 1}}>{invoice.assetType}</code>
-      {invoice.network?.includes('testnet') && parseCoinTypeFromAssetType(invoice.assetType) && (
-        <a href={`https://suiscan.xyz/testnet/object/${parseCoinTypeFromAssetType(invoice.assetType)}`}
-           target="_blank" rel="noopener noreferrer"
-           style={{fontSize: '0.8em', color: '#3b82f6', textDecoration: 'none', whiteSpace: 'nowrap'}}
-           title="View token contract on explorer">
-          🔍
-        </a>
-      )}
+{
+  invoice.assetType && (
+    <div className="detail-row">
+      <span>
+        <strong>Asset Type:</strong>
+      </span>
+      <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+        <code style={{ fontSize: "0.65em", wordBreak: "break-all", flex: 1 }}>
+          {invoice.assetType}
+        </code>
+        {invoice.network?.includes("testnet") &&
+          parsePackageIdFromAssetType(invoice.assetType) && (
+            <a
+              href={`https://suiscan.xyz/testnet/object/${parsePackageIdFromAssetType(
+                invoice.assetType
+              )}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{
+                fontSize: "0.8em",
+                color: "#3b82f6",
+                textDecoration: "none",
+                whiteSpace: "nowrap",
+              }}
+              title="View package on explorer (defines this coin type)"
+            >
+              🔍
+            </a>
+          )}
+      </div>
     </div>
-  </div>
-)}
+  );
+}
 ```
 
 ---
@@ -124,16 +167,20 @@ const getFacilitatorAddress = (): string => {
 ## Why This Matters for HackMoney Demo
 
 ### For Judges:
+
 1. **Facilitator Transparency:** "Is the facilitator stealing fees?"
+
    - **Answer:** Click the link, see EXACTLY what the facilitator is doing on-chain!
 
 2. **Token Authenticity:** "Is this really Circle USDC?"
-   - **Answer:** Click the link, verify the token contract!
+
+   - **Answer:** Click the link, verify the USDC package (the Sui-native way)!
 
 3. **Complete Verification:** "Can I trust ANY of these addresses?"
    - **Answer:** YES! Every address is clickable and verifiable!
 
 ### Competitive Advantage:
+
 - **Most payment systems hide these details**
 - Pay402 SHOWS them proudly
 - Demonstrates deep understanding of blockchain transparency
@@ -145,14 +192,14 @@ const getFacilitatorAddress = (): string => {
 
 Now EVERY address in the payment flow is verifiable:
 
-| Entity | Link Type | Purpose |
-|--------|-----------|---------|
-| ✅ Buyer Address | Account | Verify zkLogin address is real |
-| ✅ Merchant Address | Account | Verify who you're paying |
-| ✅ **Facilitator Address** | **Account** | **Verify fee transparency** |
-| ✅ **Asset Type (Token)** | **Object** | **Verify token authenticity** |
-| ✅ Payment Transaction | Transaction | Verify payment succeeded |
-| ✅ Invoice Hash | Display only | Cryptographic proof |
+| Entity                     | Link Type    | Purpose                        |
+| -------------------------- | ------------ | ------------------------------ |
+| ✅ Buyer Address           | Account      | Verify zkLogin address is real |
+| ✅ Merchant Address        | Account      | Verify who you're paying       |
+| ✅ **Facilitator Address** | **Account**  | **Verify fee transparency**    |
+| ✅ **Asset Type (Package)** | **Package**  | **Verify token package**       |
+| ✅ Payment Transaction     | Transaction  | Verify payment succeeded       |
+| ✅ Invoice Hash            | Display only | Cryptographic proof            |
 
 ---
 
@@ -161,12 +208,12 @@ Now EVERY address in the payment flow is verifiable:
 **When showing the payment screen to judges:**
 
 > "And here's the transparency layer that makes Pay402 unique. See these magnifying glass icons? Click any of them:
-> 
+>
 > - 🔍 **Buyer address:** That's my zkLogin wallet—click to verify it's real on-chain
 > - 🔍 **Merchant address:** That's who I'm paying—verify their history
 > - 🔍 **Facilitator:** That's the 0.01 USDC fee collector—click to prove they're not stealing more
 > - 🔍 **Asset Type:** That's the Circle USDC contract—verify it's the real token, not a fake
-> 
+>
 > Every single party in this payment is verifiable. No hidden fees, no fake tokens, no trust required. That's blockchain done right."
 
 ---
@@ -180,7 +227,7 @@ Now EVERY address in the payment flow is verifiable:
 ✅ Links only appear on testnet (not localnet)  
 ✅ Links open in new tab  
 ✅ Responsive layout (no overflow)  
-✅ Hover states work correctly  
+✅ Hover states work correctly
 
 ---
 
@@ -197,6 +244,6 @@ Now EVERY address in the payment flow is verifiable:
 ## Summary
 
 **Before:** Facilitator and asset type were displayed but not verifiable  
-**After:** Both are clickable, leading to explorer for complete transparency  
+**After:** Both are clickable, leading to explorer for complete transparency
 
 **Result:** 100% of payment parties are now verifiable on-chain! 🎯

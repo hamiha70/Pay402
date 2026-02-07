@@ -87,15 +87,20 @@ export default function PaymentPage({ invoiceJWT: propInvoiceJWT }: PaymentPageP
     return 'tokens'; // Fallback
   };
 
-  // Helper: Parse CAIP-19 asset type to get coin contract address
-  // Format: sui:testnet/0xabc...::usdc::USDC
-  // Returns: 0xabc...::usdc::USDC (for explorer object link)
-  const parseCoinTypeFromAssetType = (assetType: string): string | null => {
+  // Helper: Parse CAIP-19 asset type to get package ID
+  // Format: sui:testnet/0xPACKAGE_ID::module::Type
+  // Returns: 0xPACKAGE_ID (for explorer package link)
+  // Note: On Sui, USDC is a Coin<USDC> object, not a contract like ERC-20
+  // We link to the package that defines the coin type
+  const parsePackageIdFromAssetType = (assetType: string): string | null => {
     try {
-      // CAIP-19 format: chain_id/asset_type
+      // CAIP-19 format: chain_id/package_id::module::type
       const parts = assetType.split('/');
       if (parts.length >= 2) {
-        return parts[1]; // Return the coin type (e.g., 0xabc...::usdc::USDC)
+        const coinType = parts[1]; // 0xPACKAGE_ID::module::Type
+        // Extract just the package ID (before the first ::)
+        const packageId = coinType.split('::')[0];
+        return packageId; // Return package ID for explorer link
       }
       return null;
     } catch {
@@ -398,13 +403,13 @@ export default function PaymentPage({ invoiceJWT: propInvoiceJWT }: PaymentPageP
                 <span><strong>Asset Type:</strong></span>
                 <div style={{display: 'flex', alignItems: 'center', gap: '8px'}}>
                   <code style={{fontSize: '0.65em', wordBreak: 'break-all', flex: 1}}>{invoice.assetType}</code>
-                  {invoice.network?.includes('testnet') && parseCoinTypeFromAssetType(invoice.assetType) && (
+                  {invoice.network?.includes('testnet') && parsePackageIdFromAssetType(invoice.assetType) && (
                     <a 
-                      href={`https://suiscan.xyz/testnet/object/${parseCoinTypeFromAssetType(invoice.assetType)}`}
+                      href={`https://suiscan.xyz/testnet/object/${parsePackageIdFromAssetType(invoice.assetType)}`}
                       target="_blank"
                       rel="noopener noreferrer"
                       style={{fontSize: '0.8em', color: '#3b82f6', textDecoration: 'none', whiteSpace: 'nowrap'}}
-                      title="View token contract on explorer"
+                      title="View package on explorer (defines this coin type)"
                     >
                       🔍
                     </a>

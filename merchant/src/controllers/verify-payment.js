@@ -50,13 +50,20 @@ export function verifyPaymentController(req, res) {
     const wantsHtml = req.headers.accept?.includes('text/html');
     
     const premiumContent = {
-      title: '🎉 Premium Market Insights',
-      data: [
-        { symbol: 'BTC', price: 45123.45, change: '+5.2%', volume: '28.5B' },
-        { symbol: 'ETH', price: 2456.78, change: '+3.1%', volume: '15.2B' },
-        { symbol: 'SUI', price: 1.89, change: '+12.5%', volume: '850M' },
+      title: '🎉 Premium Content Unlocked!',
+      subtitle: 'What Pay402 Built - First x402 Facilitator on SUI',
+      features: [
+        { icon: '✅', name: 'OAuth Login', detail: 'Auto SUI address from Google' },
+        { icon: '✅', name: 'Gas Sponsorship', detail: 'No blockchain access needed' },
+        { icon: '✅', name: 'PTB Verification', detail: 'Buyer verifies before signing' },
+        { icon: '✅', name: 'zkLogin Signing', detail: 'Enoki Salt management' },
+        { icon: '✅', name: 'Optimistic Mode', detail: 'Fast delivery (before finality)' },
+        { icon: '✅', name: 'Pessimistic Mode', detail: 'On-chain confirmation first' },
+        { icon: '✅', name: 'USDC Persistence', detail: 'Buyer keeps coins (no escrow)' },
+        { icon: '✅', name: 'Merchant Widget', detail: 'JavaScript embed (Stripe model)' },
+        { icon: '✅', name: 'On-chain Receipts', detail: 'x402 invoice audit trail' },
+        { icon: '🔜', name: 'Browser Extension', detail: 'OAuth + one-time USDC only' },
       ],
-      analysis: 'Market showing strong bullish momentum across major assets...',
       timestamp: new Date().toISOString(),
       paid: true,
     };
@@ -139,32 +146,31 @@ export function verifyPaymentController(req, res) {
         </p>
       </div>
 
-      <h1>${premiumContent.title}</h1>
+      <h1 style="margin: 0 0 10px 0; color: #1f2937;">${premiumContent.title}</h1>
+      <p style="color: #6b7280; margin: 0 0 20px 0; font-size: 0.95rem;">${premiumContent.subtitle}</p>
       
-      <table>
-        <thead>
-          <tr>
-            <th>Symbol</th>
-            <th>Price</th>
-            <th>24h Change</th>
-            <th>Volume</th>
-          </tr>
-        </thead>
-        <tbody>
-          ${premiumContent.data.map(item => `
-            <tr>
-              <td><strong>${item.symbol}</strong></td>
-              <td>$${item.price.toLocaleString()}</td>
-              <td class="positive">${item.change}</td>
-              <td>$${item.volume}</td>
-            </tr>
-          `).join('')}
-        </tbody>
-      </table>
-
-      <div class="analysis-box">
-        <strong>📊 Market Analysis:</strong>
-        <p style="margin-top: 10px;">${premiumContent.analysis}</p>
+      <div style="
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+        gap: 12px;
+        margin-top: 20px;
+      ">
+        ${premiumContent.features.map(feature => `
+          <div style="
+            background: ${feature.icon === '🔜' ? '#f9fafb' : '#f0fdf4'};
+            border: 1px solid ${feature.icon === '🔜' ? '#e5e7eb' : '#bbf7d0'};
+            border-radius: 8px;
+            padding: 12px;
+          ">
+            <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 6px;">
+              <span style="font-size: 1.2rem;">${feature.icon}</span>
+              <strong style="color: #1f2937; font-size: 0.9rem;">${feature.name}</strong>
+            </div>
+            <p style="margin: 0; color: #6b7280; font-size: 0.85rem; line-height: 1.4;">
+              ${feature.detail}
+            </p>
+          </div>
+        `).join('')}
       </div>
 
       <div class="meta">
@@ -216,6 +222,37 @@ export function verifyPaymentController(req, res) {
         ` : ''}
         
         <p style="margin-top: 16px;"><strong>Generated:</strong> ${premiumContent.timestamp}</p>
+        
+        <div style="margin-top: 24px; text-align: center;">
+          <button 
+            onclick="
+              // Clear all zkLogin session data
+              localStorage.clear();
+              sessionStorage.clear();
+              
+              // Redirect to merchant home page
+              window.location.href = '/';
+            "
+            style="
+              padding: 12px 24px;
+              background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+              color: white;
+              border: none;
+              border-radius: 8px;
+              cursor: pointer;
+              font-size: 1rem;
+              font-weight: 600;
+              transition: all 0.2s;
+            "
+            onmouseover="this.style.transform = 'translateY(-2px)'; this.style.boxShadow = '0 10px 20px rgba(102, 126, 234, 0.4)';"
+            onmouseout="this.style.transform = 'translateY(0)'; this.style.boxShadow = 'none';"
+          >
+            🔄 Start Another Payment (Fresh Session)
+          </button>
+          <p style="margin-top: 8px; color: #6b7280; font-size: 0.85rem;">
+            This will clear your session and start fresh
+          </p>
+        </div>
       </div>
     </div>
 

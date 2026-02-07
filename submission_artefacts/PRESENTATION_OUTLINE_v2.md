@@ -459,42 +459,42 @@ During demo, emphasize:
 
 | Mode            | Description                           | Latency | Breakdown                                        |
 | --------------- | ------------------------------------- | ------- | ------------------------------------------------ |
-| **Optimistic**  | Deliver after submit, before finality | ~100ms  | Validate (35ms) + Submit (10ms) + HTTP (55ms)    |
-| **Pessimistic** | Deliver after on-chain confirmation   | ~600ms  | Validate (35ms) + Finality (500ms) + HTTP (65ms) |
+| **Optimistic**  | Deliver after submit, before finality | Fast    | Validate + Submit + HTTP response                |
+| **Pessimistic** | Deliver after on-chain confirmation   | ~400ms+ | Validate + SUI finality (~400ms) + HTTP response |
 
 ### Optimistic Settlement Deep Dive
 
 ```
 Timeline from buyer click to content delivery:
 
-[0ms]    User clicks "Confirm Payment"
-[5ms]    Widget signs PTB (zkLogin)
-[10ms]   POST to facilitator
-[15ms]   Facilitator validates signature
-[35ms]   Facilitator checks USDC balance (RPC call)
-[40ms]   Facilitator validates PTB structure
-[45ms]   Facilitator submits to SUI blockchain
-[50ms]   HTTP response: "Safe to deliver"
-[60ms]   Redirect to merchant
-[70ms]   ✅ Content delivered to user
+1. User clicks "Confirm Payment"
+2. Widget signs PTB (zkLogin)
+3. POST to facilitator
+4. Facilitator validates signature
+5. Facilitator checks USDC balance (RPC call)
+6. Facilitator validates PTB structure
+7. Facilitator submits to SUI blockchain
+8. HTTP response: "Safe to deliver"
+9. Redirect to merchant
+10. ✅ Content delivered to user
 
 Background (user already has content):
-[500ms]  Transaction finalized on-chain
-[510ms]  Receipt event indexed
+11. Transaction finalized on-chain (~400ms)
+12. Receipt event indexed
 ```
 
-**Key insight:** Facilitator acts as guarantor. Comprehensive validation before submit eliminates most risk. Only remaining risk: buyer front-runs between submit (45ms) and finality (500ms) - very low probability.
+**Key insight:** Facilitator acts as guarantor. Comprehensive validation before submit eliminates most risk. Only remaining risk: buyer front-runs between submit and finality - very low probability on SUI.
 
 ### Return Visit (Funded User)
 
-| Action                   | Latency |
-| ------------------------ | ------- |
-| Click payment link       | 1 sec   |
-| zkLogin session (cached) | 0 sec   |
-| Confirm payment          | 1 sec   |
-| Content delivered        | <1 sec  |
+| Action                   | Latency        |
+| ------------------------ | -------------- |
+| Click payment link       | Instant        |
+| zkLogin session (cached) | No re-auth     |
+| Confirm payment          | 1 click        |
+| Content delivered        | Fast (seconds) |
 
-**Total:** ~2-3 seconds for repeat purchases
+**Total:** Fast repeat purchases (no wallet popups, no re-authentication)
 
 ---
 
@@ -510,9 +510,9 @@ The following features are **working live on SUI testnet:**
 | ----------------------------- | ------- | -------------------------------------------------------------------------------- |
 | ✅ **OAuth login**            | Working | Automatic SUI address creation (persisted, OAuth + Salt)                         |
 | ✅ **Gas sponsorship**        | Working | Facilitator pays gas via sponsored PTB, buyer needs no blockchain access nor SUI |
-| ✅ **PTB validation**         | Working | Buyer verifies transaction structure before signing                              |
+| ✅ **PTB validation**         | Working | Buyer verifies transaction structure before signing (widget)                     |
 | ✅ **zkLogin signing**        | Working | Enoki service for Salt management                                                |
-| ✅ **Optimistic settlement**  | Working | Content delivered in ~100ms                                                      |
+| ✅ **Optimistic settlement**  | Working | Content delivered quickly (before finality)                                      |
 | ✅ **Pessimistic settlement** | Working | On-chain confirmation before delivery                                            |
 | ✅ **USDC persistence**       | Working | USDC remains with buyer all the time (no escrow custody)                         |
 | ✅ **Merchant onboarding**    | Working | Add JavaScript widget to website (Stripe model)                                  |

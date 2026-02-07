@@ -1,0 +1,7 @@
+__tests__/
+*.test.ts
+coverage/
+scripts/
+*.md
+.env.localnet.example
+.env.testnet.example

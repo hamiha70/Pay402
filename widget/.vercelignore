@@ -1,0 +1,8 @@
+__tests__/
+*.test.ts
+*.test.tsx
+coverage/
+*.md
+__fixtures__/
+.env.localnet.example
+.env.testnet.example

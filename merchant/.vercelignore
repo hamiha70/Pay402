@@ -1,0 +1,4 @@
+*.md
+setup-keys.js
+.env.localnet.example
+.env.testnet.example

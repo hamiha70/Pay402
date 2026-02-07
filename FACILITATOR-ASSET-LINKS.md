@@ -192,14 +192,14 @@ const getFacilitatorAddress = (): string => {
 
 Now EVERY address in the payment flow is verifiable:
 
-| Entity                     | Link Type    | Purpose                        |
-| -------------------------- | ------------ | ------------------------------ |
-| ✅ Buyer Address           | Account      | Verify zkLogin address is real |
-| ✅ Merchant Address        | Account      | Verify who you're paying       |
-| ✅ **Facilitator Address** | **Account**  | **Verify fee transparency**    |
+| Entity                      | Link Type    | Purpose                        |
+| --------------------------- | ------------ | ------------------------------ |
+| ✅ Buyer Address            | Account      | Verify zkLogin address is real |
+| ✅ Merchant Address         | Account      | Verify who you're paying       |
+| ✅ **Facilitator Address**  | **Account**  | **Verify fee transparency**    |
 | ✅ **Asset Type (Package)** | **Package**  | **Verify token package**       |
-| ✅ Payment Transaction     | Transaction  | Verify payment succeeded       |
-| ✅ Invoice Hash            | Display only | Cryptographic proof            |
+| ✅ Payment Transaction      | Transaction  | Verify payment succeeded       |
+| ✅ Invoice Hash             | Display only | Cryptographic proof            |
 
 ---
 

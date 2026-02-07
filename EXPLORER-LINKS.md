@@ -80,6 +80,7 @@ Added clickable explorer links throughout the payment widget to enhance transpar
 - Judges can verify package ownership and code
 
 **Sui-Specific Note:**
+
 - Unlike EVM chains where USDC is an ERC-20 contract, on Sui it's a `Coin<USDC>` object
 - We link to the **package** that defines the coin type, not the coin itself
 - This is the Sui-native way to verify token authenticity

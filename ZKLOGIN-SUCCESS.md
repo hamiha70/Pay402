@@ -358,6 +358,22 @@ We now have:
 - ✅ Gas sponsorship working
 - ✅ Real USDC payments
 - ✅ Sub-second settlement
+- ✅ Working SuiScan explorer links
+- ✅ Buyer/Merchant address verification links
+- ✅ Enhanced invoice hash display
 - ✅ Demo-ready!
 
 **Time to update Dan and prepare for HackMoney demo! 🚀**
+
+---
+
+## 🔗 Latest Enhancements (Feb 7, 2026)
+
+Added explorer links throughout the widget for enhanced transparency:
+
+1. **Buyer Address** - Users can verify their zkLogin account on-chain
+2. **Merchant Address** - Users can verify who they're paying
+3. **Invoice Hash** - Enhanced display with info tooltip
+
+See `EXPLORER-LINKS.md` for full details.
+

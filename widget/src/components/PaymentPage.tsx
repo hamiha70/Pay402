@@ -354,7 +354,20 @@ export default function PaymentPage({ invoiceJWT: propInvoiceJWT }: PaymentPageP
             {merchantAddr && (
               <div className="detail-row">
                 <span><strong>Merchant Address:</strong></span>
-                <code style={{fontSize: '0.7em', wordBreak: 'break-all'}}>{merchantAddr}</code>
+                <div style={{display: 'flex', alignItems: 'center', gap: '8px'}}>
+                  <code style={{fontSize: '0.7em', wordBreak: 'break-all', flex: 1}}>{merchantAddr}</code>
+                  {invoice.network?.includes('testnet') && (
+                    <a 
+                      href={`https://suiscan.xyz/testnet/account/${merchantAddr}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      style={{fontSize: '0.8em', color: '#3b82f6', textDecoration: 'none', whiteSpace: 'nowrap'}}
+                      title="View merchant on explorer"
+                    >
+                      🔍
+                    </a>
+                  )}
+                </div>
               </div>
             )}
             {invoice.assetType && (
@@ -415,7 +428,24 @@ export default function PaymentPage({ invoiceJWT: propInvoiceJWT }: PaymentPageP
             </div>
             <div className="balance-row" style={{flexDirection: 'column', alignItems: 'flex-start', gap: '5px'}}>
               <span><strong>Address:</strong></span>
-              <code style={{fontSize: '0.7em', wordBreak: 'break-all', width: '100%'}}>{address}</code>
+              <div style={{display: 'flex', alignItems: 'center', gap: '8px', width: '100%'}}>
+                <code style={{fontSize: '0.7em', wordBreak: 'break-all', flex: 1}}>{address}</code>
+                {invoice.network?.includes('testnet') && (
+                  <a 
+                    href={`https://suiscan.xyz/testnet/account/${address}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={{
+                      fontSize: '0.8em',
+                      color: '#3b82f6',
+                      textDecoration: 'none',
+                      whiteSpace: 'nowrap'
+                    }}
+                  >
+                    🔍 View
+                  </a>
+                )}
+              </div>
             </div>
           </div>
 
@@ -576,8 +606,20 @@ export default function PaymentPage({ invoiceJWT: propInvoiceJWT }: PaymentPageP
           </div>
 
           <div className="info-box">
-            <strong>Invoice Hash:</strong>
-            <code style={{color: '#1f2937', fontWeight: 600, fontSize: '0.75em', wordBreak: 'break-all', display: 'block', marginTop: '8px'}}>{verificationResult.details.invoiceHash}</code>
+            <div style={{display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px'}}>
+              <strong>Invoice Hash:</strong>
+              <span style={{fontSize: '0.8em', color: '#6b7280'}} title="Cryptographic proof of invoice integrity">ℹ️</span>
+            </div>
+            <code style={{
+              color: '#1f2937', 
+              fontWeight: 600, 
+              fontSize: '0.75em', 
+              wordBreak: 'break-all', 
+              display: 'block',
+              background: '#f3f4f6',
+              padding: '8px',
+              borderRadius: '4px'
+            }}>{verificationResult.details.invoiceHash}</code>
           </div>
 
           <p>The transaction has been verified. You can safely proceed.</p>

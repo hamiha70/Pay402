@@ -120,3 +120,6 @@ app.listen(PORT, () => {
     console.warn('   Generate keypair with: sui client new-address ed25519');
   }
 });
+
+// Export app for Vercel serverless (keeps localhost working too)
+export default app;

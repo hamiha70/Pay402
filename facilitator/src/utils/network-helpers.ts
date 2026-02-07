@@ -44,11 +44,11 @@ export function getExplorerUrl(digest: string, network?: string): string | null 
   }
   
   if (config.name === 'Testnet') {
-    return `https://testnet.suivision.xyz/txblock/${digest}`;
+    return `https://suiscan.xyz/testnet/tx/${digest}`;
   }
   
   // Mainnet
-  return `https://suivision.xyz/txblock/${digest}`;
+  return `https://suiscan.xyz/mainnet/tx/${digest}`;
 }
 
 /**

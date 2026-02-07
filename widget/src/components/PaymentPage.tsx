@@ -653,9 +653,9 @@ export default function PaymentPage({ invoiceJWT: propInvoiceJWT }: PaymentPageP
     const network = invoice.network?.split(':')[1] || 'localnet';
     let explorerLink = null;
     if (network === 'mainnet') {
-      explorerLink = `https://suivision.xyz/txblock/${paymentId}`;
+      explorerLink = `https://suiscan.xyz/mainnet/tx/${paymentId}`;
     } else if (network === 'testnet') {
-      explorerLink = `https://testnet.suivision.xyz/txblock/${paymentId}`;
+      explorerLink = `https://suiscan.xyz/testnet/tx/${paymentId}`;
     }
     
     const cliCommand = `lsui client tx-block ${paymentId}`;

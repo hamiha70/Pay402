@@ -457,10 +457,10 @@ During demo, emphasize:
 
 ### Latency: Request → Content Delivered
 
-| Mode            | Description                           | Latency | Breakdown                                        |
-| --------------- | ------------------------------------- | ------- | ------------------------------------------------ |
-| **Optimistic**  | Deliver after submit, before finality | Fast    | Validate + Submit + HTTP response                |
-| **Pessimistic** | Deliver after on-chain confirmation   | ~400ms+ | Validate + SUI finality (~400ms) + HTTP response |
+| Mode            | Description                           | Blockchain Latency | Breakdown                                        |
+| --------------- | ------------------------------------- | ------------------ | ------------------------------------------------ |
+| **Optimistic**  | Deliver after submit, before finality | 0ms (background)   | Validate + Submit + HTTP response                |
+| **Pessimistic** | Deliver after on-chain confirmation   | ~400ms             | Validate + SUI finality (~400ms) + HTTP response |
 
 ### Optimistic Settlement Deep Dive
 

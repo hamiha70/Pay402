@@ -289,12 +289,17 @@ export default function PaymentPage({ invoiceJWT: propInvoiceJWT }: PaymentPageP
       setReceiptData(data.receipt);  // Store receipt for display
       
       // Store blockchain latency for display
-      if (data.submitLatency) {
-        // Parse "123ms" to 123
+      if (data.submitLatency && data.submitLatency !== 'pending') {
+        // Parse "123ms" to 123 (only for pessimistic mode)
         const blockchainMs = parseInt(data.submitLatency.replace('ms', ''));
-        localStorage.setItem('blockchainLatency', blockchainMs.toString());
-        localStorage.setItem('settlementMode', mode);
+        if (!isNaN(blockchainMs)) {
+          localStorage.setItem('blockchainLatency', blockchainMs.toString());
+        }
+      } else if (mode === 'optimistic') {
+        // Optimistic mode: blockchain happens in background (0ms wait)
+        localStorage.setItem('blockchainLatency', '0');
       }
+      localStorage.setItem('settlementMode', mode);
       
       setStep('success');
     } catch (err) {

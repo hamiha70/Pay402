@@ -357,7 +357,7 @@ export SUI_NETWORK=localnet
 - ✅ Payment coin (MockUSDC → Circle USDC)
 - ✅ Timeouts (100ms → 2000ms)
 - ✅ CLI commands (`lsui` → `tsui`)
-- ✅ Explorer URLs (none → suivision.xyz)
+- ✅ Explorer URLs (none → suiscan.xyz)
 - ✅ Faucet (embedded → Circle)
 - ✅ Security rules (SUI payments allowed → blocked)
 
@@ -466,7 +466,7 @@ npm run validate-network
 
 🛠️ Helper Functions:
    CLI Command: tsui client tx-block <digest>
-   Explorer URL: https://testnet.suivision.xyz/txblock/<digest>
+   Explorer URL: https://suiscan.xyz/testnet/tx/<digest>
    Optimistic Timeout: 2000ms
    Pessimistic Timeout: 5000ms
 ```

@@ -332,7 +332,7 @@ sui client objects 0x2eba319f6171320e2af116fc8f21981b67e72ca7f0c060014364720f139
 
 ## 🔗 **USEFUL LINKS**
 
-- **Testnet Explorer:** https://testnet.suivision.xyz
+- **Testnet Explorer:** https://suiscan.xyz/testnet
 - **Circle Faucet:** https://faucet.circle.com
 - **Your zkLogin Address:** `0x2eba319f6171320e2af116fc8f21981b67e72ca7f0c060014364720f1394da1b`
 

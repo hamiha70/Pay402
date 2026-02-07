@@ -42,11 +42,11 @@ describe('Network Helper Functions', () => {
       expect(url).toBeNull();
     });
     
-    it('should return testnet suivision URL for testnet', () => {
+    it('should return testnet suiscan URL for testnet', () => {
       process.env.SUI_NETWORK = 'testnet';
       const url = getExplorerUrl(testDigest);
-      expect(url).toBe(`https://testnet.suivision.xyz/txblock/${testDigest}`);
-      expect(url).toContain('testnet.suivision');
+      expect(url).toBe(`https://suiscan.xyz/testnet/tx/${testDigest}`);
+      expect(url).toContain('suiscan');
     });
     
     it('should include the transaction digest', () => {
@@ -143,7 +143,7 @@ describe('Network Helper Functions', () => {
       
       expect(result.digest).toBe(testDigest);
       expect(result.cliCommand).toBeNull();
-      expect(result.explorerUrl).toContain('suivision');
+      expect(result.explorerUrl).toContain('suiscan');
       expect(result.explorerUrl).toContain(testDigest);
       expect(result.network).toBe('Testnet');
     });

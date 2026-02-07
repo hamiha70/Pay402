@@ -8,18 +8,21 @@
 ## 🎯 The Fix
 
 ### Root Cause
+
 The `chain` parameter was missing from the `useSignTransaction` call in `widget/src/hooks/useEnokiAuthDappKit.ts`.
 
 ### Solution
+
 ```typescript
 const result = await signTransaction({
   transaction: tx,
   account: currentAccount,
-  chain: chainId,  // ← CRITICAL: This was missing!
+  chain: chainId, // ← CRITICAL: This was missing!
 });
 ```
 
 **Why this was required:**
+
 - zkLogin/Enoki needs to know which blockchain network to generate the zero-knowledge proof for
 - Without it, the Enoki SDK couldn't properly call `/v1/zklogin/zkp` endpoint
 - With it, everything works perfectly! ✅
@@ -29,6 +32,7 @@ const result = await signTransaction({
 ## ✅ Verified Working Flow
 
 ### 1. OAuth Login ✅
+
 ```
 User clicks "Sign In with Google"
   ↓
@@ -42,6 +46,7 @@ Address displayed in widget ✅
 ```
 
 ### 2. Balance Check ✅
+
 ```
 Auto-check on page load
   ↓
@@ -51,6 +56,7 @@ Shows: "USDC: 20.00" ✅
 ```
 
 ### 3. Transaction Signing ✅
+
 ```
 User clicks "Confirm Payment"
   ↓
@@ -67,6 +73,7 @@ Bytes: 516 bytes (transaction)
 ```
 
 ### 4. Transaction Execution ✅
+
 ```
 Widget submits to facilitator
   ↓
@@ -78,6 +85,7 @@ Digest: EV7D7z9gjzjrAQSKWSW8S1iLGdk8aEVPjn3zLA1aUSLE ✅
 ```
 
 ### 5. Settlement ✅
+
 ```
 Merchant received: 0.10 USDC (100,000 microUSDC)
 Facilitator received: 0.01 USDC (10,000 microUSDC)
@@ -94,15 +102,18 @@ Gas paid by: Facilitator (0.0000037 SUI)
 **Transaction:** `EV7D7z9gjzjrAQSKWSW8S1iLGdk8aEVPjn3zLA1aUSLE`
 
 **CLI Verification:**
+
 ```bash
 sui client tx-block EV7D7z9gjzjrAQSKWSW8S1iLGdk8aEVPjn3zLA1aUSLE
 # Status: Success ✅
 ```
 
 **Explorer:**
+
 - https://suiscan.xyz/testnet/tx/EV7D7z9gjzjrAQSKWSW8S1iLGdk8aEVPjn3zLA1aUSLE
 
 ### Payment Event
+
 ```
 EventType: PaymentSettled
 {
@@ -117,12 +128,14 @@ EventType: PaymentSettled
 ```
 
 ### Gas Sponsorship ✅
+
 - **Gas Owner:** Facilitator (0x2616cf14...)
 - **Gas Budget:** 10 MIST
 - **Gas Used:** 3.67 MIST
 - **Buyer's SUI balance:** Untouched ✅
 
 ### Optimistic Settlement ✅
+
 - **HTTP Response:** 15ms (content delivered immediately)
 - **Blockchain Submit:** 986ms (background)
 - **Total Client Latency:** 3862ms
@@ -132,6 +145,7 @@ EventType: PaymentSettled
 ## 🔍 What Happened During Debug
 
 ### Failed Attempts
+
 1. ❌ Tried downgrading `@mysten/enoki` (0.13.0 → 1.0.1) - didn't help
 2. ❌ Created `/oauth-callback` route - not needed (but good practice)
 3. ❌ Suspected "Allowed Origins" issue - not the problem
@@ -139,6 +153,7 @@ EventType: PaymentSettled
 5. ❌ Suspected `Buffer.from()` browser incompatibility - fixed earlier but not root cause
 
 ### Breakthrough Moment
+
 - **Added verbose logging** to see exact wallet features
 - **Discovered:** The `chain` parameter was never being passed
 - **Realized:** This was documented in dapp-kit docs but we missed it!
@@ -150,20 +165,22 @@ EventType: PaymentSettled
 ## 📝 Code Changes Summary
 
 ### Critical Fix
+
 **File:** `widget/src/hooks/useEnokiAuthDappKit.ts` (line 124-128)
 
 ```typescript
-const network = import.meta.env.VITE_SUI_NETWORK || 'testnet';
+const network = import.meta.env.VITE_SUI_NETWORK || "testnet";
 const chainId = `sui:${network}`;
 
 const result = await signTransaction({
   transaction: tx,
   account: currentAccount,
-  chain: chainId,  // ← THE FIX!
+  chain: chainId, // ← THE FIX!
 });
 ```
 
 ### Supporting Changes
+
 1. **Explorer links:** Fixed SuiVision → SuiScan URLs
 2. **OAuth callback:** Added dedicated `/oauth-callback` route (defensive)
 3. **Verbose logging:** Enhanced debugging for future issues
@@ -174,6 +191,7 @@ const result = await signTransaction({
 ## 🎯 Robustness Checklist
 
 ### ✅ Currently Working
+
 - [x] zkLogin OAuth with Google
 - [x] Address derivation
 - [x] Balance checking (auto-check on load)
@@ -188,21 +206,24 @@ const result = await signTransaction({
 ### 🔧 To Make It Robust
 
 #### 1. Network Detection
+
 ```typescript
 // Current: Hardcoded in .env
-const network = import.meta.env.VITE_SUI_NETWORK || 'testnet';
+const network = import.meta.env.VITE_SUI_NETWORK || "testnet";
 
 // Robust: Derive from invoice
-const network = invoice.network.split(':')[1]; // "sui:testnet" → "testnet"
+const network = invoice.network.split(":")[1]; // "sui:testnet" → "testnet"
 ```
 
 #### 2. Error Handling
+
 - [ ] Handle expired JWTs (OAuth session timeout)
 - [ ] Handle network switching mid-session
 - [ ] Retry logic for transient failures
 - [ ] User-friendly error messages
 
 #### 3. Edge Cases
+
 - [ ] User closes OAuth popup
 - [ ] User has insufficient USDC
 - [ ] User has insufficient SUI (gas - not applicable with sponsorship)
@@ -210,6 +231,7 @@ const network = invoice.network.split(':')[1]; // "sui:testnet" → "testnet"
 - [ ] Facilitator is offline
 
 #### 4. Testing
+
 - [ ] Test on mainnet
 - [ ] Test with different OAuth providers (Facebook, Twitch)
 - [ ] Test concurrent payments
@@ -221,6 +243,7 @@ const network = invoice.network.split(':')[1]; // "sui:testnet" → "testnet"
 ## 📱 Demo Flow (For HackMoney)
 
 ### Happy Path (3 clicks!)
+
 1. Visit merchant: http://localhost:3002
 2. Click "💳 Get Premium Content"
 3. Sign in with Google → **Address appears** ✅
@@ -230,6 +253,7 @@ const network = invoice.network.split(':')[1]; // "sui:testnet" → "testnet"
 **Total time:** ~5 seconds (including zkLogin OAuth)
 
 ### Talking Points
+
 - "No wallet installation required!"
 - "Just Google login → instant blockchain address"
 - "Gas is sponsored - user never touches SUI"
@@ -242,12 +266,14 @@ const network = invoice.network.split(':')[1]; // "sui:testnet" → "testnet"
 ## 🎬 Next Steps
 
 ### Immediate (Before Demo)
+
 1. ✅ Fix explorer links (SuiVision → SuiScan)
 2. ✅ Test full flow 3-5 times
 3. ✅ Document the breakthrough
 4. ✅ Update Dan with success!
 
 ### Short-term (Demo Day)
+
 - [ ] Polish UI/UX
 - [ ] Add loading states
 - [ ] Improve error messages
@@ -255,6 +281,7 @@ const network = invoice.network.split(':')[1]; // "sui:testnet" → "testnet"
 - [ ] Practice demo script
 
 ### Post-Hackathon
+
 - [ ] Refactor CAIP utilities (eliminate duplication)
 - [ ] Add workflow toggle (auto-redirect vs manual entry)
 - [ ] Implement retry logic
@@ -270,7 +297,7 @@ Hey Dan! 🎉
 
 BREAKTHROUGH! We figured it out!
 
-The issue was simple but critical: we weren't passing the `chain` parameter 
+The issue was simple but critical: we weren't passing the `chain` parameter
 to useSignTransaction. Once we added:
 
 const result = await signTransaction({
@@ -283,16 +310,16 @@ Everything works perfectly now! ✅
 
 Full end-to-end flow confirmed:
 - OAuth login ✅
-- zkLogin address derivation ✅  
+- zkLogin address derivation ✅
 - Transaction signing ✅
 - Gas sponsorship ✅
 - On-chain settlement ✅
 
-Transaction proof: 
+Transaction proof:
 https://suiscan.xyz/testnet/tx/EV7D7z9gjzjrAQSKWSW8S1iLGdk8aEVPjn3zLA1aUSLE
 
-Thanks for your earlier help with the OAuth setup - that got us 90% 
-of the way there! The last 10% was just reading the dapp-kit docs 
+Thanks for your earlier help with the OAuth setup - that got us 90%
+of the way there! The last 10% was just reading the dapp-kit docs
 more carefully. 😅
 
 Really appreciate your support! 🙏
@@ -303,15 +330,19 @@ Really appreciate your support! 🙏
 ## 📚 Technical Lessons Learned
 
 ### 1. Always Read the Docs Carefully
+
 The `chain` parameter was documented in the dapp-kit `useSignTransaction` docs, but we missed it initially.
 
 ### 2. zkLogin Requires Network Context
+
 Unlike regular wallet signing, zkLogin needs to know the target chain upfront to generate the correct zero-knowledge proof.
 
 ### 3. Debugging Order Matters
+
 We went down several rabbit holes (JWT storage, CORS, OAuth redirects) before finding the simple root cause. Sometimes the answer is in the docs, not the code!
 
 ### 4. Verbose Logging Wins
+
 The detailed logging we added helped us understand the flow and would have caught this sooner if we'd added it earlier.
 
 ---
@@ -321,6 +352,7 @@ The detailed logging we added helped us understand the flow and would have caugh
 **This is a MAJOR milestone!**
 
 We now have:
+
 - ✅ Full zkLogin integration working
 - ✅ End-to-end payment flow on testnet
 - ✅ Gas sponsorship working

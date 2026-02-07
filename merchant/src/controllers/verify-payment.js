@@ -23,9 +23,9 @@ export function verifyPaymentController(req, res) {
     let explorerLink = null;
     if (txDigest) {
       if (suiNetwork === 'mainnet') {
-        explorerLink = `https://suivision.xyz/txblock/${txDigest}`;
+        explorerLink = `https://suiscan.xyz/mainnet/tx/${txDigest}`;
       } else if (suiNetwork === 'testnet') {
-        explorerLink = `https://testnet.suivision.xyz/txblock/${txDigest}`;
+        explorerLink = `https://suiscan.xyz/testnet/tx/${txDigest}`;
       }
       // For localnet, no public explorer available
     }

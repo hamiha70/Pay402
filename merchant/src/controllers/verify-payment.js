@@ -7,7 +7,7 @@
 
 export function verifyPaymentController(req, res) {
   try {
-    const { paymentId, digest, mode, paymentTime, accessTime, invoiceTime, network } = req.query;
+    const { paymentId, digest, mode, paymentTime, accessTime, invoiceTime, network, blockchainLatency } = req.query;
     const txDigest = paymentId || digest;
     const suiNetwork = network || 'localnet';
     
@@ -17,7 +17,6 @@ export function verifyPaymentController(req, res) {
     const invoiceTimestamp = invoiceTime ? parseInt(invoiceTime) : null;
     
     const timeDelta = paymentTimestamp ? accessTimestamp - paymentTimestamp : null;
-    const totalTime = invoiceTimestamp && paymentTimestamp ? paymentTimestamp - invoiceTimestamp : null;
     
     // Generate explorer link
     let explorerLink = null;
@@ -142,7 +141,7 @@ export function verifyPaymentController(req, res) {
         <strong>✅ Payment Verified Successfully!</strong>
         <p style="margin: 5px 0 0 0; font-size: 0.875rem;">
           Settlement Mode: <strong>${mode || 'optimistic'}</strong>
-          ${totalTime !== null ? `<br>Payment Time: <strong>${totalTime}ms</strong> ${mode === 'optimistic' ? '⚡' : '🔒'}` : ''}
+          ${blockchainLatency ? `<br>Blockchain Latency: <strong>${blockchainLatency}ms</strong> ${mode === 'optimistic' ? '⚡ (background)' : '🔒'}` : ''}
         </p>
       </div>
 

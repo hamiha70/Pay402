@@ -277,8 +277,7 @@ export default function PaymentPage({ invoiceJWT: propInvoiceJWT }: PaymentPageP
       
       console.log(`💳 Payment submitted (${mode} mode)`);
       console.log('Client latency:', `${clientLatency}ms`);
-      console.log('Server latency:', data.latency);
-      console.log('Digest:', data.digest);
+      console.log('Server response:', data);
       
       if (data.receipt) {
         console.log('Receipt:', data.receipt);
@@ -288,6 +287,15 @@ export default function PaymentPage({ invoiceJWT: propInvoiceJWT }: PaymentPageP
       setPaymentId(data.digest);
       setPaymentTime(completionTime);  // Capture payment completion time
       setReceiptData(data.receipt);  // Store receipt for display
+      
+      // Store blockchain latency for display
+      if (data.submitLatency) {
+        // Parse "123ms" to 123
+        const blockchainMs = parseInt(data.submitLatency.replace('ms', ''));
+        localStorage.setItem('blockchainLatency', blockchainMs.toString());
+        localStorage.setItem('settlementMode', mode);
+      }
+      
       setStep('success');
     } catch (err) {
       console.error('💥 Payment submission error:', err);
@@ -700,7 +708,7 @@ export default function PaymentPage({ invoiceJWT: propInvoiceJWT }: PaymentPageP
                   fontWeight: settlementMode === 'optimistic' ? 'bold' : 'normal',
                 }}
               >
-                ⚡ Optimistic (~50ms)
+                ⚡ Optimistic
                 <div style={{ fontSize: '0.75rem', marginTop: '4px' }}>
                   Instant response, facilitator guarantees
                 </div>
@@ -718,7 +726,7 @@ export default function PaymentPage({ invoiceJWT: propInvoiceJWT }: PaymentPageP
                   fontWeight: settlementMode === 'pessimistic' ? 'bold' : 'normal',
                 }}
               >
-                🔒 Pessimistic (~500ms)
+                🔒 Pessimistic
                 <div style={{ fontSize: '0.75rem', marginTop: '4px' }}>
                   Wait for blockchain confirmation
                 </div>
@@ -755,7 +763,7 @@ export default function PaymentPage({ invoiceJWT: propInvoiceJWT }: PaymentPageP
     }
     
     const cliCommand = `lsui client tx-block ${paymentId}`;
-    const actualPaymentTime = paymentTime && invoiceTime ? paymentTime - invoiceTime : null;
+    const blockchainLatency = localStorage.getItem('blockchainLatency');
 
     return (
       <div className="payment-page">
@@ -772,7 +780,7 @@ export default function PaymentPage({ invoiceJWT: propInvoiceJWT }: PaymentPageP
             <strong>✅ Payment Verified Successfully!</strong>
             <p style={{margin: '5px 0 0 0', fontSize: '0.875rem'}}>
               Settlement Mode: <strong>{settlementMode}</strong>
-              {actualPaymentTime && ` • Time: ${actualPaymentTime}ms ⚡`}
+              {blockchainLatency && ` • Blockchain: ${blockchainLatency}ms ${settlementMode === 'optimistic' ? '⚡ (background)' : '🔒'}`}
             </p>
           </div>
           
@@ -891,8 +899,9 @@ export default function PaymentPage({ invoiceJWT: propInvoiceJWT }: PaymentPageP
           <button
             onClick={() => {
               const accessTime = Date.now();
+              const blockchainLatency = localStorage.getItem('blockchainLatency') || '';
               const redirectUrl = invoice.redirectUrl || 'http://localhost:3002/api/verify-payment';
-              const url = `${redirectUrl}?paymentId=${paymentId}&mode=${settlementMode}&paymentTime=${paymentTime}&accessTime=${accessTime}&invoiceTime=${invoiceTime}&network=${network}`;
+              const url = `${redirectUrl}?paymentId=${paymentId}&mode=${settlementMode}&paymentTime=${paymentTime}&accessTime=${accessTime}&invoiceTime=${invoiceTime}&network=${network}&blockchainLatency=${blockchainLatency}`;
               window.open(url, '_blank');
             }}
             className="btn-primary"

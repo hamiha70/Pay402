@@ -87,6 +87,29 @@ export default function PaymentPage({ invoiceJWT: propInvoiceJWT }: PaymentPageP
     return 'tokens'; // Fallback
   };
 
+  // Helper: Parse CAIP-19 asset type to get coin contract address
+  // Format: sui:testnet/0xabc...::usdc::USDC
+  // Returns: 0xabc...::usdc::USDC (for explorer object link)
+  const parseCoinTypeFromAssetType = (assetType: string): string | null => {
+    try {
+      // CAIP-19 format: chain_id/asset_type
+      const parts = assetType.split('/');
+      if (parts.length >= 2) {
+        return parts[1]; // Return the coin type (e.g., 0xabc...::usdc::USDC)
+      }
+      return null;
+    } catch {
+      return null;
+    }
+  };
+
+  // Helper: Get facilitator address from environment
+  const getFacilitatorAddress = (): string => {
+    // For testnet, we use a known facilitator address
+    // In production, this could be fetched from the invoice or API
+    return '0x2616cf141ab19b9dd657ac652fbcda65a7cbd437c1eb7cb7f28d5c4f5859e618';
+  };
+
   // Auto-parse invoice from URL or sessionStorage on mount
   useEffect(() => {
     if (invoiceJWT && !invoice) {
@@ -373,7 +396,20 @@ export default function PaymentPage({ invoiceJWT: propInvoiceJWT }: PaymentPageP
             {invoice.assetType && (
               <div className="detail-row">
                 <span><strong>Asset Type:</strong></span>
-                <code style={{fontSize: '0.65em', wordBreak: 'break-all'}}>{invoice.assetType}</code>
+                <div style={{display: 'flex', alignItems: 'center', gap: '8px'}}>
+                  <code style={{fontSize: '0.65em', wordBreak: 'break-all', flex: 1}}>{invoice.assetType}</code>
+                  {invoice.network?.includes('testnet') && parseCoinTypeFromAssetType(invoice.assetType) && (
+                    <a 
+                      href={`https://suiscan.xyz/testnet/object/${parseCoinTypeFromAssetType(invoice.assetType)}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      style={{fontSize: '0.8em', color: '#3b82f6', textDecoration: 'none', whiteSpace: 'nowrap'}}
+                      title="View token contract on explorer"
+                    >
+                      🔍
+                    </a>
+                  )}
+                </div>
               </div>
             )}
             {invoice.payTo && (
@@ -397,7 +433,20 @@ export default function PaymentPage({ invoiceJWT: propInvoiceJWT }: PaymentPageP
             </div>
             <div className="detail-row">
               <span><strong>Facilitator Fee:</strong></span>
-              <span style={{color: '#6b7280'}}>{feeAmount.toFixed(2)} {coinName}</span>
+              <div style={{display: 'flex', alignItems: 'center', gap: '8px'}}>
+                <span style={{color: '#6b7280'}}>{feeAmount.toFixed(2)} {coinName}</span>
+                {invoice.network?.includes('testnet') && (
+                  <a 
+                    href={`https://suiscan.xyz/testnet/account/${getFacilitatorAddress()}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={{fontSize: '0.8em', color: '#3b82f6', textDecoration: 'none', whiteSpace: 'nowrap'}}
+                    title="View facilitator account on explorer"
+                  >
+                    🔍
+                  </a>
+                )}
+              </div>
             </div>
             <div className="detail-row total">
               <span><strong>Total Amount:</strong></span>

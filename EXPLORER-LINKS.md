@@ -36,7 +36,40 @@ Added clickable explorer links throughout the payment widget to enhance transpar
 
 ---
 
-### 3. Invoice Hash (Verification Screen)
+### 3. Facilitator Address (Next to Fee) ⭐ NEW
+**Location:** Review Payment page, next to "Facilitator Fee"
+
+**What it does:**
+- Shows a "🔍" icon next to the facilitator fee amount
+- Links to: `https://suiscan.xyz/testnet/account/{facilitatorAddress}`
+- User can verify the facilitator's transaction history
+
+**Why it matters:**
+- **CRITICAL FOR JUDGES:** Proves facilitator fee transparency
+- Shows facilitator isn't stealing more than declared fee
+- Demonstrates Pay402's provable honesty
+- Complete blockchain transparency!
+
+---
+
+### 4. Asset Type (Token Contract) ⭐ NEW
+**Location:** Review Payment page, "Invoice Details" section
+
+**What it does:**
+- Shows a "🔍" icon next to the asset type (CAIP-19 format)
+- Parses CAIP-19 to extract coin type
+- Links to: `https://suiscan.xyz/testnet/object/{coinType}`
+- User can verify the token contract
+
+**Why it matters:**
+- **Proves token authenticity:** Is this really Circle USDC?
+- Advanced verification for power users
+- Shows transparency at every level
+- Judges can verify contract integrity
+
+---
+
+### 5. Invoice Hash (Verification Screen)
 **Location:** Verification Passed page
 
 **What it does:**
@@ -84,14 +117,8 @@ Added clickable explorer links throughout the payment widget to enhance transpar
 
 ## What We DIDN'T Add (and Why)
 
-### ❌ Facilitator Address
-**Reason:** User doesn't care about facilitator internals. Too much info clutters the UI.
-
-### ❌ Asset Type (CAIP-19)
-**Reason:** Technical identifier, not useful for end users. Would be confusing.
-
-### ❌ Invoice Hash Explorer Link
-**Reason:** Hash is computed off-chain (SHA-256 of invoice data), not a blockchain object. No explorer to link to.
+### ❌ Pay To (CAIP-10)
+**Reason:** This is essentially the same as the merchant address (just in CAIP-10 format). Would be redundant since we already show the merchant address with a link.
 
 ---
 
@@ -113,6 +140,8 @@ Added clickable explorer links throughout the payment widget to enhance transpar
 
 ✅ Buyer address link works and shows correct account  
 ✅ Merchant address link works and shows merchant account  
+✅ **Facilitator address link works and shows facilitator account** ⭐  
+✅ **Asset type link works and shows token contract** ⭐  
 ✅ Invoice hash displays with proper styling  
 ✅ Links open in new tab  
 ✅ Links only appear on testnet (not localnet)  

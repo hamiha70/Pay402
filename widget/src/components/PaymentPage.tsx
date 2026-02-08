@@ -908,7 +908,14 @@ export default function PaymentPage({ invoiceJWT: propInvoiceJWT }: PaymentPageP
             onClick={() => {
               const accessTime = Date.now();
               const blockchainLatency = localStorage.getItem('blockchainLatency') || '';
-              const redirectUrl = invoice.redirectUrl || 'http://localhost:3002/api/verify-payment';
+              const redirectUrl = invoice.redirectUrl;
+              
+              if (!redirectUrl) {
+                console.error('❌ No redirectUrl in invoice - merchant configuration error');
+                alert('Error: Merchant did not provide a redirect URL. Cannot access premium content.');
+                return;
+              }
+              
               const url = `${redirectUrl}?paymentId=${paymentId}&mode=${settlementMode}&paymentTime=${paymentTime}&accessTime=${accessTime}&invoiceTime=${invoiceTime}&network=${network}&blockchainLatency=${blockchainLatency}`;
               window.open(url, '_blank');
             }}

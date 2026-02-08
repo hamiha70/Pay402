@@ -356,12 +356,9 @@
           console.log("🔗 Redirecting to widget with invoice in hash");
           window.location.href = widgetUrl;
         } catch (error) {
-          console.error('Failed to fetch config:', error);
-          // Fallback to localhost for backward compatibility
-          const widgetUrl = `http://localhost:5173#invoice=${encodeURIComponent(
-            currentInvoiceJWT
-          )}`;
-          window.location.href = widgetUrl;
+          console.error('Failed to fetch widget config:', error);
+          alert('Error: Cannot connect to payment widget. Please contact support.');
+          document.querySelector('.invoice-details').style.display = 'none';
         }
       }
 

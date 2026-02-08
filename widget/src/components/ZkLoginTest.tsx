@@ -2,6 +2,9 @@ import { useState } from 'react';
 import { ConnectButton, useCurrentAccount, useConnectWallet, useWallets } from '@mysten/dapp-kit';
 import { isEnokiWallet } from '@mysten/enoki';
 
+// Facilitator URL from environment variable
+const FACILITATOR_URL = import.meta.env.VITE_FACILITATOR_URL || 'http://localhost:3001';
+
 /**
  * zkLogin Test Component
  * 
@@ -42,7 +45,7 @@ export default function ZkLoginTest() {
 
     setLoading(true);
     try {
-      const response = await fetch(`http://localhost:3001/balance/${currentAccount.address}`);
+      const response = await fetch(`${FACILITATOR_URL}/balance/${currentAccount.address}`);
       const data = await response.json();
       setBalanceInfo(data);
     } catch (error) {

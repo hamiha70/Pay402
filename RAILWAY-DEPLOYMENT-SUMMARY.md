@@ -7,6 +7,7 @@
 ## ✅ Deployed Services
 
 ### 1. Facilitator (Backend)
+
 - **URL:** https://pay402-production.up.railway.app
 - **Root Directory:** `facilitator`
 - **Status:** ✅ Running
@@ -14,12 +15,14 @@
 - **Gas Balance:** 0.1831 SUI (low - consider funding)
 
 ### 2. Merchant (Demo Service)
+
 - **URL:** https://merchant-production-0255.up.railway.app
 - **Root Directory:** `merchant`
 - **Status:** ✅ Running
 - **Facilitator URL:** https://pay402-production.up.railway.app
 
 ### 3. Widget (Frontend)
+
 - **URL:** https://widget-production-8b65.up.railway.app
 - **Root Directory:** `widget`
 - **Status:** ✅ Running
@@ -28,24 +31,31 @@
 ## 🔧 Configuration Notes
 
 ### Root Directory Setup
+
 Each service requires its Root Directory to be set in the Railway dashboard:
+
 - Go to Service → Settings → Source → Root Directory
 - Enter the directory name (no leading slash): `facilitator`, `merchant`, or `widget`
 
 ### Environment Variables
+
 All environment variables have been set via Railway CLI:
+
 - Facilitator: Network, keys, package IDs
 - Merchant: Facilitator URL, merchant config
 - Widget: Enoki, Google OAuth, Facilitator URL, network config
 
 ### Build Configuration
+
 - **Facilitator & Merchant:** Node.js Express apps with TypeScript compilation
 - **Widget:** Vite React app served with `serve` package (TypeScript checking disabled for speed)
 
 ## 📋 Remaining Tasks
 
 ### 1. Update OAuth Redirect URIs ✅ DONE
+
 - [x] **Google Cloud Console:**
+
   - Add: `https://widget-production-8b65.up.railway.app`
   - Go to: https://console.cloud.google.com/apis/credentials
   - Edit OAuth 2.0 Client ID: `1001996736694-2ic38121fneem5ob0ond46cmvhatsrtk`
@@ -59,6 +69,7 @@ All environment variables have been set via Railway CLI:
   - **Status:** Already configured correctly
 
 ### 2. Test End-to-End Flow ✅ COMPLETE
+
 - [x] Open widget at https://widget-production-8b65.up.railway.app
 - [x] Test Google zkLogin authentication
 - [x] Test wallet connection
@@ -70,12 +81,15 @@ All environment variables have been set via Railway CLI:
 - **Status:** ✅ **Full end-to-end flow tested and working on mobile and desktop!**
 
 ### 3. Gas Funding (Optional but Recommended)
+
 The facilitator wallet has low gas (0.1721 SUI, threshold: 1 SUI). To fund:
+
 ```bash
 sui client faucet --address 0x2616cf141ab19b9dd657ac652fbcda65a7cbd437c1eb7cb7f28d5c4f5859e618
 ```
 
 ### 4. Monitoring
+
 - Monitor Railway logs for errors: `railway logs`
 - Check deployment status: `railway deployment list`
 - Watch for cold starts and restarts
@@ -91,6 +105,7 @@ sui client faucet --address 0x2616cf141ab19b9dd657ac652fbcda65a7cbd437c1eb7cb7f2
 ## 🎯 Demo Checklist
 
 For HackMoney demo:
+
 - [x] Update OAuth redirect URIs ✅
 - [x] Test complete payment flow ✅
 - [x] Verify mobile compatibility ✅
@@ -101,16 +116,19 @@ For HackMoney demo:
 ## 🐛 Known Issues & Workarounds
 
 ### TypeScript Errors in Widget
+
 - **Issue:** Widget has some TypeScript type errors (unused vars, missing properties)
 - **Workaround:** Build script skips TypeScript check (`vite build` instead of `tsc -b && vite build`)
 - **Impact:** No runtime impact, but should be fixed post-hackathon
 
 ### Gas Balance Low
+
 - **Issue:** Facilitator wallet has 0.1831 SUI (below 1 SUI threshold)
 - **Workaround:** Use testnet faucet to refill
 - **Impact:** May run out during heavy testing
 
 ### Cold Starts
+
 - **Issue:** Railway free tier may have cold starts
 - **Workaround:** Keep services warm by pinging health endpoints
 - **Impact:** First request after idle may be slow
@@ -118,6 +136,7 @@ For HackMoney demo:
 ## 📝 Deployment History
 
 ### Challenges Resolved
+
 1. ✅ Vercel deployment issues → Pivoted to Railway
 2. ✅ Monorepo configuration → Used per-service Root Directory settings
 3. ✅ Test files in builds → Added `tsconfig` excludes
@@ -132,6 +151,7 @@ For HackMoney demo:
 12. ✅ All localhost fallbacks → Replaced with proper error handling
 
 ### Final Architecture
+
 ```
 GitHub (vercel-deploy branch)
     ↓

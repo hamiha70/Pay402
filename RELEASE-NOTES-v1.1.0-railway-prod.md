@@ -20,6 +20,7 @@ This release represents a **fully working production deployment** of the Pay402 
 ## ✨ What's New in v1.1.0
 
 ### Production Deployment
+
 - ✅ All three services (Facilitator, Merchant, Widget) deployed on Railway.app
 - ✅ Full end-to-end payment flow working in production
 - ✅ Mobile-tested and verified
@@ -27,13 +28,16 @@ This release represents a **fully working production deployment** of the Pay402 
 - ✅ All services communicate via production domains (no localhost)
 
 ### Configuration Improvements
+
 1. **Environment-Based URLs**
+
    - Added `MERCHANT_URL` environment variable for redirect URL configuration
    - Added `WIDGET_URL` environment variable for payment page redirects
    - Merchant exposes `/api/config` endpoint for dynamic widget URL discovery
    - All hardcoded `localhost` URLs removed from production code
 
 2. **Better Error Handling**
+
    - Proper error messages when configuration fails
    - No silent localhost fallbacks that hide production issues
    - Clear user-facing errors for missing redirect URLs
@@ -45,6 +49,7 @@ This release represents a **fully working production deployment** of the Pay402 
    - Proper service-to-directory linking in Railway dashboard
 
 ### Build Optimizations
+
 - TypeScript compilation optimized for faster deployments
 - Test files excluded from production builds
 - Widget uses `vite build` (bypasses strict type checks for hackathon speed)
@@ -53,6 +58,7 @@ This release represents a **fully working production deployment** of the Pay402 
 ## 🔧 Technical Details
 
 ### Architecture
+
 ```
 ┌─────────────────────────────────────────────────────────┐
 │                    GitHub Repository                     │
@@ -84,12 +90,14 @@ This release represents a **fully working production deployment** of the Pay402 
 ### Environment Variables Set
 
 **Facilitator:**
+
 - `SUI_NETWORK=testnet`
 - `FACILITATOR_PRIVATE_KEY=...`
 - `USDC_TYPE=...`
 - `PACKAGE_ID=...`
 
 **Merchant:**
+
 - `MERCHANT_URL=https://merchant-production-0255.up.railway.app`
 - `WIDGET_URL=https://widget-production-8b65.up.railway.app`
 - `FACILITATOR_ADDRESS=...`
@@ -97,6 +105,7 @@ This release represents a **fully working production deployment** of the Pay402 
 - `SUI_NETWORK=testnet`
 
 **Widget:**
+
 - `VITE_FACILITATOR_URL=https://pay402-production.up.railway.app`
 - `VITE_ENOKI_API_KEY=...`
 - `VITE_GOOGLE_CLIENT_ID=...`
@@ -107,6 +116,7 @@ This release represents a **fully working production deployment** of the Pay402 
 ## 📦 Files Changed
 
 ### New Files
+
 - `facilitator/nixpacks.toml` - Facilitator build config
 - `facilitator/railway.json` - Facilitator Railway metadata
 - `merchant/nixpacks.toml` - Merchant build config
@@ -117,6 +127,7 @@ This release represents a **fully working production deployment** of the Pay402 
 - `RELEASE-NOTES-v1.1.0-railway-prod.md` - This file
 
 ### Modified Files
+
 - `widget/package.json` - Added `serve` package, modified build script
 - `widget/tsconfig.app.json` - Exclude test files
 - `widget/src/components/PaymentPage.tsx` - Use env vars, remove localhost
@@ -131,12 +142,14 @@ This release represents a **fully working production deployment** of the Pay402 
 ## 🐛 Bug Fixes
 
 1. **Fixed hardcoded localhost URLs** in production code
+
    - `PaymentPage.tsx` now uses `VITE_FACILITATOR_URL`
    - `ZkLoginTest.tsx` now uses `VITE_FACILITATOR_URL`
    - Merchant invoice now uses `MERCHANT_URL` for redirects
    - Merchant frontend fetches widget URL from `/api/config`
 
 2. **Fixed Railway service linking issues**
+
    - Each service directory properly linked to its Railway service
    - Root Directory settings documented and verified
 
@@ -147,6 +160,7 @@ This release represents a **fully working production deployment** of the Pay402 
 ## 🧪 Testing
 
 ### Verified Functionality ✅
+
 - [x] Google OAuth zkLogin authentication
 - [x] Wallet connection and balance display
 - [x] Invoice generation from merchant
@@ -160,6 +174,7 @@ This release represents a **fully working production deployment** of the Pay402 
 - [x] Mobile browser compatibility
 
 ### Test Environments
+
 - ✅ Desktop browsers (Chrome, Firefox)
 - ✅ Mobile browsers (tested by user)
 
@@ -186,6 +201,7 @@ This release represents a **fully working production deployment** of the Pay402 
 ## 🎯 ETH Global HackMoney Ready!
 
 This release is production-ready for the HackMoney hackathon demo. Judges can:
+
 1. Visit https://merchant-production-0255.up.railway.app
 2. Click "Get Premium Data"
 3. Authenticate with Google
@@ -226,6 +242,7 @@ cd ../widget && railway up
 ## Support
 
 For issues or questions:
+
 - Check `RAILWAY-DEPLOYMENT-SUMMARY.md` for troubleshooting
 - Review Railway logs: `railway logs`
 - Verify environment variables: `railway variables`

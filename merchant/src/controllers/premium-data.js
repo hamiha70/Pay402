@@ -28,7 +28,7 @@ export async function premiumDataController(req, res) {
       facilitatorFee: config.facilitatorFee,
       merchantAmount: config.resourcePrice,
       expiry: Math.floor(Date.now() / 1000) + config.invoiceExpirySeconds,
-      redirectUrl: `http://localhost:${config.port}/api/verify-payment`,
+      redirectUrl: `${config.merchantUrl}/api/verify-payment`,
     };
 
     const invoiceJWT = await generateInvoiceJWT(invoice);

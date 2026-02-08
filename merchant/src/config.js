@@ -13,6 +13,7 @@ const networkConfig = getNetworkConfig();
 export const config = {
   // Server
   port: parseInt(process.env.PORT || '3002', 10),
+  merchantUrl: process.env.MERCHANT_URL || `http://localhost:${process.env.PORT || '3002'}`,
   
   // Merchant identity
   merchantName: process.env.MERCHANT_NAME || 'Premium Data Corp',

@@ -60,28 +60,14 @@
 
 ### SUI Unlocks Novel Features
 
-| Feature                                       | Enabling Technology                 |
-| --------------------------------------------- | ----------------------------------- |
-| **Onboarding Non-Crypto Users**               | **zkLogin** + Enoki                 |
-| → OAuth (Google/Apple/Facebook) → Blockchain  |                                     |
-|                                               |                                     |
-| **No Browser Wallet**                         | **Gas Sponsorship** (Native)        |
-| → Facilitator pays gas                        |                                     |
-| → User needs only USDC                        |                                     |
-|                                               |                                     |
-| **Low Latency**                               | **Sub-Second Finality**             |
-| → 600-700ms blockchain settlement (testnet)   |                                     |
-|                                               |                                     |
-| **Audit & Conflict Resolution**               | **Cheap On-Chain Events**           |
-| → Permanent receipts at ~$0.0003 per payment  |                                     |
-|                                               |                                     |
-| **Flexible Extensions**                       | **Programmable Transaction Blocks** |
-| → Atomic multi-step                           |                                     |
-| → Split, pay, emit receipt in one transaction |                                     |
-|                                               |                                     |
-| **Massive Scaling**                           | **Object Model** (Owned Objects)    |
-| → Parallel execution                          |                                     |
-| → No shared state bottlenecks                 |                                     |
+| Feature                         | Enabling Technology                 |
+| ------------------------------- | ----------------------------------- |
+| **Onboarding Non-Crypto Users** | **zkLogin** + Enoki                 |
+| **No Browser Wallet**           | **Gas Sponsorship** (Native)        |
+| **Low Latency**                 | **Sub-Second Finality**             |
+| **Audit & Conflict Resolution** | **Cheap On-Chain Events**           |
+| **Flexible Extensions**         | **Programmable Transaction Blocks** |
+| **Massive Scaling**             | **Object Model** (Owned Objects)    |
 
 **Core Message:** Not just "first on SUI" - these capabilities are **difficult or impossible** on EVM/Solana.
 

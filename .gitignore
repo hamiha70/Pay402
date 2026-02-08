@@ -75,3 +75,5 @@ temp/
 # Submission artifacts (logos, presentations, etc.)
 submission_artefacts/
 !submission_artefacts/PRESENTATION.md
+!submission_artefacts/Pay402_Presentation_Final.pdf
+!submission_artefacts/Pay402_Presentation_Final.pptx

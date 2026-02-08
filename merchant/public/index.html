@@ -344,9 +344,9 @@
       async function openPaymentPage() {
         // Fetch widget URL from backend config (supports local dev and production)
         try {
-          const configResponse = await fetch('/api/config');
+          const configResponse = await fetch("/api/config");
           const config = await configResponse.json();
-          
+
           // Pass invoice via URL hash (not query param!)
           // Hash (#) is not sent to server, so OAuth redirect works
           // Widget will read from hash, save to sessionStorage, then clean URL
@@ -356,9 +356,11 @@
           console.log("🔗 Redirecting to widget with invoice in hash");
           window.location.href = widgetUrl;
         } catch (error) {
-          console.error('Failed to fetch widget config:', error);
-          alert('Error: Cannot connect to payment widget. Please contact support.');
-          document.querySelector('.invoice-details').style.display = 'none';
+          console.error("Failed to fetch widget config:", error);
+          alert(
+            "Error: Cannot connect to payment widget. Please contact support."
+          );
+          document.querySelector(".invoice-details").style.display = "none";
         }
       }
 

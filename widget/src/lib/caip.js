@@ -1,0 +1,111 @@
+/**
+ * CAIP (Chain Agnostic Improvement Proposals) Utilities
+ *
+ * Implements parsing for X-402 V2 compliance:
+ * - CAIP-2: Blockchain ID Specification
+ * - CAIP-10: Account ID Specification
+ * - CAIP-19: Asset Type and Asset ID Specification
+ *
+ * @see https://chainagnostic.org/
+ *
+ * ⚠️ NOTE: This is duplicated from facilitator/src/utils/caip.ts
+ * TODO: Extract to shared package (@pay402/caip-utils) post-hackathon
+ */
+export function parseCAIP2(networkId) {
+    const parts = networkId.split(':');
+    if (parts.length !== 2) {
+        throw new Error(`Invalid CAIP-2 network ID: ${networkId}. Expected format: namespace:reference`);
+    }
+    return {
+        namespace: parts[0],
+        reference: parts[1],
+        raw: networkId,
+    };
+}
+export function parseCAIP10(accountId) {
+    const parts = accountId.split(':');
+    if (parts.length !== 3) {
+        throw new Error(`Invalid CAIP-10 account ID: ${accountId}. Expected format: chain_id:account_address`);
+    }
+    return {
+        chainId: `${parts[0]}:${parts[1]}`,
+        address: parts[2],
+        raw: accountId,
+    };
+}
+export function parseCAIP19(assetType) {
+    // Split by first '/' to separate chain_id from asset_namespace:asset_reference
+    const slashIndex = assetType.indexOf('/');
+    if (slashIndex === -1) {
+        throw new Error(`Invalid CAIP-19 asset type: ${assetType}. Expected format: chain_id/asset_namespace:asset_reference`);
+    }
+    const chainId = assetType.substring(0, slashIndex);
+    const assetPart = assetType.substring(slashIndex + 1);
+    // For Sui coin types (0x...::module::type), there's no separate namespace
+    // The entire coin type IS the reference
+    // Format: sui:testnet/0xa1ec7fc...::usdc::USDC
+    // If assetPart contains "::" (Sui Move syntax), treat entire thing as reference
+    if (assetPart.includes('::')) {
+        return {
+            chainId,
+            namespace: 'coin', // Implicit namespace for Sui coin types
+            reference: assetPart, // Full coin type: 0xa1ec7fc...::usdc::USDC
+            raw: assetType,
+        };
+    }
+    // Legacy format with explicit namespace (e.g., "coin:0x2::usdc::USDC")
+    // Split asset part by first ':' to separate namespace from reference
+    const colonIndex = assetPart.indexOf(':');
+    if (colonIndex === -1) {
+        throw new Error(`Invalid CAIP-19 asset type: ${assetType}. Expected format: chain_id/asset_namespace:asset_reference`);
+    }
+    const namespace = assetPart.substring(0, colonIndex);
+    const reference = assetPart.substring(colonIndex + 1);
+    return {
+        chainId,
+        namespace,
+        reference,
+        raw: assetType,
+    };
+}
+/**
+ * Generate CAIP-2 Network ID
+ */
+export function generateCAIP2(namespace, reference) {
+    return `${namespace}:${reference}`;
+}
+/**
+ * Generate CAIP-10 Account ID
+ */
+export function generateCAIP10(chainId, address) {
+    return `${chainId}:${address}`;
+}
+/**
+ * Generate CAIP-19 Asset Type
+ */
+export function generateCAIP19(chainId, namespace, reference) {
+    return `${chainId}/${namespace}:${reference}`;
+}
+/**
+ * Helper: Extract Sui-specific values from CAIP fields
+ */
+export function extractSuiValues(invoice) {
+    const network = parseCAIP2(invoice.network);
+    const asset = parseCAIP19(invoice.assetType);
+    const account = parseCAIP10(invoice.payTo);
+    // Validate all are Sui
+    if (network.namespace !== 'sui') {
+        throw new Error(`Expected Sui network, got: ${network.namespace}`);
+    }
+    if (asset.chainId !== invoice.network) {
+        throw new Error(`Asset chain ID (${asset.chainId}) doesn't match network (${invoice.network})`);
+    }
+    if (account.chainId !== invoice.network) {
+        throw new Error(`Account chain ID (${account.chainId}) doesn't match network (${invoice.network})`);
+    }
+    return {
+        network: network.reference, // "mainnet", "testnet", "devnet"
+        coinType: asset.reference, // "0x2::usdc::USDC"
+        merchantAddress: account.address, // "0x1234..."
+    };
+}

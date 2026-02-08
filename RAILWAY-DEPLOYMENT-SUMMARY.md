@@ -58,14 +58,16 @@ All environment variables have been set via Railway CLI:
   - Add to allowed origins (NO trailing paths!)
   - **Status:** Already configured correctly
 
-### 2. Test End-to-End Flow ⏳ READY TO TEST
-- [ ] Open widget at https://widget-production-8b65.up.railway.app
-- [ ] Test Google zkLogin authentication
-- [ ] Test wallet connection
-- [ ] Navigate to merchant demo at https://merchant-production-0255.up.railway.app
-- [ ] Attempt a payment using the widget
-- [ ] Verify payment submission to facilitator
-- [ ] Check transaction on Sui testnet explorer
+### 2. Test End-to-End Flow ✅ COMPLETE
+- [x] Open widget at https://widget-production-8b65.up.railway.app
+- [x] Test Google zkLogin authentication
+- [x] Test wallet connection
+- [x] Navigate to merchant demo at https://merchant-production-0255.up.railway.app
+- [x] Attempt a payment using the widget
+- [x] Verify payment submission to facilitator
+- [x] Check transaction on Sui testnet explorer
+- [x] **Verify redirect to merchant after payment**
+- **Status:** ✅ **Full end-to-end flow tested and working on mobile and desktop!**
 
 ### 3. Gas Funding (Optional but Recommended)
 The facilitator wallet has low gas (0.1721 SUI, threshold: 1 SUI). To fund:
@@ -89,9 +91,10 @@ sui client faucet --address 0x2616cf141ab19b9dd657ac652fbcda65a7cbd437c1eb7cb7f2
 ## 🎯 Demo Checklist
 
 For HackMoney demo:
-- [ ] Update OAuth redirect URIs (critical!)
-- [ ] Fund facilitator wallet (recommended)
-- [ ] Test complete payment flow
+- [x] Update OAuth redirect URIs ✅
+- [x] Test complete payment flow ✅
+- [x] Verify mobile compatibility ✅
+- [ ] Fund facilitator wallet (recommended for extended demos)
 - [ ] Prepare demo script
 - [ ] Have backup local environment ready
 
@@ -120,10 +123,13 @@ For HackMoney demo:
 3. ✅ Test files in builds → Added `tsconfig` excludes
 4. ✅ TypeScript build errors → Disabled strict checking for widget
 5. ✅ Service mixing → Set Root Directory for each service
-6. ✅ Hardcoded localhost URLs → Fixed PaymentPage.tsx to use VITE_FACILITATOR_URL
-7. ✅ Railway service linking → Relinked all services to correct directories
-8. ✅ Widget URL configuration → Added /api/config endpoint in merchant
-9. ✅ Build caching issues → Forced fresh builds from vercel-deploy branch
+6. ✅ Hardcoded localhost URLs in PaymentPage.tsx → Use VITE_FACILITATOR_URL
+7. ✅ Hardcoded localhost URLs in ZkLoginTest.tsx → Use VITE_FACILITATOR_URL
+8. ✅ Hardcoded merchant redirect URL → Added MERCHANT_URL env var
+9. ✅ Railway service linking → Relinked all services to correct directories
+10. ✅ Widget URL configuration → Added /api/config endpoint in merchant
+11. ✅ Build caching issues → Forced fresh builds from vercel-deploy branch
+12. ✅ All localhost fallbacks → Replaced with proper error handling
 
 ### Final Architecture
 ```

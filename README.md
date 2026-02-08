@@ -6,7 +6,7 @@
 ⛓️ **Built on SUI Blockchain (Testnet)**  
 🎯 **Live Demo:** https://merchant-production-0255.up.railway.app  
 📹 **Video Demo:** [Coming Soon]  
-📊 **Architecture:** [Flow Diagram](./docs/architecture/ARCHITECTURE.md)
+📊 **Architecture:** [Flow Diagram](./docs/ARCHITECTURE.md)
 
 **Deployed Services:**
 
@@ -271,7 +271,7 @@ No wallet, no seed phrases, no crypto knowledge required.
 4. **Payment Widget (widget/):** zkLogin integration, PTB verification, payment UI
 5. **Helper Scripts (scripts/):** Test fixture generation, dev environment setup
 
-See [ARCHITECTURE.md](docs/architecture/ARCHITECTURE.md) for full details.
+See [ARCHITECTURE.md](docs/ARCHITECTURE.md) for full details.
 
 ---
 
@@ -280,7 +280,7 @@ See [ARCHITECTURE.md](docs/architecture/ARCHITECTURE.md) for full details.
 **Key Documents:**
 
 - [docs/PROBLEM_STATEMENT.md](./docs/PROBLEM_STATEMENT.md) - Market context and Pay402's value proposition
-- [docs/architecture/ARCHITECTURE.md](./docs/architecture/ARCHITECTURE.md) - System architecture with Mermaid diagrams
+- [docs/ARCHITECTURE.md](./docs/ARCHITECTURE.md) - System architecture with Mermaid diagrams
 - [docs/TRUST_MODEL.md](./docs/TRUST_MODEL.md) - Security model and threat analysis
 
 **Developer Docs:**

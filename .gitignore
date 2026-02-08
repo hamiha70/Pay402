@@ -74,3 +74,6 @@ temp/
 
 # Submission artifacts (logos, presentations, etc.)
 submission_artefacts/
+!submission_artefacts/PRESENTATION.md
+!submission_artefacts/CONSISTENCY_CHECK.md
+!submission_artefacts/LOGO_PROMPTS.md

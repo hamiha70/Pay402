@@ -132,17 +132,17 @@ Total: 3 clicks, 5 seconds, zero crypto knowledge
 
 **Hackathon Achievements (ETH Global HackMoney 2026):**
 
-| Achievement | Status | Technology |
-|------------|--------|------------|
-| **OAuth Login** | ✅ Complete | zkLogin + Enoki SDK |
-| **Gas Sponsorship** | ✅ Complete | Native SUI PTBs |
-| **PTB Validation** | ✅ Complete | Client-side verifier |
-| **zkLogin Signing** | ✅ Complete | 1-click payments |
-| **Optimistic Settlement** | ✅ Complete | Instant delivery |
-| **Pessimistic Settlement** | ✅ Complete | 600-700ms finality |
-| **USDC Persistence** | ✅ Complete | Circle native USDC |
-| **Merchant Onboarding** | ✅ Complete | JWT invoices |
-| **On-Chain Receipts** | ✅ Complete | $0.0003 per event |
+| Achievement                | Status      | Technology           |
+| -------------------------- | ----------- | -------------------- |
+| **OAuth Login**            | ✅ Complete | zkLogin + Enoki SDK  |
+| **Gas Sponsorship**        | ✅ Complete | Native SUI PTBs      |
+| **PTB Validation**         | ✅ Complete | Client-side verifier |
+| **zkLogin Signing**        | ✅ Complete | 1-click payments     |
+| **Optimistic Settlement**  | ✅ Complete | Instant delivery     |
+| **Pessimistic Settlement** | ✅ Complete | 600-700ms finality   |
+| **USDC Persistence**       | ✅ Complete | Circle native USDC   |
+| **Merchant Onboarding**    | ✅ Complete | JWT invoices         |
+| **On-Chain Receipts**      | ✅ Complete | $0.0003 per event    |
 
 **Testing:** 276 automated tests passing  
 **Deployment:** Live on Railway (facilitator + widget + merchant)  
@@ -152,7 +152,7 @@ Total: 3 clicks, 5 seconds, zero crypto knowledge
 
 ## How It Works
 
-### Payment Flow (60 Seconds)
+### Payment Flow
 
 1. **User visits merchant API** → Gets 402 Payment Required
 2. **Widget appears** → "Login with Google"
@@ -187,6 +187,7 @@ Total: 3 clicks, 5 seconds, zero crypto knowledge
 5. Content delivered with blockchain receipt!
 
 **What you'll see:**
+
 - OAuth login (no wallet extension)
 - Automatic SUI address creation
 - PTB verification before signing
@@ -230,7 +231,7 @@ npm install
 ### Judge-Facing Docs
 
 - **[PROBLEM_STATEMENT.md](./docs/PROBLEM_STATEMENT.md)** - Market context and Pay402's value
-- **[ARCHITECTURE.md](./docs/ARCHITECTURE.md)** - System design with Mermaid diagrams  
+- **[ARCHITECTURE.md](./docs/ARCHITECTURE.md)** - System design with Mermaid diagrams
 - **[TRUST_MODEL.md](./docs/TRUST_MODEL.md)** - Security model and threat analysis
 
 ### Developer Docs
@@ -251,22 +252,26 @@ npm install
 ## Tech Stack
 
 ### Blockchain Layer
+
 - **SUI Move:** Smart contracts with generic `Coin<T>` support
 - **zkLogin:** Google OAuth → blockchain address (Enoki SDK)
 - **PTBs:** Atomic multi-step transactions
 - **USDC:** Circle native stablecoin on SUI
 
 ### Backend (Facilitator)
+
 - **Node.js + Express:** API server
 - **@mysten/sui:** SUI SDK with gRPC
 - **TypeScript:** Type-safe development
 
 ### Frontend (Widget)
+
 - **React + Vite:** UI framework
 - **@mysten/enoki:** zkLogin integration
 - **Custom PTB Verifier:** Client-side security
 
 ### Infrastructure
+
 - **Mysten Enoki:** Salt service for zkLogin
 - **Railway:** Deployment platform
 - **Circle Faucet:** Testnet USDC funding
@@ -300,16 +305,19 @@ Pay402/
 ## Roadmap
 
 ### Immediate Next Steps
+
 - [ ] Mainnet deployment
 - [ ] Production monitoring (Sentry, uptime)
 - [ ] Multi-region facilitator nodes
 
 ### Short-Term Goals
+
 - [ ] Browser extension (universal PTB verifier)
 - [ ] Embeddable widget (npm package)
 - [ ] Merchant SDK for easy integration
 
 ### Long-Term Vision
+
 - [ ] CCTP integration (cross-chain settlement)
 - [ ] Additional stablecoin support
 - [ ] Merchant dashboard for reconciliation
@@ -320,12 +328,14 @@ Pay402/
 ## Resources
 
 ### External Documentation
+
 - **SUI Blockchain:** https://docs.sui.io/
 - **zkLogin Guide:** https://docs.sui.io/guides/developer/cryptography/zklogin-integration
 - **x402 Protocol:** https://docs.cdp.coinbase.com/x402/
 - **Circle USDC:** https://developers.circle.com/stablecoins/sui
 
 ### Network Explorer
+
 - **SUI Testnet:** https://suiscan.xyz/testnet
 - **Example Transaction:** https://suiscan.xyz/testnet/tx/EV7D7z9gjzjrAQSKWSW8S1iLGdk8aEVPjn3zLA1aUSLE
 
@@ -334,18 +344,21 @@ Pay402/
 ## Security Considerations
 
 ### zkLogin Security
+
 - ✅ Non-custodial (user controls ephemeral keys)
 - ✅ ZK proofs (Google account not revealed on-chain)
 - ✅ Salt prevents address enumeration
 - ✅ Session-only keys (ephemeral keypairs)
 
 ### Payment Security
+
 - ✅ Client-side PTB verification (prevents overcharging)
 - ✅ Signature verification (prevents forgery)
 - ✅ Owned objects (parallel execution, no race conditions)
 - ✅ Event logging (permanent audit trail)
 
 ### Infrastructure Security
+
 - ✅ Open-source (full transparency)
 - ✅ Rate limiting (DDoS protection)
 - ✅ Gas budget limits (cost control)

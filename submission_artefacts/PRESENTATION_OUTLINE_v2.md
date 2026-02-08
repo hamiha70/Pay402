@@ -3,7 +3,7 @@
 **Event:** ETH Global HackMoney January 2026  
 **Project:** Pay402 🐠 - First x402 Facilitator on SUI  
 **Duration:** 5 minutes (with backup slides for Q&A/extended reading)  
-**Demo URL:** https://pay402.io (testnet)
+**Demo URL:** https://merchant-production-0255.up.railway.app (testnet)
 
 ---
 
@@ -522,7 +522,7 @@ The following features are **working live on SUI testnet:**
 **Critical breakthrough:** Missing `chain: "sui:testnet"` parameter - once fixed, everything works!
 
 **Live proof on testnet:**  
-🔗 https://suiscan.xyz/testnet/tx/EVTDfZ9gj2rAQSKWlSW8SJlLGdk8sEVPJjn3zLAlaUsLE
+🔗 https://suiscan.xyz/testnet/tx/EV7D7z9gjzjrAQSKWSW8S1iLGdk8aEVPjn3zLA1aUSLE
 
 **Note:** First time funding requires Circle faucet. Subsequent payments reuse USDC at same address.
 

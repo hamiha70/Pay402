@@ -21,7 +21,7 @@ graph TB
     subgraph "SUI Blockchain<br/>(Testnet)"
         ZK[🔑 zkLogin Service<br/>Google OAuth → SUI Address]
         PTB[📦 Programmable Transaction Block<br/>USDC Split + Payment + Receipt]
-        SC[📜 Smart Contract<br/>settle_payment<T>()]
+        SC[📜 Smart Contract<br/>settle_payment()]
         USDC[💵 USDC Coins<br/>Circle Native on SUI]
     end
     
@@ -197,9 +197,9 @@ sequenceDiagram
 - **Pay402 Benefit:** Buyer needs only USDC, facilitator pays gas
 
 ### 4. Object Model (Owned Objects)
-- **Problem:** EVM global state causes front-running, Solana account conflicts
+- **Problem:** EVM global state creates coordination overhead, Solana account conflicts
 - **SUI Solution:** Object ownership prevents conflicts, enables parallelism
-- **Pay402 Benefit:** No front-running risk, scalable to many concurrent payments
+- **Pay402 Benefit:** Massive scalability, thousands of concurrent payments
 
 ### 5. On-Chain Events
 - **Problem:** EVM event storage is expensive, indexing is complex
@@ -225,7 +225,7 @@ sequenceDiagram
 4. Facilitator submits transaction in background
 5. Transaction finalizes on-chain (~400ms later)
 
-**Key Insight:** Facilitator acts as guarantor. Comprehensive validation before submit eliminates most risk. Only remaining risk: buyer front-runs between submit and finality - very low probability on SUI's owned object model.
+**Key Insight:** Facilitator acts as guarantor. Comprehensive validation before submit eliminates most risk. Only remaining risk: buyer spends USDC elsewhere between submit and finality - mitigated by fast SUI finality (~400ms) and immediate validation.
 
 ---
 

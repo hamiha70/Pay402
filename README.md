@@ -28,15 +28,17 @@ The **HTTP 402 "Payment Required"** status code enables machine-readable micropa
 - ✅ Proven protocol adoption
 - ❌ Require wallet extensions (high friction for new users)
 - ❌ Users need native gas tokens (ETH, SOL) in addition to USDC
-- ❌ EVM: Global state enables front-running attacks
+- ❌ EVM: Global state creates coordination overhead
 - ❌ No seamless Web2 → Web3 onboarding
 
-### Pay402's Innovation
+**Pay402's Innovation
+
+:**
 
 **First x402 facilitator to unlock:**
 1. **Zero-friction onboarding:** Google OAuth → blockchain (zkLogin)
 2. **No gas burden:** Facilitator sponsors gas (buyer needs only USDC)
-3. **Anti-front-running:** SUI's object model prevents attacks
+3. **Parallel execution:** SUI's object model enables massive scalability
 4. **Optimistic settlement:** Content delivered in ~2 seconds
 5. **Cheap audit trail:** On-chain receipt events for merchants
 
@@ -62,7 +64,7 @@ Pay402 leverages SUI-specific capabilities that are difficult or impossible on E
 - **Pay402 benefit:** Buyer needs only USDC, facilitator pays SUI gas
 
 ### 4. Object Model (Owned Objects)
-- **No global state** → prevents front-running
+- **No global state** → reduces coordination overhead
 - Parallel transaction execution
 - **Pay402 benefit:** Scalable, trustless payments without race conditions
 
@@ -144,11 +146,11 @@ USDC, SUI, USDT, custom tokens - all supported via `Coin<T>` generics
 
 Fair for micropayments, predictable revenue model
 
-### 5. Anti-Front-Running 🛡️
+### 5. Parallel Execution 🚀
 
-**Atomic settlement prevents buyer attacks**
+**Owned objects enable massive scalability**
 
-Uses `&mut Coin<T>` to lock coins during transaction
+SUI's object model eliminates shared state, allowing unlimited parallel payments
 
 ### 6. CCTP-Ready 🌉
 
@@ -400,7 +402,7 @@ Pay402/
 
 - ✅ Signature verification (prevent forgery)
 - ✅ Nonce tracking (prevent replay)
-- ✅ Anti-front-running (`&mut Coin<T>`)
+- ✅ Owned objects (parallel execution, no shared state)
 - ✅ Token expiration (5-minute validity)
 - ✅ Event logging (permanent audit trail)
 

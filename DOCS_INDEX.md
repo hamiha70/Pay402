@@ -118,7 +118,7 @@ If you're curious about the development journey:
 - Native SUI feature
 
 **Object Model:**
-- Owned objects prevent front-running
+- Owned objects (user's coins are exclusively theirs)
 - No global state (unlike EVM)
 - Parallel execution (unlike Solana account locking)
 

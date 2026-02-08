@@ -76,11 +76,10 @@ Drop-off rate: >90% for new users
 - **Problem:** Two-token requirement doubles friction
 - **Example:** "$0.01 article, but first buy $20 of ETH for gas"
 
-#### 3. **Front-Running Vulnerability (EVM)**
-- **EVM global state:** Attacker can see pending payment transaction
-- **Attack:** Front-run with higher gas, steal the payment intent
-- **Impact:** Merchant delivers content to attacker, not buyer
-- **Mitigation:** EIP-3009 `transferWithAuthorization` (complex, limited adoption)
+#### 3. **Coordination Overhead (EVM)**
+- **EVM global state:** All contracts share state, sequential execution
+- **Impact:** Lower throughput, higher latency for concurrent payments
+- **Mitigation:** Complex batching or layer-2 solutions
 
 #### 4. **Finality Delays**
 - **Ethereum:** 12-15 minutes (multiple confirmations)
@@ -173,20 +172,20 @@ PTB = [
 - Need approve() then transferFrom() (two transactions)
 - Or EIP-3009 transferWithAuthorization (limited adoption, complex)
 
-#### 4. **Object Model: No Front-Running**
+#### 4. **Object Model: Parallel Execution & Scalability**
 
 **SUI Unique Feature:**
 - Owned objects (user's coins are exclusively theirs)
 - No global state (unlike EVM)
-- Parallel execution (unlike Solana account locking)
+- Parallel transaction execution
 
 **Pay402 Benefit:**
-- Buyer's USDC coins can't be front-run
-- No race conditions between buyers
-- Scalable to thousands of concurrent payments
+- Massive scalability (thousands of concurrent payments)
+- No coordination overhead
+- Predictable, fast performance
 
 **Why EVM/Solana struggle:**
-- **EVM:** Global state enables front-running (mempool visibility)
+- **EVM:** Global state creates sequential bottlenecks
 - **Solana:** Account locking can cause transaction failures
 
 #### 5. **On-Chain Events: Cheap Audit Trail**
@@ -253,7 +252,7 @@ PTB = [
 - ❌ No native zkLogin equivalent
 - ❌ Account abstraction is complex, fragmented
 - ❌ Gas sponsorship requires relayers (not standardized)
-- ❌ Front-running vulnerability (global state)
+- ❌ Global state creates coordination overhead
 - ❌ Slow finality (Base: 2-4 sec, Ethereum: 12-15 min)
 
 **Could we build Pay402 on Base?**
@@ -279,7 +278,7 @@ PTB = [
 1. ✅ zkLogin (native, production-ready)
 2. ✅ Gas sponsorship (native feature)
 3. ✅ PTBs (atomic, verifiable transactions)
-4. ✅ Object model (no front-running, parallel execution)
+4. ✅ Object model (parallel execution, massive scalability)
 5. ✅ Fast finality (~400ms)
 6. ✅ Cheap events (audit trail)
 
@@ -309,7 +308,7 @@ PTB = [
 |---------|--------------|--------------|---------------------|
 | **Onboarding** | Google OAuth (zkLogin) | Wallet required | Wallet required |
 | **Gas** | Sponsored by facilitator | User pays ETH | User pays SOL |
-| **Front-running** | Prevented (object model) | Vulnerable (global state) | Mitigated (account locks) |
+| **Scalability** | Parallel (object model) | Sequential (global state) | Parallel (account model) |
 | **Finality** | ~400ms | 2-4 seconds | ~400ms |
 | **PTB Verification** | Client-side, easy | EIP-3009 (complex) | Limited |
 | **Audit Trail** | On-chain events (cheap) | On-chain events (expensive) | On-chain events |
@@ -318,7 +317,7 @@ PTB = [
 1. Only one with zkLogin (Google → blockchain)
 2. Only one with native gas sponsorship
 3. Only one with client-side PTB verification
-4. Only one with front-running prevention via object model
+4. Only one with parallel execution via object model (massive scalability)
 
 ---
 
@@ -326,13 +325,13 @@ PTB = [
 
 **x402 is proven.** Base and Solana have working facilitators.
 
-**But x402 can't reach mainstream adoption** with current implementations (wallet friction, gas burden, front-running).
+**But x402 can't reach mainstream adoption** with current implementations (wallet friction, gas burden, coordination overhead).
 
 **Pay402 on SUI solves these problems** by leveraging SUI-specific capabilities:
 - zkLogin (Google → blockchain)
 - Gas sponsorship (facilitator pays)
 - PTBs (atomic, verifiable)
-- Object model (no front-running)
+- Object model (parallel execution, massive scalability)
 
 **Result:** First x402 facilitator that Web2 users can actually use.
 

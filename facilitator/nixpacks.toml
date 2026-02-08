@@ -5,7 +5,7 @@ nixPkgs = ["nodejs_22"]
 cmds = ["npm install"]
 
 [phases.build]
-cmds = ["echo 'No build step needed for merchant'"]
+cmds = ["npm run build"]
 
 [start]
 cmd = "npm start"

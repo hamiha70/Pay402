@@ -6,14 +6,16 @@
 ⛓️ **Built on SUI Blockchain (Testnet)**  
 🎯 **Live Demo:** https://merchant-production-0255.up.railway.app  
 📹 **Video Demo:** [Coming Soon]  
-📊 **Architecture:** [Flow Diagram](./docs/architecture/FLOW_DIAGRAM.md)
+📊 **Architecture:** [Flow Diagram](./docs/architecture/ARCHITECTURE.md)
 
 **Deployed Services:**
+
 - Facilitator: https://pay402-production.up.railway.app
 - Widget: https://widget-production-8b65.up.railway.app
 - Merchant: https://merchant-production-0255.up.railway.app
 
 **Smart Contract:**
+
 - Package: `0x5f32be9e6eee3aab5c64c2f2df6c7e5e83f0e683fd83fda9bb66aa05b063f1ca`
 - Module: `x402_payment`
 
@@ -270,6 +272,29 @@ No wallet, no seed phrases, no crypto knowledge required.
 5. **Helper Scripts (scripts/):** Test fixture generation, dev environment setup
 
 See [ARCHITECTURE.md](docs/architecture/ARCHITECTURE.md) for full details.
+
+---
+
+## Documentation
+
+**Key Documents:**
+
+- [docs/PROBLEM_STATEMENT.md](./docs/PROBLEM_STATEMENT.md) - Market context and Pay402's value proposition
+- [docs/architecture/ARCHITECTURE.md](./docs/architecture/ARCHITECTURE.md) - System architecture with Mermaid diagrams
+- [docs/TRUST_MODEL.md](./docs/TRUST_MODEL.md) - Security model and threat analysis
+
+**Developer Docs:**
+
+- [docs/developer/testing.md](./docs/developer/testing.md) - Comprehensive testing guide
+- [docs/developer/railway-deployment.md](./docs/developer/railway-deployment.md) - Railway deployment instructions
+- [docs/developer/enoki-portal.md](./docs/developer/enoki-portal.md) - Enoki zkLogin setup
+- [docs/developer/setup-scripts.md](./docs/developer/setup-scripts.md) - Development scripts
+
+**Component READMEs:**
+
+- [facilitator/README.md](./facilitator/README.md) - Facilitator API documentation
+- [merchant/README.md](./merchant/README.md) - Merchant demo implementation
+- [widget/README.md](./widget/README.md) - Payment widget with dual auth (zkLogin/keypair)
 
 ---
 

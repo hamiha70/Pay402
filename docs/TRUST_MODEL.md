@@ -1,4 +1,4 @@
-# Pay402 Security Model
+# Pay402 Trust Model
 
 **Date:** February 3, 2026  
 **Status:** ✅ Documented

@@ -44,19 +44,21 @@ All environment variables have been set via Railway CLI:
 
 ## 📋 Remaining Tasks
 
-### 1. Update OAuth Redirect URIs
-- [ ] **Google Cloud Console:**
+### 1. Update OAuth Redirect URIs ✅ DONE
+- [x] **Google Cloud Console:**
   - Add: `https://widget-production-8b65.up.railway.app`
   - Go to: https://console.cloud.google.com/apis/credentials
   - Edit OAuth 2.0 Client ID: `1001996736694-2ic38121fneem5ob0ond46cmvhatsrtk`
   - Add to "Authorized redirect URIs"
+  - **Status:** User confirmed this was done
 
-- [ ] **Enoki Dashboard:**
+- [x] **Enoki Dashboard:**
   - Add: `https://widget-production-8b65.up.railway.app`
   - Go to: Enoki dashboard for API key `enoki_public_7edbeb7decb38349e30a6d900cdc8843`
-  - Add to allowed redirect URIs
+  - Add to allowed origins (NO trailing paths!)
+  - **Status:** Already configured correctly
 
-### 2. Test End-to-End Flow
+### 2. Test End-to-End Flow ⏳ READY TO TEST
 - [ ] Open widget at https://widget-production-8b65.up.railway.app
 - [ ] Test Google zkLogin authentication
 - [ ] Test wallet connection
@@ -66,7 +68,7 @@ All environment variables have been set via Railway CLI:
 - [ ] Check transaction on Sui testnet explorer
 
 ### 3. Gas Funding (Optional but Recommended)
-The facilitator wallet has low gas (0.1831 SUI, threshold: 1 SUI). To fund:
+The facilitator wallet has low gas (0.1721 SUI, threshold: 1 SUI). To fund:
 ```bash
 sui client faucet --address 0x2616cf141ab19b9dd657ac652fbcda65a7cbd437c1eb7cb7f28d5c4f5859e618
 ```
@@ -118,6 +120,10 @@ For HackMoney demo:
 3. ✅ Test files in builds → Added `tsconfig` excludes
 4. ✅ TypeScript build errors → Disabled strict checking for widget
 5. ✅ Service mixing → Set Root Directory for each service
+6. ✅ Hardcoded localhost URLs → Fixed PaymentPage.tsx to use VITE_FACILITATOR_URL
+7. ✅ Railway service linking → Relinked all services to correct directories
+8. ✅ Widget URL configuration → Added /api/config endpoint in merchant
+9. ✅ Build caching issues → Forced fresh builds from vercel-deploy branch
 
 ### Final Architecture
 ```

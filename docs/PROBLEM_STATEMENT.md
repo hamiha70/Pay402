@@ -95,6 +95,7 @@ Drop-off rate: >90% for new users
 - **Ethereum:** 12-15 minutes (multiple confirmations)
 - **Base:** 2-4 seconds (optimistic rollup)
 - **Solana:** ~400ms (but account conflicts cause retries)
+- **SUI:** 600-700ms on testnet, ~400ms on mainnet
 - **Problem:** Content delivery delayed or requires trust assumptions
 
 #### 5. **No Web2 → Web3 Bridge**
@@ -316,7 +317,7 @@ PTB = [
 2. ✅ Gas sponsorship (native feature)
 3. ✅ PTBs (atomic, verifiable transactions)
 4. ✅ Object model (parallel execution, massive scalability)
-5. ✅ Fast finality (~400ms)
+5. ✅ Fast finality (600-700ms testnet, ~400ms mainnet)
 6. ✅ Cheap events (audit trail)
 
 **Result:** Pay402 can only achieve its vision on SUI.
@@ -348,7 +349,7 @@ PTB = [
 | **Onboarding**       | Google OAuth (zkLogin)   | Wallet required             | Wallet required          |
 | **Gas**              | Sponsored by facilitator | User pays ETH               | User pays SOL            |
 | **Scalability**      | Parallel (object model)  | Sequential (global state)   | Parallel (account model) |
-| **Finality**         | ~400ms                   | 2-4 seconds                 | ~400ms                   |
+| **Finality**         | 600-700ms (testnet)      | 2-4 seconds                 | ~400ms                   |
 | **PTB Verification** | Client-side, easy        | EIP-3009 (complex)          | Limited                  |
 | **Audit Trail**      | On-chain events (cheap)  | On-chain events (expensive) | On-chain events          |
 

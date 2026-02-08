@@ -5,6 +5,11 @@
 **Duration:** 5 minutes (with backup slides for Q&A/extended reading)  
 **Demo URL:** https://merchant-production-0255.up.railway.app (testnet)
 
+**Related Documentation:**
+- [Problem Statement](../docs/PROBLEM_STATEMENT.md) - Market context and Pay402's value proposition
+- [Architecture](../docs/ARCHITECTURE.md) - System architecture with Mermaid diagrams
+- [Trust Model](../docs/TRUST_MODEL.md) - Security model and threat analysis
+
 ---
 
 ## Presentation Objectives
@@ -287,7 +292,7 @@ User → Click payment link (1 sec)
 | **zkLogin**         | Native        | ❌ Not available          | ⚠️ Social recovery wallets exist | Google → Address, no wallet                   |
 | **PTBs**            | Native        | ⚠️ Versioned transactions | ❌ Single-call only              | Atomic multi-step: split, transfer, receipt   |
 | **Object Model**    | Owned objects | Account-based             | Account-based                    | Parallel execution, massive scalability       |
-| **Finality**        | ~400ms        | ~400ms                    | ~12 min (L1), ~2s (L2)           | Near-instant payment confirmation             |
+| **Finality**        | 600-700ms (testnet) | ~400ms              | ~12 min (L1), ~2s (L2)           | Sub-second payment confirmation               |
 | **Gas Sponsorship** | Built-in      | Supported                 | ⚠️ Complex (EIP-4337)            | Facilitator pays, user doesn't need gas token |
 | **Generic Coins**   | `Coin<T>`     | Token Program             | Token-specific contracts         | One contract, any stablecoin                  |
 | **Receipt Events**  | ~$0.0003      | ~$0.00025                 | ~$0.50-$5.00                     | Cheap audit trails enable micropayments       |
@@ -299,7 +304,7 @@ User → Click payment link (1 sec)
 - zkLogin is native (vs third-party social wallets on EVM)
 - PTBs are first-class (vs complex transaction batching)
 - Object model eliminates shared state (vs careful state management)
-- Sub-second finality + cheap events = perfect for micropayments
+- Sub-second finality (600-700ms testnet) + cheap events = perfect for micropayments
 
 ---
 
@@ -460,7 +465,9 @@ During demo, emphasize:
 | Mode            | Description                           | Blockchain Latency | Breakdown                                        |
 | --------------- | ------------------------------------- | ------------------ | ------------------------------------------------ |
 | **Optimistic**  | Deliver after submit, before finality | 0ms (background)   | Validate + Submit + HTTP response                |
-| **Pessimistic** | Deliver after on-chain confirmation   | ~400ms             | Validate + SUI finality (~400ms) + HTTP response |
+| **Pessimistic** | Deliver after on-chain confirmation   | 600-700ms          | Validate + SUI finality (600-700ms) + HTTP response |
+
+**Note:** Measured testnet latencies range 500-1300ms, typically 600-700ms. SUI mainnet finality is faster (~400ms).
 
 ### Optimistic Settlement Deep Dive
 
@@ -483,7 +490,7 @@ Background (user already has content):
 12. Receipt event indexed
 ```
 
-**Key insight:** Facilitator acts as guarantor. Comprehensive validation before submit eliminates most risk. Only remaining risk: buyer spends USDC elsewhere between submit and finality - mitigated by fast SUI finality (~400ms) and immediate balance validation.
+**Key insight:** Facilitator acts as guarantor. Comprehensive validation before submit eliminates most risk. Only remaining risk: buyer spends USDC elsewhere between submit and finality - mitigated by fast SUI finality (600-700ms on testnet, ~400ms on mainnet) and immediate balance validation.
 
 ### Return Visit (Funded User)
 

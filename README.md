@@ -1,233 +1,385 @@
-# Pay402 - First x402 Facilitator on SUI with zkLogin
+# Pay402 - First x402 Facilitator on SUI
 
-**Zero-friction micropayments: Google OAuth → Blockchain payments. No wallet required.**
+**Zero-friction micropayments for the $600M x402 ecosystem. Google OAuth → Blockchain payments in 600ms. No wallet required.**
 
 🏆 **ETH Global HackMoney January 2026**  
-⛓️ **Built on SUI Blockchain (Testnet)**  
-🎯 **Live Demo:** https://merchant-production-0255.up.railway.app  
-📹 **Video Demo:** [Coming Soon]  
-📊 **Architecture:** [Flow Diagram](./docs/ARCHITECTURE.md)
+⛓️ **SUI Testnet** | 🎯 **Live Demo:** https://merchant-production-0255.up.railway.app  
+📊 **Architecture:** [Flow Diagram](./docs/ARCHITECTURE.md) | 💰 **Example Transaction:** [SuiScan](https://suiscan.xyz/testnet/tx/EV7D7z9gjzjrAQSKWSW8S1iLGdk8aEVPjn3zLA1aUSLE)
 
-**Deployed Services:**
+**Deployed Services (Railway):**
 
-- Facilitator: https://pay402-production.up.railway.app
-- Widget: https://widget-production-8b65.up.railway.app
-- Merchant: https://merchant-production-0255.up.railway.app
+| Service           | URL                                             |
+| ----------------- | ----------------------------------------------- |
+| **Facilitator**   | https://pay402-production.up.railway.app        |
+| **Widget**        | https://widget-production-8b65.up.railway.app   |
+| **Merchant Demo** | https://merchant-production-0255.up.railway.app |
 
-**Smart Contract:**
+**Smart Contract (SUI Testnet):**
 
 - Package: `0x5f32be9e6eee3aab5c64c2f2df6c7e5e83f0e683fd83fda9bb66aa05b063f1ca`
 - Module: `x402_payment`
-
-**Proof of Concept:** [Live Testnet Transaction](https://suiscan.xyz/testnet/tx/EV7D7z9gjzjrAQSKWSW8S1iLGdk8aEVPjn3zLA1aUSLE)
+- Example Transaction: [View on SuiScan](https://suiscan.xyz/testnet/tx/EV7D7z9gjzjrAQSKWSW8S1iLGdk8aEVPjn3zLA1aUSLE)
 
 ---
 
-## The Problem: x402 Needs Better Infrastructure
+## The Problem: x402 Needs Better UX
 
 ### What is x402?
 
 The **HTTP 402 "Payment Required"** status code enables machine-readable micropayments for:
 
-- **API Monetization:** Pay-per-request pricing for AI/data APIs
+- **API Monetization:** Pay-per-request pricing ($0.01-$1.00 per API call)
 - **Content Paywalls:** Microtransactions for premium articles, datasets
-- **Agentic Commerce:** AI agents purchasing resources autonomously
+- **AI Agent Commerce:** Autonomous agents purchasing resources
 
-### Current State of x402
+### x402 Market Context
 
-**Existing implementations (Base, Solana):**
+**x402 is production-ready technology with massive adoption:**
 
-- ✅ Proven protocol adoption
+- **$600M** annualized payment volume (Dec 2025)
+- **63M+** monthly transactions
+- **$7.5M** monthly USDC volume
+- **1,100+** projects using the protocol
+- **Live on Base** (Coinbase SDK) and **Solana** (PayAI)
+
+**The Opportunity:** SUI has NO x402 facilitator. We're first.
+
+### Current Limitations (Base/Solana)
+
+Existing x402 implementations face user friction:
+
 - ❌ Require wallet extensions (high friction for new users)
 - ❌ Users need native gas tokens (ETH, SOL) in addition to USDC
-- ❌ EVM: Global state creates coordination overhead
+- ❌ Slow finality on EVM chains (12+ minutes on L1)
 - ❌ No seamless Web2 → Web3 onboarding
 
-\*\*Pay402's Innovation
+### Pay402's Innovation: First on SUI
 
-:\*\*
-
-**First x402 facilitator to unlock:**
-
-1. **Zero-friction onboarding:** Google OAuth → blockchain (zkLogin)
-2. **No gas burden:** Facilitator sponsors gas (buyer needs only USDC)
-3. **Parallel execution:** SUI's object model enables massive scalability
-4. **Optimistic settlement:** Content delivered in ~2 seconds
-5. **Cheap audit trail:** On-chain receipt events for merchants
+**We leverage SUI-native capabilities to deliver the best x402 implementation:**
 
 ---
 
-## Why SUI?
+## Why SUI? Six Unique Advantages
 
-Pay402 leverages SUI-specific capabilities that are difficult or impossible on EVM/Solana:
+Pay402 leverages SUI-specific capabilities that are **difficult or impossible on EVM/Solana:**
 
-### 1. zkLogin (Web2 → Web3 Bridge)
+### 1. Onboarding Non-Crypto Users (zkLogin + Enoki)
 
-- **OAuth-based authentication** (Google, Apple, etc.)
-- Deterministic address derivation from OAuth credentials
-- No seed phrases, no wallet installation
+- **Google OAuth → blockchain address** (deterministic derivation)
+- No seed phrases, no wallet installation, no crypto knowledge
 - **Pay402 benefit:** 3-click payment flow vs. 10+ steps on other chains
 
-### 2. Programmable Transaction Blocks (PTBs)
+### 2. No Browser Wallet (Gas Sponsorship - Native)
+
+- **Facilitator pays all gas fees** transparently
+- User needs only USDC, no SUI tokens required
+- **Pay402 benefit:** True Web2 UX, zero gas complexity for users
+
+### 3. Low Latency (Sub-Second Finality)
+
+- **600-700ms blockchain settlement** on testnet
+- Real-time payment confirmation
+- **Pay402 benefit:** Instant content delivery, superior to EVM's 12+ minutes
+
+### 4. Audit & Conflict Resolution (Cheap On-Chain Events)
+
+- **~$0.0003 per receipt** event (vs $0.50-$5 on EVM)
+- Permanent, queryable audit trail
+- **Pay402 benefit:** Every payment emits receipt for merchant reconciliation
+
+### 5. Flexible Extensions (Programmable Transaction Blocks)
 
 - **Atomic multi-step transactions** with single signature
 - Client-side verification before signing
 - **Pay402 benefit:** Split coin + payment + receipt in one transaction
 
-### 3. Gas Sponsorship (Native Feature)
+### 6. Massive Scaling (Object Model - Owned Objects)
 
-- Third party can pay gas fees for users
-- **Pay402 benefit:** Buyer needs only USDC, facilitator pays SUI gas
-
-### 4. Object Model (Owned Objects)
-
-- **No global state** → reduces coordination overhead
-- Parallel transaction execution
-- **Pay402 benefit:** Scalable, trustless payments without race conditions
-
-### 5. On-Chain Events (Cost-Efficient)
-
-- Permanent, queryable event log
-- Much cheaper than EVM event storage
-- **Pay402 benefit:** Every payment emits audit receipt for merchant reconciliation
+- **Parallel execution** without shared state bottlenecks
+- No global state coordination overhead
+- **Pay402 benefit:** Unlimited scalability, no race conditions
 
 ---
+
+## User Experience: 3 Clicks vs Traditional Crypto
 
 **Traditional crypto payments:**
 
 ```
 ❌ Install wallet extension (MetaMask, etc.)
-❌ Save seed phrase (scary!)
-❌ Buy crypto on exchange
+❌ Save seed phrase (12-24 words)
+❌ Buy crypto on exchange (KYC, wait days)
+❌ Transfer to wallet (pay gas, wait confirmation)
 ❌ Connect wallet to every site
 ❌ Approve transaction in popup
+
+Total: Days of setup + 6+ steps per payment
 ```
 
-**Pay402:**
+**Pay402 with zkLogin:**
 
 ```
-✅ Click link
-✅ Login with Google
-✅ Pay
-✅ Done!
+✅ Click merchant link
+✅ Login with Google (familiar OAuth)
+✅ Confirm payment (1-click)
+
+Total: 3 clicks, 5 seconds, zero crypto knowledge
 ```
 
-**That's it. 3 clicks. No wallet. No crypto knowledge.**
+---
+
+## What We Built
+
+**Hackathon Achievements (ETH Global HackMoney 2026):**
+
+| Achievement | Status | Technology |
+|------------|--------|------------|
+| **OAuth Login** | ✅ Complete | zkLogin + Enoki SDK |
+| **Gas Sponsorship** | ✅ Complete | Native SUI PTBs |
+| **PTB Validation** | ✅ Complete | Client-side verifier |
+| **zkLogin Signing** | ✅ Complete | 1-click payments |
+| **Optimistic Settlement** | ✅ Complete | Instant delivery |
+| **Pessimistic Settlement** | ✅ Complete | 600-700ms finality |
+| **USDC Persistence** | ✅ Complete | Circle native USDC |
+| **Merchant Onboarding** | ✅ Complete | JWT invoices |
+| **On-Chain Receipts** | ✅ Complete | $0.0003 per event |
+
+**Testing:** 276 automated tests passing  
+**Deployment:** Live on Railway (facilitator + widget + merchant)  
+**Network:** SUI Testnet with real Circle USDC
 
 ---
 
 ## How It Works
 
-### User Flow (60 Seconds)
+### Payment Flow (60 Seconds)
 
-1. User visits merchant API
-2. Gets 402 Payment Required
-3. Widget appears: "Login with Google"
-4. User logs in (familiar Google OAuth)
-5. **Magic:** Blockchain address created from Google account
-6. **Magic:** Balance checked automatically
-7. User confirms payment ($0.01)
-8. Content delivered!
+1. **User visits merchant API** → Gets 402 Payment Required
+2. **Widget appears** → "Login with Google"
+3. **OAuth authentication** → Google account (familiar flow)
+4. **Address creation** → Deterministic SUI address from OAuth (zkLogin magic)
+5. **Balance check** → Automatic USDC balance verification
+6. **PTB verification** → Widget validates transaction before signing
+7. **Payment confirmation** → 1-click sign with zkLogin
+8. **Content delivered** → 600-700ms later, with blockchain receipt
 
-### Behind the Scenes
+### Architecture Components
 
 - **zkLogin:** Google OAuth → SUI address (no wallet needed!)
-- **Facilitator:** Verifies payment, settles on blockchain
+- **Facilitator:** PTB builder, gas sponsor, balance checker
 - **Smart Contract:** Generic `Coin<T>` payment settlement (SUI Move)
-- **Embedded Widget:** Like Stripe (merchant adds one script tag)
+- **Widget:** Embeddable payment UI (like Stripe checkout)
 
----
-
-## Unique Features
-
-### 1. zkLogin Integration ✨
-
-**Only x402 facilitator with Google → blockchain address**
-
-No other facilitator (Coinbase, PayAI) has this!
-
-### 2. Embedded Widget 🎨
-
-**Zero user installation**
-
-Like Stripe/PayPal checkout (not a browser extension)
-
-### 3. Generic Coin Support 💰
-
-**Works with any SUI token**
-
-USDC, SUI, USDT, custom tokens - all supported via `Coin<T>` generics
-
-### 4. Fixed Fee Model 📊
-
-**$0.01 per transaction** (not percentage-based)
-
-Fair for micropayments, predictable revenue model
-
-### 5. Parallel Execution 🚀
-
-**Owned objects enable massive scalability**
-
-SUI's object model eliminates shared state, allowing unlimited parallel payments
-
-### 6. CCTP-Ready 🌉
-
-**Future cross-chain payments**
-
-Via Circle CCTP to Base, Ethereum, Solana, etc.
+**📊 Detailed Architecture:** [View Flow Diagrams](./docs/ARCHITECTURE.md)
 
 ---
 
 ## Quick Start
 
-### Try the Live Demo
+### Try the Live Demo (No Setup Required)
 
-**🎯 Live on SUI Testnet:** https://merchant-production-0255.up.railway.app
+**🎯 Visit:** https://merchant-production-0255.up.railway.app
 
-1. Visit the demo merchant site
-2. Click "View Premium Data" (triggers 402 Payment Required)
-3. Login with Google (zkLogin authentication)
-4. Receive 1 USDC from demo faucet (automatic)
-5. Confirm payment (0.1 USDC)
-6. Content delivered!
+1. Click "Get Premium Data" (triggers HTTP 402)
+2. Login with Google (zkLogin authentication)
+3. Get test USDC from faucet (automatic, first time only)
+4. Review and confirm payment (0.1 USDC)
+5. Content delivered with blockchain receipt!
 
 **What you'll see:**
-
-- OAuth login (no wallet needed)
+- OAuth login (no wallet extension)
 - Automatic SUI address creation
 - PTB verification before signing
-- Transaction confirmation (~2 seconds)
-- On-chain receipt with invoice details
-
-### For Merchants (Future Production)
-
-```html
-<!-- Add to your website -->
-<script src="https://cdn.pay402.com/widget.js"></script>
-<script>
-  Pay402.init({
-    facilitatorUrl: "https://facilitator.pay402.com",
-    googleClientId: "YOUR_GOOGLE_CLIENT_ID",
-  });
-</script>
-```
-
-That's it! Your API now supports crypto micropayments.
-
-### For Users (Zero Setup)
-
-1. Click merchant's paywall link
-2. Login with Google
-3. Pay with one click
-4. Content delivered
-
-No wallet, no seed phrases, no crypto knowledge required.
+- Transaction confirmation (~600-700ms)
+- On-chain receipt with payment details
 
 ---
 
-## Architecture
+## Development Setup
 
-**📊 [View Detailed Flow Diagram](./docs/architecture/FLOW_DIAGRAM.md)** (with Mermaid diagrams)
+### Prerequisites
+
+- **Node.js 18+** - [Download](https://nodejs.org/)
+- **SUI CLI** - [Install Guide](https://docs.sui.io/build/install)
+- **Enoki Account** - [Sign up](https://portal.enoki.mystenlabs.com)
+- **Google OAuth** - [Create credentials](https://console.cloud.google.com)
+
+### Quick Start (Local Development)
+
+```bash
+# 1. Clone and install
+git clone https://github.com/hamiha70/Pay402.git
+cd Pay402
+npm install
+
+# 2. Configure (interactive script)
+./scripts/setup-env.sh
+
+# 3. Start services
+./scripts/pay402-tmux.sh --localnet
+
+# 4. Visit http://localhost:3002
+```
+
+**Setup takes ~5 minutes.** See [Developer Docs](./docs/developer/) for detailed instructions.
+
+---
+
+## Documentation
+
+### Judge-Facing Docs
+
+- **[PROBLEM_STATEMENT.md](./docs/PROBLEM_STATEMENT.md)** - Market context and Pay402's value
+- **[ARCHITECTURE.md](./docs/ARCHITECTURE.md)** - System design with Mermaid diagrams  
+- **[TRUST_MODEL.md](./docs/TRUST_MODEL.md)** - Security model and threat analysis
+
+### Developer Docs
+
+- **[Testing Guide](./docs/developer/testing.md)** - Comprehensive test strategy
+- **[Railway Deployment](./docs/developer/railway-deployment.md)** - Production deployment
+- **[Enoki Setup](./docs/developer/enoki-portal.md)** - zkLogin configuration
+- **[Setup Scripts](./docs/developer/setup-scripts.md)** - Development helpers
+
+### Component READMEs
+
+- **[facilitator/README.md](./facilitator/README.md)** - Backend API docs
+- **[widget/README.md](./widget/README.md)** - Payment widget with zkLogin
+- **[merchant/README.md](./merchant/README.md)** - Demo merchant implementation
+
+---
+
+## Tech Stack
+
+### Blockchain Layer
+- **SUI Move:** Smart contracts with generic `Coin<T>` support
+- **zkLogin:** Google OAuth → blockchain address (Enoki SDK)
+- **PTBs:** Atomic multi-step transactions
+- **USDC:** Circle native stablecoin on SUI
+
+### Backend (Facilitator)
+- **Node.js + Express:** API server
+- **@mysten/sui:** SUI SDK with gRPC
+- **TypeScript:** Type-safe development
+
+### Frontend (Widget)
+- **React + Vite:** UI framework
+- **@mysten/enoki:** zkLogin integration
+- **Custom PTB Verifier:** Client-side security
+
+### Infrastructure
+- **Mysten Enoki:** Salt service for zkLogin
+- **Railway:** Deployment platform
+- **Circle Faucet:** Testnet USDC funding
+
+---
+
+## Project Structure
+
+```
+Pay402/
+├── move/payment/              # SUI Move contracts
+│   └── sources/payment.move   # Generic Coin<T> settlement
+├── facilitator/               # Backend API (Node.js)
+│   ├── src/controllers/       # PTB builder, gas sponsor
+│   └── __tests__/             # 37 passing tests
+├── widget/                    # Payment UI (React)
+│   ├── src/components/        # React components
+│   ├── lib/verifier.ts        # PTB verification
+│   └── __tests__/             # Widget tests
+├── merchant/                  # Demo merchant (Node.js)
+│   └── src/controllers/       # Invoice generation
+├── scripts/                   # Development helpers
+└── docs/                      # Documentation
+    ├── ARCHITECTURE.md        # System design
+    ├── TRUST_MODEL.md         # Security model
+    └── PROBLEM_STATEMENT.md   # Market context
+```
+
+---
+
+## Roadmap
+
+### Immediate Next Steps
+- [ ] Mainnet deployment
+- [ ] Production monitoring (Sentry, uptime)
+- [ ] Multi-region facilitator nodes
+
+### Short-Term Goals
+- [ ] Browser extension (universal PTB verifier)
+- [ ] Embeddable widget (npm package)
+- [ ] Merchant SDK for easy integration
+
+### Long-Term Vision
+- [ ] CCTP integration (cross-chain settlement)
+- [ ] Additional stablecoin support
+- [ ] Merchant dashboard for reconciliation
+- [ ] Payment channels for AI agents
+
+---
+
+## Resources
+
+### External Documentation
+- **SUI Blockchain:** https://docs.sui.io/
+- **zkLogin Guide:** https://docs.sui.io/guides/developer/cryptography/zklogin-integration
+- **x402 Protocol:** https://docs.cdp.coinbase.com/x402/
+- **Circle USDC:** https://developers.circle.com/stablecoins/sui
+
+### Network Explorer
+- **SUI Testnet:** https://suiscan.xyz/testnet
+- **Example Transaction:** https://suiscan.xyz/testnet/tx/EV7D7z9gjzjrAQSKWSW8S1iLGdk8aEVPjn3zLA1aUSLE
+
+---
+
+## Security Considerations
+
+### zkLogin Security
+- ✅ Non-custodial (user controls ephemeral keys)
+- ✅ ZK proofs (Google account not revealed on-chain)
+- ✅ Salt prevents address enumeration
+- ✅ Session-only keys (ephemeral keypairs)
+
+### Payment Security
+- ✅ Client-side PTB verification (prevents overcharging)
+- ✅ Signature verification (prevents forgery)
+- ✅ Owned objects (parallel execution, no race conditions)
+- ✅ Event logging (permanent audit trail)
+
+### Infrastructure Security
+- ✅ Open-source (full transparency)
+- ✅ Rate limiting (DDoS protection)
+- ✅ Gas budget limits (cost control)
+
+**Detailed Security Analysis:** [TRUST_MODEL.md](./docs/TRUST_MODEL.md)
+
+---
+
+## License
+
+MIT License - see [LICENSE](LICENSE) for details.
+
+---
+
+## Acknowledgments
+
+- **Mysten Labs:** zkLogin technology, SUI blockchain, Enoki SDK
+- **Coinbase:** x402 protocol specification and ecosystem
+- **Circle:** USDC stablecoin and future CCTP integration
+- **ETH Global:** HackMoney hackathon organization and support
+
+---
+
+## Support
+
+- **GitHub Issues:** [Report bugs](https://github.com/hamiha70/Pay402/issues)
+- **Documentation:** [Browse docs](./docs/)
+- **Live Demo:** [Try it now](https://merchant-production-0255.up.railway.app)
+
+---
+
+**Built for ETH Global HackMoney 2026**
+
+**Bringing Stripe-level UX to crypto micropayments on SUI!** 🚀
 
 ### High-Level Overview
 

@@ -6,7 +6,8 @@
 ⛓️ **Built on SUI Blockchain (Testnet)**  
 🎯 **Live Demo:** https://merchant-production-0255.up.railway.app  
 📹 **Video Demo:** [Coming Soon]  
-📊 **Architecture:** [Flow Diagram](./docs/architecture/FLOW_DIAGRAM.md)
+📊 **Architecture:** [Flow Diagram](./docs/architecture/FLOW_DIAGRAM.md)  
+📚 **Documentation:** [DOCS_INDEX.md](./DOCS_INDEX.md) (complete navigation guide)
 
 **Proof of Concept:** [Live Testnet Transaction](https://suiscan.xyz/testnet/tx/EV7D7z9gjzjrAQSKWSW8S1iLGdk8aEVPjn3zLA1aUSLE)
 

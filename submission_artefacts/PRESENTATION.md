@@ -29,19 +29,22 @@
 
 ### Currently Live
 
-| Chain       | Facilitator       | Status               |
-| ----------- | ----------------- | -------------------- |
-| **Base**    | Coinbase x402 SDK | ✅ Live, mainnet     |
-| **Solana**  | PayAI             | ✅ Live, mainnet     |
-| **SUI**     | ❌ None           | **← We're first**    |
+| Chain      | Facilitator       | Status            |
+| ---------- | ----------------- | ----------------- |
+| **Base**   | Coinbase x402 SDK | ✅ Live, mainnet  |
+| **Solana** | PayAI             | ✅ Live, mainnet  |
+| **SUI**    | ❌ None           | **← We're first** |
 
-**Market Signal:** 
-- x402 SDK has **5,391 GitHub stars** (active ecosystem)
-- Coinbase shipping production facilitator on Base
-- Multiple chains adopting (Base, Solana, Polygon planned)
-- Emerging standard for API monetization and AI agent commerce
+**Market Traction (Real Numbers):**
 
-**Key Message:** x402 is proven technology with growing adoption. We're bringing it to SUI.
+- **$600M annualized payment volume** across all chains (Dec 2025)
+- **63M+ monthly transactions** (Dec 2025)
+- **$7.5M monthly USDC volume** (Dec 2025)
+- **1,100+ projects** using x402 protocol
+- **Base:** 68M+ total transactions processed
+- **Solana (PayAI):** $50M+ monthly volume
+
+**Key Message:** x402 is proven, production-scale technology. We're bringing it to SUI with unique advantages.
 
 ---
 
@@ -57,28 +60,28 @@
 
 ### SUI Unlocks Novel Features
 
-| Feature                                       | Enabling Technology                    |
-| --------------------------------------------- | -------------------------------------- |
-| **Onboarding Non-Crypto Users**              | **zkLogin** + Enoki                    |
-| → OAuth (Google/Apple/Facebook) → Blockchain |                                        |
-|                                               |                                        |
-| **No Browser Wallet**                         | **Gas Sponsorship** (Native)           |
-| → Facilitator pays gas                        |                                        |
-| → User needs only USDC                        |                                        |
-|                                               |                                        |
-| **Low Latency**                               | **Sub-Second Finality**                |
-| → 600-700ms blockchain settlement (testnet)   |                                        |
-|                                               |                                        |
-| **Audit & Conflict Resolution**               | **Cheap On-Chain Events**              |
-| → Permanent receipts at ~$0.0003 per payment  |                                        |
-|                                               |                                        |
-| **Flexible Extensions**                       | **Programmable Transaction Blocks**    |
-| → Atomic multi-step                           |                                        |
-| → Split, pay, emit receipt in one transaction |                                        |
-|                                               |                                        |
-| **Massive Scaling**                           | **Object Model** (Owned Objects)       |
-| → Parallel execution                          |                                        |
-| → No shared state bottlenecks                 |                                        |
+| Feature                                       | Enabling Technology                 |
+| --------------------------------------------- | ----------------------------------- |
+| **Onboarding Non-Crypto Users**               | **zkLogin** + Enoki                 |
+| → OAuth (Google/Apple/Facebook) → Blockchain  |                                     |
+|                                               |                                     |
+| **No Browser Wallet**                         | **Gas Sponsorship** (Native)        |
+| → Facilitator pays gas                        |                                     |
+| → User needs only USDC                        |                                     |
+|                                               |                                     |
+| **Low Latency**                               | **Sub-Second Finality**             |
+| → 600-700ms blockchain settlement (testnet)   |                                     |
+|                                               |                                     |
+| **Audit & Conflict Resolution**               | **Cheap On-Chain Events**           |
+| → Permanent receipts at ~$0.0003 per payment  |                                     |
+|                                               |                                     |
+| **Flexible Extensions**                       | **Programmable Transaction Blocks** |
+| → Atomic multi-step                           |                                     |
+| → Split, pay, emit receipt in one transaction |                                     |
+|                                               |                                     |
+| **Massive Scaling**                           | **Object Model** (Owned Objects)    |
+| → Parallel execution                          |                                     |
+| → No shared state bottlenecks                 |                                     |
 
 **Core Message:** Not just "first on SUI" - these capabilities are **difficult or impossible** on EVM/Solana.
 

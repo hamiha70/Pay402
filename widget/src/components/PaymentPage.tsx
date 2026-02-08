@@ -4,6 +4,9 @@ import { useBalance } from '../hooks/useBalance';
 import { buildPTB, verifyPTB, submitPayment as submitPaymentAPI } from '../lib/pay402-client';
 import type { InvoiceJWT } from '../lib/verifier';
 
+// Facilitator URL from environment variable (supports local and production)
+const FACILITATOR_URL = import.meta.env.VITE_FACILITATOR_URL || 'http://localhost:3001';
+
 /**
  * Payment Page Component
  * 
@@ -221,7 +224,7 @@ export default function PaymentPage({ invoiceJWT: propInvoiceJWT }: PaymentPageP
 
     try {
       // Use shared client library (same code as e2e tests!)
-      const config = { facilitatorUrl: 'http://localhost:3001' };
+      const config = { facilitatorUrl: FACILITATOR_URL };
       
       // Build PTB
       const { kindBytes } = await buildPTB(config, invoiceJWT, address);
@@ -265,7 +268,7 @@ export default function PaymentPage({ invoiceJWT: propInvoiceJWT }: PaymentPageP
       console.log('  Signature length:', signature.length);
 
       // Submit payment using shared client library (same code as e2e tests!)
-      const config = { facilitatorUrl: 'http://localhost:3001' };
+      const config = { facilitatorUrl: FACILITATOR_URL };
       const data = await submitPaymentAPI(config, {
         invoiceJWT,
         buyerAddress: address,

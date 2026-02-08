@@ -345,7 +345,7 @@
         // Pass invoice via URL hash (not query param!)
         // Hash (#) is not sent to server, so OAuth redirect works
         // Widget will read from hash, save to sessionStorage, then clean URL
-        const widgetUrl = `http://localhost:5173#invoice=${encodeURIComponent(
+        const widgetUrl = `https://widget-production-8b65.up.railway.app#invoice=${encodeURIComponent(
           currentInvoiceJWT
         )}`;
         console.log("🔗 Redirecting to widget with invoice in hash");

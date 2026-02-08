@@ -39,6 +39,13 @@ app.get('/health', healthController);
 app.get('/api/premium-data', premiumDataController);
 app.get('/api/verify-payment', verifyPaymentController);
 
+// Configuration endpoint for frontend
+app.get('/api/config', (req, res) => {
+  res.json({
+    widgetUrl: process.env.WIDGET_URL || 'http://localhost:5173'
+  });
+});
+
 // Demo page (served from public/index.html via static middleware)
 // Fallback for old inline demo
 app.get('/demo-old', (req, res) => {

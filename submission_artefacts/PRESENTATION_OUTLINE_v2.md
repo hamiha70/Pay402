@@ -286,7 +286,7 @@ User → Click payment link (1 sec)
 | ------------------- | ------------- | ------------------------- | -------------------------------- | --------------------------------------------- |
 | **zkLogin**         | Native        | ❌ Not available          | ⚠️ Social recovery wallets exist | Google → Address, no wallet                   |
 | **PTBs**            | Native        | ⚠️ Versioned transactions | ❌ Single-call only              | Atomic multi-step: split, transfer, receipt   |
-| **Object Model**    | Owned objects | Account-based             | Account-based                    | No frontrunning, no shared state bottlenecks  |
+| **Object Model**    | Owned objects | Account-based             | Account-based                    | Parallel execution, massive scalability       |
 | **Finality**        | ~400ms        | ~400ms                    | ~12 min (L1), ~2s (L2)           | Near-instant payment confirmation             |
 | **Gas Sponsorship** | Built-in      | Supported                 | ⚠️ Complex (EIP-4337)            | Facilitator pays, user doesn't need gas token |
 | **Generic Coins**   | `Coin<T>`     | Token Program             | Token-specific contracts         | One contract, any stablecoin                  |
@@ -483,7 +483,7 @@ Background (user already has content):
 12. Receipt event indexed
 ```
 
-**Key insight:** Facilitator acts as guarantor. Comprehensive validation before submit eliminates most risk. Only remaining risk: buyer front-runs between submit and finality - very low probability on SUI.
+**Key insight:** Facilitator acts as guarantor. Comprehensive validation before submit eliminates most risk. Only remaining risk: buyer spends USDC elsewhere between submit and finality - mitigated by fast SUI finality (~400ms) and immediate balance validation.
 
 ### Return Visit (Funded User)
 

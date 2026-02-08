@@ -1,0 +1,9 @@
+{
+  "name": "pay402-monorepo",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "build": "cd facilitator && npm install && npm run build",
+    "start": "cd facilitator && npm start"
+  }
+}

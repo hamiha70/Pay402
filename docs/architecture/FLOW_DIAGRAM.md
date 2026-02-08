@@ -8,29 +8,28 @@
 
 ```mermaid
 graph TB
-    subgraph "Buyer Experience"
-        B[👤 Buyer Browser]
-        W[🎨 Payment Widget<br/>React + Enoki]
+    subgraph buyer[Buyer Experience]
+        B[Buyer Browser]
+        W[Payment Widget - React + Enoki]
+    end
+    
+    subgraph facilitator[Facilitator Service - Railway]
+        F[Facilitator API - Express + TypeScript]
+        FS[Facilitator Signer - Ed25519 Keypair]
+    end
+    
+    subgraph sui[SUI Blockchain - Testnet]
+        ZK[zkLogin Service - Google OAuth to SUI Address]
+        PTB[Programmable Transaction Block - USDC Split + Payment + Receipt]
+        SC[Smart Contract - settle_payment]
+        USDC[USDC Coins - Circle Native on SUI]
+    end
+    
+    subgraph merchant[Merchant]
+        M[Merchant Server - Demo API]
+        MC[Merchant Address - SUI Wallet]
     end
 
-    subgraph "Facilitator Service<br/>(Railway Deployment)"
-        F[⚡ Facilitator API<br/>Express + TypeScript]
-        FS[🔐 Facilitator Signer<br/>Ed25519 Keypair]
-    end
-
-    subgraph "SUI Blockchain<br/>(Testnet)"
-        ZK[🔑 zkLogin Service<br/>Google OAuth → SUI Address]
-        PTB[📦 Programmable Transaction Block<br/>USDC Split + Payment + Receipt]
-        SC[📜 Smart Contract<br/>settle_payment()]
-        USDC[💵 USDC Coins<br/>Circle Native on SUI]
-    end
-
-    subgraph "Merchant"
-        M[🏪 Merchant Server<br/>Demo API]
-        MC[💰 Merchant Address<br/>SUI Wallet]
-    end
-
-    %% Flow connections
     B -->|1. Click Pay| W
     W -->|2. OAuth Login| ZK
     ZK -->|3. Derive Address| W

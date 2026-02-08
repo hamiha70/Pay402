@@ -18,6 +18,7 @@
 ### What is x402?
 
 The **HTTP 402 "Payment Required"** status code enables machine-readable micropayments for:
+
 - **API Monetization:** Pay-per-request pricing for AI/data APIs
 - **Content Paywalls:** Microtransactions for premium articles, datasets
 - **Agentic Commerce:** AI agents purchasing resources autonomously
@@ -25,17 +26,19 @@ The **HTTP 402 "Payment Required"** status code enables machine-readable micropa
 ### Current State of x402
 
 **Existing implementations (Base, Solana):**
+
 - ✅ Proven protocol adoption
 - ❌ Require wallet extensions (high friction for new users)
 - ❌ Users need native gas tokens (ETH, SOL) in addition to USDC
 - ❌ EVM: Global state creates coordination overhead
 - ❌ No seamless Web2 → Web3 onboarding
 
-**Pay402's Innovation
+\*\*Pay402's Innovation
 
-:**
+:\*\*
 
 **First x402 facilitator to unlock:**
+
 1. **Zero-friction onboarding:** Google OAuth → blockchain (zkLogin)
 2. **No gas burden:** Facilitator sponsors gas (buyer needs only USDC)
 3. **Parallel execution:** SUI's object model enables massive scalability
@@ -49,26 +52,31 @@ The **HTTP 402 "Payment Required"** status code enables machine-readable micropa
 Pay402 leverages SUI-specific capabilities that are difficult or impossible on EVM/Solana:
 
 ### 1. zkLogin (Web2 → Web3 Bridge)
+
 - **OAuth-based authentication** (Google, Apple, etc.)
 - Deterministic address derivation from OAuth credentials
 - No seed phrases, no wallet installation
 - **Pay402 benefit:** 3-click payment flow vs. 10+ steps on other chains
 
 ### 2. Programmable Transaction Blocks (PTBs)
+
 - **Atomic multi-step transactions** with single signature
 - Client-side verification before signing
 - **Pay402 benefit:** Split coin + payment + receipt in one transaction
 
 ### 3. Gas Sponsorship (Native Feature)
+
 - Third party can pay gas fees for users
 - **Pay402 benefit:** Buyer needs only USDC, facilitator pays SUI gas
 
 ### 4. Object Model (Owned Objects)
+
 - **No global state** → reduces coordination overhead
 - Parallel transaction execution
 - **Pay402 benefit:** Scalable, trustless payments without race conditions
 
 ### 5. On-Chain Events (Cost-Efficient)
+
 - Permanent, queryable event log
 - Much cheaper than EVM event storage
 - **Pay402 benefit:** Every payment emits audit receipt for merchant reconciliation
@@ -174,6 +182,7 @@ Via Circle CCTP to Base, Ethereum, Solana, etc.
 6. Content delivered!
 
 **What you'll see:**
+
 - OAuth login (no wallet needed)
 - Automatic SUI address creation
 - PTB verification before signing
@@ -238,11 +247,11 @@ No wallet, no seed phrases, no crypto knowledge required.
 
 ### Deployed Services (Railway)
 
-| Service | URL | Purpose |
-|---------|-----|---------|
-| **Facilitator** | https://pay402-production.up.railway.app | Backend API, PTB builder, gas sponsor |
-| **Widget** | https://widget-production-8b65.up.railway.app | Payment UI, zkLogin integration |
-| **Merchant Demo** | https://merchant-production-0255.up.railway.app | Demo x402 merchant with paywall |
+| Service           | URL                                             | Purpose                               |
+| ----------------- | ----------------------------------------------- | ------------------------------------- |
+| **Facilitator**   | https://pay402-production.up.railway.app        | Backend API, PTB builder, gas sponsor |
+| **Widget**        | https://widget-production-8b65.up.railway.app   | Payment UI, zkLogin integration       |
+| **Merchant Demo** | https://merchant-production-0255.up.railway.app | Demo x402 merchant with paywall       |
 
 **Components:**
 

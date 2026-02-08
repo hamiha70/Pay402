@@ -1,16 +1,76 @@
-# Pay402 - Zero-Friction x402 Payments on SUI
+# Pay402 - First x402 Facilitator on SUI with zkLogin
 
-**The first x402 payment facilitator with Google login → blockchain payments. No wallet installation required.**
+**Zero-friction micropayments: Google OAuth → Blockchain payments. No wallet required.**
 
 🏆 **ETH Global HackMoney January 2026**  
-⛓️ **Built on SUI Blockchain**  
-🎯 **Live Demo:** [demo.pay402.com](https://demo.pay402.com) (coming soon)
+⛓️ **Built on SUI Blockchain (Testnet)**  
+🎯 **Live Demo:** https://merchant-production-0255.up.railway.app  
+📹 **Video Demo:** [Coming Soon]  
+📊 **Architecture:** [Flow Diagram](./docs/architecture/FLOW_DIAGRAM.md)
+
+**Proof of Concept:** [Live Testnet Transaction](https://suiscan.xyz/testnet/tx/EV7D7z9gjzjrAQSKWSW8S1iLGdk8aEVPjn3zLA1aUSLE)
 
 ---
 
-## What is Pay402?
+## The Problem: x402 Needs Better Infrastructure
 
-Pay402 enables **micropayments for API access** using the x402 HTTP status code, with zero-friction onboarding via zkLogin.
+### What is x402?
+
+The **HTTP 402 "Payment Required"** status code enables machine-readable micropayments for:
+- **API Monetization:** Pay-per-request pricing for AI/data APIs
+- **Content Paywalls:** Microtransactions for premium articles, datasets
+- **Agentic Commerce:** AI agents purchasing resources autonomously
+
+### Current State of x402
+
+**Existing implementations (Base, Solana):**
+- ✅ Proven protocol adoption
+- ❌ Require wallet extensions (high friction for new users)
+- ❌ Users need native gas tokens (ETH, SOL) in addition to USDC
+- ❌ EVM: Global state enables front-running attacks
+- ❌ No seamless Web2 → Web3 onboarding
+
+### Pay402's Innovation
+
+**First x402 facilitator to unlock:**
+1. **Zero-friction onboarding:** Google OAuth → blockchain (zkLogin)
+2. **No gas burden:** Facilitator sponsors gas (buyer needs only USDC)
+3. **Anti-front-running:** SUI's object model prevents attacks
+4. **Optimistic settlement:** Content delivered in ~2 seconds
+5. **Cheap audit trail:** On-chain receipt events for merchants
+
+---
+
+## Why SUI?
+
+Pay402 leverages SUI-specific capabilities that are difficult or impossible on EVM/Solana:
+
+### 1. zkLogin (Web2 → Web3 Bridge)
+- **OAuth-based authentication** (Google, Apple, etc.)
+- Deterministic address derivation from OAuth credentials
+- No seed phrases, no wallet installation
+- **Pay402 benefit:** 3-click payment flow vs. 10+ steps on other chains
+
+### 2. Programmable Transaction Blocks (PTBs)
+- **Atomic multi-step transactions** with single signature
+- Client-side verification before signing
+- **Pay402 benefit:** Split coin + payment + receipt in one transaction
+
+### 3. Gas Sponsorship (Native Feature)
+- Third party can pay gas fees for users
+- **Pay402 benefit:** Buyer needs only USDC, facilitator pays SUI gas
+
+### 4. Object Model (Owned Objects)
+- **No global state** → prevents front-running
+- Parallel transaction execution
+- **Pay402 benefit:** Scalable, trustless payments without race conditions
+
+### 5. On-Chain Events (Cost-Efficient)
+- Permanent, queryable event log
+- Much cheaper than EVM event storage
+- **Pay402 benefit:** Every payment emits audit receipt for merchant reconciliation
+
+---
 
 **Traditional crypto payments:**
 
@@ -99,7 +159,25 @@ Via Circle CCTP to Base, Ethereum, Solana, etc.
 
 ## Quick Start
 
-### For Merchants (Add Widget)
+### Try the Live Demo
+
+**🎯 Live on SUI Testnet:** https://merchant-production-0255.up.railway.app
+
+1. Visit the demo merchant site
+2. Click "View Premium Data" (triggers 402 Payment Required)
+3. Login with Google (zkLogin authentication)
+4. Receive 1 USDC from demo faucet (automatic)
+5. Confirm payment (0.1 USDC)
+6. Content delivered!
+
+**What you'll see:**
+- OAuth login (no wallet needed)
+- Automatic SUI address creation
+- PTB verification before signing
+- Transaction confirmation (~2 seconds)
+- On-chain receipt with invoice details
+
+### For Merchants (Future Production)
 
 ```html
 <!-- Add to your website -->
@@ -127,24 +205,41 @@ No wallet, no seed phrases, no crypto knowledge required.
 
 ## Architecture
 
+**📊 [View Detailed Flow Diagram](./docs/architecture/FLOW_DIAGRAM.md)** (with Mermaid diagrams)
+
+### High-Level Overview
+
 ```
 ┌──────────────────────────────────────────────────┐
 │              User's Browser                      │
 │  ┌────────────────────────────────────────────┐  │
-│  │  Pay402 Widget                             │  │
-│  │  - Detects 402 responses                   │  │
-│  │  - Triggers zkLogin (Google)               │  │
-│  │  - Auto-discovers SUI address              │  │
-│  │  - Confirms payment                        │  │
+│  │  Pay402 Widget (React + Enoki)             │  │
+│  │  - zkLogin authentication (Google OAuth)   │  │
+│  │  - PTB verification before signing         │  │
+│  │  - Transaction signing with zkLogin        │  │
+│  │  - Payment UX & receipts                   │  │
 │  └────────────────────────────────────────────┘  │
 └──────────────┬──────────────┬──────────────┬─────┘
                │              │              │
                ↓              ↓              ↓
        ┌────────────┐  ┌────────────┐  ┌──────────┐
        │  Merchant  │  │ Facilitator│  │ SUI Chain│
-       │  (x402)    │  │  (Build)   │  │ (Existing)│
+       │  (x402)    │  │  (Backend) │  │ (Testnet)│
+       │            │  │  - Build   │  │          │
+       │  Serves    │  │    PTBs    │  │ zkLogin  │
+       │  Premium   │  │  - Sponsor │  │ PTBs     │
+       │  Content   │  │    Gas     │  │ USDC     │
+       │            │  │  - Submit  │  │ Events   │
        └────────────┘  └────────────┘  └──────────┘
 ```
+
+### Deployed Services (Railway)
+
+| Service | URL | Purpose |
+|---------|-----|---------|
+| **Facilitator** | https://pay402-production.up.railway.app | Backend API, PTB builder, gas sponsor |
+| **Widget** | https://widget-production-8b65.up.railway.app | Payment UI, zkLogin integration |
+| **Merchant Demo** | https://merchant-production-0255.up.railway.app | Demo x402 merchant with paywall |
 
 **Components:**
 

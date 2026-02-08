@@ -13,7 +13,7 @@
 
 ---
 
-## SLIDE 1: x402 - Already a Reality
+## SLIDE 1: x402 for micropayments - Already a Reality
 
 **Title:** "x402: Micropayments Are Here"
 
@@ -21,29 +21,27 @@
 
 ### HTTP 402 "Payment Required"
 
-```http
-GET /api/data HTTP/1.1
-
-HTTP/1.1 402 Payment Required
-X-402-Invoice: eyJhbGciOiJFZERTQSJ9...
-```
-
 **Machine-readable payment requests for:**
 
-- API monetization ($0.01-$1.00 per request)
-- Premium content paywalls
+- API monetization ($0.01-$1.00 per request at low cost)
+- Premium content paywalls for humans
 - AI agent commerce
 
 ### Currently Live
 
-| Chain       | Facilitator       | Status            |
-| ----------- | ----------------- | ----------------- |
-| **Base**    | Coinbase x402 SDK | ✅ Live, mainnet  |
-| **Solana**  | PayAI             | ✅ Live, mainnet  |
-| **Polygon** | Coinbase SDK      | ✅ Live           |
-| **SUI**     | ❌ None           | **← We're first** |
+| Chain       | Facilitator       | Status               |
+| ----------- | ----------------- | -------------------- |
+| **Base**    | Coinbase x402 SDK | ✅ Live, mainnet     |
+| **Solana**  | PayAI             | ✅ Live, mainnet     |
+| **SUI**     | ❌ None           | **← We're first**    |
 
-**Key Message:** x402 is proven technology. Coinbase, Circle, and multiple teams are shipping implementations.
+**Market Signal:** 
+- x402 SDK has **5,391 GitHub stars** (active ecosystem)
+- Coinbase shipping production facilitator on Base
+- Multiple chains adopting (Base, Solana, Polygon planned)
+- Emerging standard for API monetization and AI agent commerce
+
+**Key Message:** x402 is proven technology with growing adoption. We're bringing it to SUI.
 
 ---
 
@@ -59,14 +57,28 @@ X-402-Invoice: eyJhbGciOiJFZERTQSJ9...
 
 ### SUI Unlocks Novel Features
 
-| Feature                         | Technology                             | What It Enables                                 |
-| ------------------------------- | -------------------------------------- | ----------------------------------------------- |
-| **Onboarding Non-Crypto Users** | zkLogin + Enoki                        | Google OAuth → Blockchain address               |
-| **No Browser Wallet**           | Gas Sponsorship                        | Facilitator pays gas, user needs only USDC      |
-| **Low Latency**                 | Sub-second Finality                    | 600-700ms blockchain settlement (testnet)       |
-| **Audit & Conflict Resolution** | Cheap On-Chain Events                  | Permanent receipts at ~$0.0003 per payment      |
-| **Flexible Extensions**         | Programmable Transaction Blocks (PTBs) | Atomic multi-step: split, pay, emit receipt     |
-| **Massive Scaling**             | Object Model (Owned Objects)           | Parallel execution, no shared state bottlenecks |
+| Feature                                       | Enabling Technology                    |
+| --------------------------------------------- | -------------------------------------- |
+| **Onboarding Non-Crypto Users**              | **zkLogin** + Enoki                    |
+| → OAuth (Google/Apple/Facebook) → Blockchain |                                        |
+|                                               |                                        |
+| **No Browser Wallet**                         | **Gas Sponsorship** (Native)           |
+| → Facilitator pays gas                        |                                        |
+| → User needs only USDC                        |                                        |
+|                                               |                                        |
+| **Low Latency**                               | **Sub-Second Finality**                |
+| → 600-700ms blockchain settlement (testnet)   |                                        |
+|                                               |                                        |
+| **Audit & Conflict Resolution**               | **Cheap On-Chain Events**              |
+| → Permanent receipts at ~$0.0003 per payment  |                                        |
+|                                               |                                        |
+| **Flexible Extensions**                       | **Programmable Transaction Blocks**    |
+| → Atomic multi-step                           |                                        |
+| → Split, pay, emit receipt in one transaction |                                        |
+|                                               |                                        |
+| **Massive Scaling**                           | **Object Model** (Owned Objects)       |
+| → Parallel execution                          |                                        |
+| → No shared state bottlenecks                 |                                        |
 
 **Core Message:** Not just "first on SUI" - these capabilities are **difficult or impossible** on EVM/Solana.
 
@@ -88,7 +100,7 @@ X-402-Invoice: eyJhbGciOiJFZERTQSJ9...
 │     → Click "Get Premium Data ($0.10)"                   │
 │     → HTTP 402 Payment Required                          │
 │                                                          │
-│  2. Payment Widget Opens                                 │
+│  2. Payment Widget Opens (Stripe-like checkout)          │
 │     → Shows: Merchant, Amount, Resource                  │
 │     → Click "Sign in with Google"                        │
 │                                                          │
@@ -141,19 +153,14 @@ X-402-Invoice: eyJhbGciOiJFZERTQSJ9...
 
 ### On-Chain Components
 
-**Smart Contract (SUI Move)**
+**Smart Contract (SUI Move) on Testnet**
 
 - Generic `Coin<T>` payment settlement
+- Minimal smart contract - Heavy lifting through PTB
 - Validates buyer identity, atomically splits coins
 - Emits on-chain receipt events
-- 18 passing tests
-
-**Blockchain Interaction**
-
-- SUI testnet deployment
 - Circle USDC (native stablecoin)
-- Sub-second finality (600-700ms measured)
-- Gas sponsored by facilitator
+- Gas sponsored by facilitator native
 
 ---
 
@@ -162,23 +169,20 @@ X-402-Invoice: eyJhbGciOiJFZERTQSJ9...
 **Facilitator API (Node.js + TypeScript)**
 
 - PTB construction matching invoice terms
-- Gas sponsorship (facilitator pays SUI fees)
 - Balance checking and validation
 - Optimistic + pessimistic settlement modes
-- 181 passing tests
+- Payment verification onchain
 
-**Payment Widget (React + Vite)**
+**Payment Widget Stripe style (React + Vite)**
 
 - zkLogin integration (Enoki SDK)
 - Client-side PTB verification
 - Payment UI and flow management
-- 77 passing tests
 
-**Demo Merchant (Node.js + Express)**
+**Merchant (Node.js + Express)**
 
 - Invoice generation (JWT signed)
 - HTTP 402 response pattern
-- Payment verification
 - Content delivery
 
 ---
@@ -247,7 +251,7 @@ X-402-Invoice: eyJhbGciOiJFZERTQSJ9...
 **Six unique advantages:**
 
 1. **Onboarding non-crypto users** - Google → Blockchain
-2. **No browser wallet** - Gas sponsored, USDC only
+2. **No browser wallet** - Gas sponsored, enoki + zkLogin
 3. **Low latency** - Sub-second settlement
 4. **Audit & conflict resolution** - Cheap on-chain receipts
 5. **Flexible extensions** - PTBs enable transparent fees
@@ -263,11 +267,9 @@ X-402-Invoice: eyJhbGciOiJFZERTQSJ9...
 ### Try It
 
 **Live Demo:** https://merchant-production-0255.up.railway.app  
-**GitHub:** https://github.com/hamiha70/Pay402  
-**Documentation:** See README.md
+**GitHub:** https://github.com/hamiha70/Pay402
 
-**Built for:** ETH Global HackMoney 2026  
-**Solo Hacker Submission**
+**Built for:** ETH Global HackMoney 2026
 
 ---
 
@@ -305,7 +307,7 @@ _(For Q&A)_
 └──────────────────────────────────────────────────────────────┘
 
 ┌──────────────────────────────────────────────────────────────┐
-│                  MERCHANT'S TRUST MODEL                      │
+│                  MERCHANT'S FACILITATOR TRUST MODEL                      │
 ├──────────────────────────────────────────────────────────────┤
 │                                                              │
 │  Optimistic mode:                                            │
@@ -319,7 +321,7 @@ _(For Q&A)_
 └──────────────────────────────────────────────────────────────┘
 ```
 
-### PTB Verification (Critical Security)
+### PTB Verification (Critical trust boundary)
 
 **Where:** Widget (buyer's browser) verifies PTB before signing
 
@@ -390,6 +392,7 @@ User → Install wallet extension (2 min)
 ```
 User → Click payment link (1 sec)
      → "Sign in with Google" (3 sec)
+     → First time: get self-custodial address (payment interface)
      → Confirm payment (1 sec)
 ```
 
@@ -446,15 +449,15 @@ ptb.setGasOwner(facilitatorAddress); // Who pays gas (owns SUI)
 
 **Mitigation:**
 
-- Gas budget capped per tx (max ~0.1 SUI = ~$0.10)
+- Gas budget capped per tx (max ~0.1 SUI = ~$0.01)
 - Facilitator rate-limits by address
 - PTB verifier prevents complex/expensive calls (only template commands allowed)
 
 **Cost per Transaction:**
 
-- Gas: ~0.001 SUI (~$0.002)
-- Facilitator fee: $0.01
-- Net profit: ~$0.008 per transaction
+- Gas: ~0.001 SUI (~$0.0002)
+- Facilitator fee: $0.001
+- Net profit: ~$0.0008 per transaction
 
 ---
 

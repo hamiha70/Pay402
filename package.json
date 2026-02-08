@@ -1,0 +1,18 @@
+{
+  "name": "pay402-monorepo",
+  "version": "1.0.0",
+  "private": true,
+  "workspaces": [
+    "facilitator",
+    "merchant",
+    "widget"
+  ],
+  "scripts": {
+    "build:facilitator": "cd facilitator && npm install && npm run build",
+    "start:facilitator": "cd facilitator && npm start",
+    "build:merchant": "cd merchant && npm install",
+    "start:merchant": "cd merchant && npm start",
+    "build:widget": "cd widget && npm install && npm run build",
+    "start:widget": "cd widget && npm run preview"
+  }
+}

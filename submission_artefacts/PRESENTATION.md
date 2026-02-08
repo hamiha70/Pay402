@@ -6,6 +6,7 @@
 **Demo URL:** https://merchant-production-0255.up.railway.app (testnet)
 
 **Related Documentation:**
+
 - [Problem Statement](../docs/PROBLEM_STATEMENT.md) - Market context and Pay402's value proposition
 - [Architecture](../docs/ARCHITECTURE.md) - System architecture with Mermaid diagrams
 - [Trust Model](../docs/TRUST_MODEL.md) - Security model and threat analysis
@@ -28,6 +29,7 @@ X-402-Invoice: eyJhbGciOiJFZERTQSJ9...
 ```
 
 **Machine-readable payment requests for:**
+
 - API monetization ($0.01-$1.00 per request)
 - Premium content paywalls
 - AI agent commerce
@@ -57,14 +59,14 @@ X-402-Invoice: eyJhbGciOiJFZERTQSJ9...
 
 ### SUI Unlocks Novel Features
 
-| Feature | Technology | What It Enables |
-|---------|------------|-----------------|
-| **Onboarding Non-Crypto Users** | zkLogin + Enoki | Google OAuth → Blockchain address |
-| **No Browser Wallet** | Gas Sponsorship | Facilitator pays gas, user needs only USDC |
-| **Low Latency** | Sub-second Finality | 600-700ms blockchain settlement (testnet) |
-| **Audit & Conflict Resolution** | Cheap On-Chain Events | Permanent receipts at ~$0.0003 per payment |
-| **Flexible Extensions** | Programmable Transaction Blocks (PTBs) | Atomic multi-step: split, pay, emit receipt |
-| **Massive Scaling** | Object Model (Owned Objects) | Parallel execution, no shared state bottlenecks |
+| Feature                         | Technology                             | What It Enables                                 |
+| ------------------------------- | -------------------------------------- | ----------------------------------------------- |
+| **Onboarding Non-Crypto Users** | zkLogin + Enoki                        | Google OAuth → Blockchain address               |
+| **No Browser Wallet**           | Gas Sponsorship                        | Facilitator pays gas, user needs only USDC      |
+| **Low Latency**                 | Sub-second Finality                    | 600-700ms blockchain settlement (testnet)       |
+| **Audit & Conflict Resolution** | Cheap On-Chain Events                  | Permanent receipts at ~$0.0003 per payment      |
+| **Flexible Extensions**         | Programmable Transaction Blocks (PTBs) | Atomic multi-step: split, pay, emit receipt     |
+| **Massive Scaling**             | Object Model (Owned Objects)           | Parallel execution, no shared state bottlenecks |
 
 **Core Message:** Not just "first on SUI" - these capabilities are **difficult or impossible** on EVM/Solana.
 
@@ -140,12 +142,14 @@ X-402-Invoice: eyJhbGciOiJFZERTQSJ9...
 ### On-Chain Components
 
 **Smart Contract (SUI Move)**
+
 - Generic `Coin<T>` payment settlement
 - Validates buyer identity, atomically splits coins
 - Emits on-chain receipt events
 - 18 passing tests
 
 **Blockchain Interaction**
+
 - SUI testnet deployment
 - Circle USDC (native stablecoin)
 - Sub-second finality (600-700ms measured)
@@ -156,6 +160,7 @@ X-402-Invoice: eyJhbGciOiJFZERTQSJ9...
 ### Off-Chain Components
 
 **Facilitator API (Node.js + TypeScript)**
+
 - PTB construction matching invoice terms
 - Gas sponsorship (facilitator pays SUI fees)
 - Balance checking and validation
@@ -163,12 +168,14 @@ X-402-Invoice: eyJhbGciOiJFZERTQSJ9...
 - 181 passing tests
 
 **Payment Widget (React + Vite)**
+
 - zkLogin integration (Enoki SDK)
 - Client-side PTB verification
 - Payment UI and flow management
 - 77 passing tests
 
 **Demo Merchant (Node.js + Express)**
+
 - Invoice generation (JWT signed)
 - HTTP 402 response pattern
 - Payment verification
@@ -179,6 +186,7 @@ X-402-Invoice: eyJhbGciOiJFZERTQSJ9...
 ### Key Architecture
 
 **3-Party System:**
+
 1. **Merchant** - Issues invoice, verifies payment, delivers content
 2. **Facilitator** - Builds PTB, sponsors gas, submits to blockchain
 3. **Buyer** - Signs transaction via zkLogin, owns USDC
@@ -193,17 +201,17 @@ X-402-Invoice: eyJhbGciOiJFZERTQSJ9...
 
 ### Hackathon Achievements
 
-| Feature | Status |
-|---------|--------|
-| **OAuth Login** | ✅ |
-| **Gas Sponsorship** | ✅ |
-| **PTB Validation** | ✅ |
-| **zkLogin Signing** | ✅ |
-| **Optimistic Settlement** | ✅ |
-| **Pessimistic Settlement** | ✅ |
-| **USDC Persistence** | ✅ |
-| **Merchant Onboarding** | ✅ |
-| **On-Chain Receipts** | ✅ |
+| Feature                    | Status |
+| -------------------------- | ------ |
+| **OAuth Login**            | ✅     |
+| **Gas Sponsorship**        | ✅     |
+| **PTB Validation**         | ✅     |
+| **zkLogin Signing**        | ✅     |
+| **Optimistic Settlement**  | ✅     |
+| **Pessimistic Settlement** | ✅     |
+| **USDC Persistence**       | ✅     |
+| **Merchant Onboarding**    | ✅     |
+| **On-Chain Receipts**      | ✅     |
 
 **Total:** 276 automated tests, all passing  
 **Deployed:** Live on Railway (testnet)  
@@ -213,16 +221,16 @@ X-402-Invoice: eyJhbGciOiJFZERTQSJ9...
 
 ### Next Steps
 
-| Milestone | Status |
-|-----------|--------|
-| **Mainnet Deployment** | 🔄 |
-| **Browser Extension** | 🔄 |
-| **Production Monitoring** | 🔄 |
-| **Multi-Region Nodes** | 🔄 |
-| **Embeddable Widget** | 🔄 |
-| **Merchant SDK (NPM)** | 🔄 |
-| **CCTP Integration (Cross-Chain)** | 🔄 |
-| **Merchant Dashboard** | 🔄 |
+| Milestone                          | Status |
+| ---------------------------------- | ------ |
+| **Mainnet Deployment**             | 🔄     |
+| **Browser Extension**              | 🔄     |
+| **Production Monitoring**          | 🔄     |
+| **Multi-Region Nodes**             | 🔄     |
+| **Embeddable Widget**              | 🔄     |
+| **Merchant SDK (NPM)**             | 🔄     |
+| **CCTP Integration (Cross-Chain)** | 🔄     |
+| **Merchant Dashboard**             | 🔄     |
 
 **Key Next Step:** Browser extension with PTB verifier (no signing keys needed - zkLogin handles that)
 
@@ -327,6 +335,7 @@ _(For Q&A)_
 ```
 
 **Facilitator CANNOT:**
+
 - Overcharge (PTB verification catches amount mismatch)
 - Redirect funds (verification catches wrong recipient)
 - Add hidden calls (verification rejects unknown commands)
@@ -341,15 +350,15 @@ _(For Q&A)_
 
 ### Feature Comparison
 
-| Feature             | SUI           | Solana                    | EVM (Base)                       | Why It Matters                                |
-| ------------------- | ------------- | ------------------------- | -------------------------------- | --------------------------------------------- |
-| **zkLogin**         | Native        | ❌ Not available          | ⚠️ Social recovery wallets exist | Google → Address, no wallet                   |
-| **PTBs**            | Native        | ⚠️ Versioned transactions | ❌ Single-call only              | Atomic multi-step: split, transfer, receipt   |
-| **Object Model**    | Owned objects | Account-based             | Account-based                    | Parallel execution, massive scalability       |
-| **Finality**        | 600-700ms (testnet) | ~400ms              | ~12 min (L1), ~2s (L2)           | Sub-second payment confirmation               |
-| **Gas Sponsorship** | Built-in      | Supported                 | ⚠️ Complex (EIP-4337)            | Facilitator pays, user doesn't need gas token |
-| **Generic Coins**   | `Coin<T>`     | Token Program             | Token-specific contracts         | One contract, any stablecoin                  |
-| **Receipt Events**  | ~$0.0003      | ~$0.00025                 | ~$0.50-$5.00                     | Cheap audit trails enable micropayments       |
+| Feature             | SUI                 | Solana                    | EVM (Base)                       | Why It Matters                                |
+| ------------------- | ------------------- | ------------------------- | -------------------------------- | --------------------------------------------- |
+| **zkLogin**         | Native              | ❌ Not available          | ⚠️ Social recovery wallets exist | Google → Address, no wallet                   |
+| **PTBs**            | Native              | ⚠️ Versioned transactions | ❌ Single-call only              | Atomic multi-step: split, transfer, receipt   |
+| **Object Model**    | Owned objects       | Account-based             | Account-based                    | Parallel execution, massive scalability       |
+| **Finality**        | 600-700ms (testnet) | ~400ms                    | ~12 min (L1), ~2s (L2)           | Sub-second payment confirmation               |
+| **Gas Sponsorship** | Built-in            | Supported                 | ⚠️ Complex (EIP-4337)            | Facilitator pays, user doesn't need gas token |
+| **Generic Coins**   | `Coin<T>`           | Token Program             | Token-specific contracts         | One contract, any stablecoin                  |
+| **Receipt Events**  | ~$0.0003            | ~$0.00025                 | ~$0.50-$5.00                     | Cheap audit trails enable micropayments       |
 
 **Key Insight:** Not "only possible on SUI" - but **dramatically simpler and better**.
 
@@ -362,6 +371,7 @@ _(For Q&A)_
 ### Traditional vs zkLogin
 
 **Traditional Crypto Payment:**
+
 ```
 User → Install wallet extension (2 min)
      → Save seed phrase (3 min)
@@ -376,6 +386,7 @@ User → Install wallet extension (2 min)
 ---
 
 **Pay402 with zkLogin:**
+
 ```
 User → Click payment link (1 sec)
      → "Sign in with Google" (3 sec)
@@ -400,6 +411,7 @@ User → Click payment link (1 sec)
 ```
 
 **Key Properties:**
+
 - ✅ No private key storage
 - ✅ Same address on every login (deterministic)
 - ✅ Non-custodial (user owns coins)
@@ -417,7 +429,7 @@ User → Click payment link (1 sec)
 
 ```typescript
 // PTB has two "actors":
-ptb.setSender(buyerAddress);       // Who initiates (owns USDC)
+ptb.setSender(buyerAddress); // Who initiates (owns USDC)
 ptb.setGasOwner(facilitatorAddress); // Who pays gas (owns SUI)
 ```
 
@@ -433,11 +445,13 @@ ptb.setGasOwner(facilitatorAddress); // Who pays gas (owns SUI)
 **Question:** "What if buyer signs malicious PTB that drains facilitator gas?"
 
 **Mitigation:**
+
 - Gas budget capped per tx (max ~0.1 SUI = ~$0.10)
 - Facilitator rate-limits by address
 - PTB verifier prevents complex/expensive calls (only template commands allowed)
 
 **Cost per Transaction:**
+
 - Gas: ~0.001 SUI (~$0.002)
 - Facilitator fee: $0.01
 - Net profit: ~$0.008 per transaction

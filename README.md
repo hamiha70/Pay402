@@ -6,8 +6,16 @@
 ⛓️ **Built on SUI Blockchain (Testnet)**  
 🎯 **Live Demo:** https://merchant-production-0255.up.railway.app  
 📹 **Video Demo:** [Coming Soon]  
-📊 **Architecture:** [Flow Diagram](./docs/architecture/FLOW_DIAGRAM.md)  
-📚 **Documentation:** [DOCS_INDEX.md](./DOCS_INDEX.md) (complete navigation guide)
+📊 **Architecture:** [Flow Diagram](./docs/architecture/FLOW_DIAGRAM.md)
+
+**Deployed Services:**
+- Facilitator: https://pay402-production.up.railway.app
+- Widget: https://widget-production-8b65.up.railway.app
+- Merchant: https://merchant-production-0255.up.railway.app
+
+**Smart Contract:**
+- Package: `0x5f32be9e6eee3aab5c64c2f2df6c7e5e83f0e683fd83fda9bb66aa05b063f1ca`
+- Module: `x402_payment`
 
 **Proof of Concept:** [Live Testnet Transaction](https://suiscan.xyz/testnet/tx/EV7D7z9gjzjrAQSKWSW8S1iLGdk8aEVPjn3zLA1aUSLE)
 
